@@ -12,3 +12,4 @@
 * [キャラクターモデル: 単一スプライト差し替え](/design/decisions/character-model.md) - 単一スロット
 * [ローカライズ: 日本語のみ + 抽出フック](/design/decisions/localization.md) - `ITextResolver` で多言語は非破壊後付け
 * [状態モデル: 単一 IStateStore に統一](/design/decisions/state-model.md) - `choose()` はユニークキー割当
+* [コマンド名規約と say スキーマ](/design/decisions/command-schema.md) - 最小 C# 層 + 糖衣。話者は id 基本のハイブリッド

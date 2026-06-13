@@ -14,9 +14,8 @@ status: 保留
 record struct` が `.mrb` バイトコードに焼かれる互換境界が広い。フィールド追加/リネーム/コマンド名変更で
 既存 `.mrb` が静かに壊れる。バージョン番号付与・Ruby 名のエイリアス・移行期間の扱いを別ラウンドで設計する。
 
-## コマンド名規約
-`say` か `speak` か。`SayCommand{Speaker,Text,VoiceId?}` のフィールド確定。
-ハンドラ属性は `[Routes]` 規約か `[Route]` per-method か。互換境界なので早期に固定する。
+## コマンド名規約 ✅ 解決済み
+→ [コマンド名規約と say スキーマ](/design/decisions/command-schema.md)（`say` 一本 + 糖衣、話者は id 基本のハイブリッド、`[Routes]` 規約）で確定。
 
 ## インラインタグ構文の正規定義
 [行内インラインタグ](/design/decisions/inline-tags.md) のタグ記法（`{w=0.5}` 等）の正式仕様と、
