@@ -29,6 +29,8 @@ status: 保留
 
 # 中優先（コア周辺）
 
+> 2026-06-13: 本セクションも**全て解決済み**。未決は下記「機能バックログ」（v1 スコープ外）のみ。
+
 ## エフェクトブリッジの await 意味論 ✅ 解決済み
 → [エフェクトの await 意味論](/design/decisions/effect-await.md)（エフェクトは進行モデルと同じ「ハンドラを await」で
 blocking/non-blocking を表現・`IWorldEffectSink` は async・per-call 上書きは v1 無し）で確定。
@@ -37,12 +39,10 @@ blocking/non-blocking を表現・`IWorldEffectSink` は async・per-call 上書
 → [フロー/シーケンサの境界](/design/decisions/flow-boundary.md)（ゲーム内ノベルパート前提・進行は完全 game 所有・
 シーケンサ/シナリオ間 `goto` は持たない・コア表面は `PlayAsync(key,ct) -> NovelResult` のみ）で確定。
 
-## セーブのスナップショット粒度（リプレイとの整合）
-[実行モデル](/design/decisions/execution-model.md) のリプレイ前提で、何を履歴に記録し何を
-`IStateStore` スナップショットに含めるか。チェックポイント境界の定義。
-加えて **シナリオ内容 versioning**（[コマンドスキーマ versioning](/design/decisions/command-versioning.md) で分離した
-別概念）: シナリオ本文の編集で過去の履歴が新 `.rb` に当たらなくなる問題を、履歴のシナリオ版数チェック →
-不一致なら近いチェックポイントへフォールバック、等で扱う。save-anywhere 実装時に対応。
+## セーブのスナップショット粒度（リプレイとの整合）✅ 解決済み
+→ [セーブのスナップショット粒度](/design/decisions/save-snapshot.md)（永続は `IStateStore` のみ・`ISaveStore` 経由・
+セーブ境界は `PlayAsync` の間・シナリオ途中保存は v1 対象外・提示状態は非シリアライズ）で確定。
+途中再開（リプレイ式 save-anywhere）とシナリオ内容 versioning は下記バックログへ。
 
 ## 音声のスコープ ✅ 解決済み
 → [音声スコープ](/design/decisions/audio-scope.md)（voice は v1 除外で将来は別コマンド+糖衣、SE/BGM は v1 採用、
@@ -55,6 +55,7 @@ lipsync は対象外）で確定。残るのは `se`/`bgm` コマンドの引数
 # 機能バックログ（v1 スコープ外だが将来検討）
 
 - ロールバック（Ren'Py 式巻き戻し）。[実行モデル](/design/decisions/execution-model.md) のリプレイ基盤の上で将来。
+- 長いノベルパートの途中再開（リプレイ式 save-anywhere）+ シナリオ内容 versioning。[セーブのスナップショット粒度](/design/decisions/save-snapshot.md) で v1 対象外。
 - メッセージ窓の hide（CG 鑑賞）トグル。
 - 選択肢のアフォーダンス: 無効/条件付き（grey out）・タイマー付き・一度のみ。
 - アクセシビリティ: 文字サイズ・可読フォント・reduce-motion・hold-to-skip。
