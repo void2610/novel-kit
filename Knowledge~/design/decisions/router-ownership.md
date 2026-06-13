@@ -45,8 +45,9 @@ NovelLifetimeScope (game が追加する子スコープ)
 
 - game は `NovelLifetimeScope`（子スコープ）を追加し、専用 Router + 各サービス + runner を登録する
   （[アーキテクチャ](/design/architecture.md) の配線方針）。
-- 世界エフェクトの **await 意味論**（ブロッキング/非ブロッキング・順序、完了待ちが要るエフェクトの扱い）は
-  本決定の範囲外で別途 → [残論点](/design/open-questions.md)。本決定は「脱出経路は明示ブリッジ・既定なし」までを定める。
+- 世界エフェクトの **await 意味論**（ブロッキング/非ブロッキング・完了待ち）は
+  [エフェクトの await 意味論](/design/decisions/effect-await.md) で確定（ハンドラ await で統一・`IWorldEffectSink` は async）。
+  本決定は「脱出経路は明示ブリッジ・既定なし」までを定める。
 - 抽象（provider）を足すのは具体ニーズが出てから。
 
 # 検討した代替案

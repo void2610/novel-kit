@@ -29,11 +29,9 @@ status: 保留
 
 # 中優先（コア周辺）
 
-## エフェクトブリッジの await 意味論
-脱出経路は [ルーター所有権](/design/decisions/router-ownership.md) で「game 供給先（`IWorldEffectSink` 等）への
-明示ブリッジ・既定なし」と決定済み。**残るのは await 意味論**: apocalyptic 方式はハンドラが同期的に返る前提
-（実装は shake 1 個のみ）。「次行前に終わる必要のある 2 秒ブラックアウト」のように完了待ちが要るエフェクトの
-ordering/await 契約（ブロッキング/非ブロッキングの明示分類）が未設計。
+## エフェクトブリッジの await 意味論 ✅ 解決済み
+→ [エフェクトの await 意味論](/design/decisions/effect-await.md)（エフェクトは進行モデルと同じ「ハンドラを await」で
+blocking/non-blocking を表現・`IWorldEffectSink` は async・per-call 上書きは v1 無し）で確定。
 
 ## フロー/シーケンサの境界 ✅ 解決済み
 → [フロー/シーケンサの境界](/design/decisions/flow-boundary.md)（ゲーム内ノベルパート前提・進行は完全 game 所有・

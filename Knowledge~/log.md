@@ -23,3 +23,5 @@
 * **Update**: [概要](/design/overview.md) のスコープに「ゲーム内ノベルパート」を明記。[残論点](/design/open-questions.md) のフロー境界を解決済みに。
 * **Creation**: [MRuby エラー処理・サンドボックス](/design/decisions/error-handling.md) を確定（backtrace surface・リリースは Faulted フェイルセーフ・サンドボックス v1 無し）。
 * **Update**: [残論点](/design/open-questions.md) の MRuby エラー処理を解決済みに、UGC サンドボックスをバックログへ。
+* **Creation**: [エフェクトの await 意味論](/design/decisions/effect-await.md) を確定（ハンドラ await で統一・IWorldEffectSink は async・per-call 上書きは v1 無し）。
+* **Update**: [ルーター所有権](/design/decisions/router-ownership.md) の await 意味論を解決済みに相互参照。[残論点](/design/open-questions.md) のエフェクト await を解決済みに。
