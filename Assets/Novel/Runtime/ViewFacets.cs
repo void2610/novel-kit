@@ -11,10 +11,11 @@ namespace Novel.Runtime
         UniTask HideAsync(CancellationToken ct);
     }
 
-    // 背景差し替え
+    // 背景差し替え + イベント CG（一枚絵）
     public interface IBackgroundView
     {
         UniTask ShowAsync(string backgroundKey, CancellationToken ct);
+        UniTask ShowStillAsync(string stillKey, CancellationToken ct);
     }
 
     // se/bgm。音量/フェード/ループ/pitch/停止の引数詳細は実装時に確定する
