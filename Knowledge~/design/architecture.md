@@ -17,6 +17,7 @@ timestamp: 2026-06-14T02:45:00Z
 | `Novel.Runtime` | UniTask, VitalRouter, MRubyCS, Novel.Commands | 純 C# コア。シナリオランナー / `IScenarioSource` / `INovelView` / `[Routes] NovelCommandHandler` / プリアンブルローダ / `ParseSymbol<T>` / タイプライタエンジン / `IStateStore`（フラグ/変数/既読）/ バックログ / `INovelPlaybackSettings` + Default |
 | `Novel.View` | Novel.Runtime, (任意) LitMotion 等 | 任意の MonoBehaviour 参考 View（メッセージ窓・吹き出し・ナレ・立ち絵・背景・選択 UI）+ アニメツールキット。game は無視して自前 `INovelView` を供給可 |
 | `Novel.Editor` | Novel.Runtime, UnityEditor | カタログ/検証インスペクタ。`.rb`→`.mrb` の ScriptedImporter は **mrubycs-compiler パッケージが提供**するため再実装せず、それに乗る |
+| `Novel.VContainer` | Novel.Runtime, Novel.View, VContainer | 任意の DI 統合層。`RegisterNovelKit` で既定実装を一括登録（実装時に追加した 5 つ目の任意アセンブリ） |
 
 > 範囲の根拠は [ライブラリ範囲の ADR](/design/decisions/library-scope.md) を参照。
 
