@@ -3,7 +3,7 @@ type: Design
 title: 公開 API 表面（凍結）
 description: 確定 15 ADR を統合した novel-kit の公開表面。ランナー / コマンド / View 抽象 / game 供給サービスのシグネチャを 1 箇所に集約する。
 tags: [api, surface, freeze, contract, runner, view]
-timestamp: 2026-06-14T02:55:00Z
+timestamp: 2026-06-14T19:35:00Z
 status: 確定
 ---
 
@@ -86,7 +86,7 @@ public interface IAudioChannel   { /* se / bgm。引数詳細は実装時確定 
 | サービス | 役割 | 根拠 ADR |
 |---|---|---|
 | `IScenarioSource` | 論理キー → `.mrb` バイトコード（`byte[]`）。`Irep` パースは MRubyState 依存のため runner 側 | [アーキテクチャ](/design/architecture.md) |
-| `IStateStore` | フラグ / 変数 / 既読を単一統合。`choose()` はユニークキー自動割当 | [状態モデル](/design/decisions/state-model.md) |
+| `IStateStore` | フラグ / 変数 / 既読を単一統合。**runtime 内部実装（`MRubyStateStore`）が既定**で game 供給不要 | [状態モデル](/design/decisions/state-model.md) |
 | `ISaveStore` | 永続化（ライブラリはシリアライズ形式を持たない。対象は `IStateStore` のみ） | [セーブ粒度](/design/decisions/save-snapshot.md) |
 | `INovelPlaybackSettings` | auto/skip 速度等の再生設定（Default 提供） | [アーキテクチャ](/design/architecture.md) |
 | `ICharacterCatalog` | id → 表示名/立ち絵/side/既定ボイス。未登録は id を表示名にフォールバック | [コマンド名規約](/design/decisions/command-schema.md) |

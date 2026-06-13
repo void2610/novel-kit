@@ -3,7 +3,7 @@ type: Decision
 title: ルーター所有権はノベル専用 Router を container 登録
 description: NovelLifetimeScope にノベル専用 VitalRouter を登録しハンドラは DI 市民。世界エフェクトは game 供給の送り先への明示ブリッジ（既定なし）。
 tags: [decision, vitalrouter, vcontainer, router, di, bridge]
-timestamp: 2026-06-13T00:00:00Z
+timestamp: 2026-06-14T19:35:00Z
 status: 確定
 ---
 
@@ -49,6 +49,14 @@ NovelLifetimeScope (game が追加する子スコープ)
   [エフェクトの await 意味論](/design/decisions/effect-await.md) で確定（ハンドラ await で統一・`IWorldEffectSink` は async）。
   本決定は「脱出経路は明示ブリッジ・既定なし」までを定める。
 - 抽象（provider）を足すのは具体ニーズが出てから。
+
+## 実装で確定（2026-06-14）
+
+実装の結果、**handler のマップは game の `RegisterVitalRouter` ではなく `NovelScenarioRunner` が行う**ことに確定した。
+理由は handler が runner 私有の `MRubyState`（とその共有変数テーブル背後の `MRubyStateStore`）に結合するため
+（Ruby の `state[:key]` 同期に同一テーブルが要る）。Router は従来どおり container 登録（`RegisterInstance(new Router())`）し、
+runner はそれを注入で受けて `handler.MapTo(router)` し、`state.ExecuteAsync(router, irep)` で発行する。
+本決定の核（ノベル専用 Router を container 所有・静的 `Router.Default` 不使用・provider 抽象なし）は維持される。
 
 # 検討した代替案
 

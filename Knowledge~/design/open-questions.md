@@ -3,7 +3,7 @@ type: Design
 title: 残論点（未決の設計判断）
 description: ランナー API 凍結前に解消すべき未決事項と、後続で詰める設計トピック。
 tags: [open-questions, todo, design]
-timestamp: 2026-06-13T14:40:00Z
+timestamp: 2026-06-14T19:35:00Z
 status: 保留
 ---
 
@@ -52,19 +52,16 @@ lipsync は対象外）で確定。残るのは `se`/`bgm` コマンドの引数
 → [MRuby エラー処理・サンドボックス](/design/decisions/error-handling.md)（try/catch で backtrace surface・
 `NovelResult.Faulted` でフェイルセーフ・`INovelErrorHandler` 注入・サンドボックスは v1 無し＝一次コンテンツ前提）で確定。
 
-# 実装フェーズで生じた要再整理事項（fix-later）
+# 実装フェーズで生じた判断（解決済み）
 
-> 2026-06-14: 実装を一気に進める中で、確定 ADR と一部食い違う実装判断を暫定で採用した。後で再整理する。
+> 2026-06-14: 実装で確定 ADR を上書き/精緻化した判断。いずれも該当 ADR へ追認済みで未決ではない。
 
-- **ハンドラ所有権**: [ルーター所有権](/design/decisions/router-ownership.md) は `NovelCommandHandler` を game の
-  `RegisterVitalRouter(routing => routing.Map<...>())` でマップする想定。しかし実装では handler が runner 私有の
-  `MRubyStateStore`（MRuby 共有テーブル背後）に依存するため、**runner が handler を構築し注入 Router へ `MapTo`** した。
-  DI 市民性と所有権の再整理が必要（`NovelScenarioRunner.cs` の FIXME）。
-- **IStateStore の所有権**: [状態モデル](/design/decisions/state-model.md) / [api-surface](/design/api-surface.md) は
-  game 供給サービス扱いだが、Ruby の `state[:key]` 同期のため**実装では runner 内部の `MRubyStateStore`** を既定とした。
-  game 供給の余地（永続専用は `ISaveStore`）と整合させるか要検討。
-- **preamble ロード**: Runtime を純 C# に保つため `IPreambleSource` 抽象に留め、Resources 実装は `Novel.View` に置いた。
-  ライブラリ同梱 preamble の配布形態（Resources 固定か）を後で確定。
+- **ハンドラ所有権 ✅**: handler は runner 私有 `MRubyStateStore` に結合するため **runner が構築し注入 Router へ `MapTo`**。
+  → [ルーター所有権](/design/decisions/router-ownership.md)「実装で確定」に追認（Router は container 登録のまま）。
+- **IStateStore の所有権 ✅**: Ruby `state[:key]` 同期のため **runtime 内部 `MRubyStateStore` が既定**（game 供給不要）。
+  永続は `ISaveStore` のみ。→ [状態モデル](/design/decisions/state-model.md)「実装で確定」に追認。
+- **preamble ロード ✅**: Runtime を純 C# に保つため `IPreambleSource` 抽象に留め、Resources 実装（`ResourcesPreambleSource`）は
+  `Novel.View` に配置。配布形態は Resources 既定（game は `IPreambleSource` 差し替えで変更可）。
 
 # 機能バックログ（v1 スコープ外だが将来検討）
 
