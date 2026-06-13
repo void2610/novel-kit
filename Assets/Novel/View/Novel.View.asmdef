@@ -3,7 +3,9 @@
     "rootNamespace": "Novel.View",
     "references": [
         "Novel.Runtime",
-        "UniTask"
+        "UniTask",
+        "Unity.TextMeshPro",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
