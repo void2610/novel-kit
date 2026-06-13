@@ -14,3 +14,4 @@
 * [状態モデル: 単一 IStateStore に統一](/design/decisions/state-model.md) - `choose()` はユニークキー割当
 * [コマンド名規約と say スキーマ](/design/decisions/command-schema.md) - 最小 C# 層 + 糖衣。話者は id 基本のハイブリッド
 * [ルーター所有権](/design/decisions/router-ownership.md) - ノベル専用 Router を container 登録・ハンドラは DI 市民・世界エフェクトは明示ブリッジ
+* [音声スコープ](/design/decisions/audio-scope.md) - voice は v1 除外（将来は別コマンド+糖衣）・SE/BGM は v1 採用

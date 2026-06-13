@@ -4,7 +4,7 @@ title: コマンド名規約と say スキーマ（最小 C# 層 + 糖衣）
 description: 行コマンドは say プリミティブ1つ。キャラ名/narration は preamble 糖衣。話者は id 基本のハイブリッド。
 tags: [decision, command, dsl, say, character, schema]
 timestamp: 2026-06-13T00:00:00Z
-status: 確定（VoiceId は音声トピックで確定予定）
+status: 確定
 ---
 
 # 状況
@@ -37,7 +37,6 @@ readonly partial record struct SayCommand : ICommand {
     public string  SpeakerId { get; init; }   // "" / null = ナレーション
     public string? DisplayAs { get; init; }    // 任意: 表示名の上書き（「？？？」等）
     public string  Text      { get; init; }   // インラインタグ生テキスト（Runtime で字句解析）
-    // VoiceId は音声トピックで確定（slot 予約）
 }
 ```
 
@@ -65,7 +64,8 @@ C# プロパティ名は MRubyCS.Serializer の名前マッピングで吸収で
 - 表示名はカタログ/`ITextResolver` 経由で解決できるため、多言語化（[ローカライズ](/design/decisions/localization.md)）と
   改名が一点に集約される。
 - `narration` は別コマンドにせず、空 `SpeakerId` として表現する。
-- `VoiceId` フィールドの要否・形は音声トピックで確定（現状は slot 予約）。
+- voice は v1 対象外で `SayCommand` は voice フィールドを持たない（将来は独立 `voice` コマンド + 糖衣で吸収）
+  → [音声スコープ](/design/decisions/audio-scope.md)。
 
 # 検討した代替案
 
