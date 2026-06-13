@@ -19,21 +19,25 @@ namespace Novel.Runtime
         private readonly Router _router;
         private readonly ISaveStore? _saveStore;
         private readonly INovelErrorHandler? _errorHandler;
+        private readonly IPreambleSource? _preambleSource;
         private readonly MRubyState _state;
         private readonly MRubyStateStore _store;
         private readonly IDisposable _subscription;
+        private bool _preambleLoaded;
         private bool _disposed;
 
         public NovelScenarioRunner(IScenarioSource source, Router router,
             INovelView view, ITextResolver text, ICharacterCatalog catalog,
             IPortraitView? portrait = null, IBackgroundView? background = null, IAudioChannel? audio = null,
             IWorldEffectSink? worldEffectSink = null,
-            ISaveStore? saveStore = null, INovelErrorHandler? errorHandler = null)
+            ISaveStore? saveStore = null, INovelErrorHandler? errorHandler = null,
+            IPreambleSource? preambleSource = null)
         {
             _source = source;
             _router = router;
             _saveStore = saveStore;
             _errorHandler = errorHandler;
+            _preambleSource = preambleSource;
             _state = MRubyState.Create();
             _store = new MRubyStateStore(_state.GetSharedVariables());
 
@@ -52,14 +56,14 @@ namespace Novel.Runtime
 
             var handler = new NovelCommandHandler(view, _store, text, catalog, portrait, background, audio, worldEffectSink);
             _subscription = handler.MapTo(_router);
-
-            // TODO: preamble.rb（say/narration/choose 等の糖衣）を起動時に一度だけ state へ評価する
         }
 
         public async UniTask<NovelResult> PlayAsync(string scenarioKey, CancellationToken ct)
         {
             try
             {
+                await EnsurePreambleLoadedAsync(ct);
+
                 if (_saveStore != null)
                 {
                     var snapshot = await _saveStore.LoadAsync(ct);
@@ -87,6 +91,15 @@ namespace Novel.Runtime
                 _errorHandler?.OnScenarioFaulted(scenarioKey, ex);
                 return NovelResult.Faulted;
             }
+        }
+
+        // 糖衣ヘルパ（say/choose 等）を定義する preamble を起動時に一度だけ state へ評価する
+        private async UniTask EnsurePreambleLoadedAsync(CancellationToken ct)
+        {
+            if (_preambleLoaded || _preambleSource == null) return;
+            _preambleLoaded = true;
+            var bytecode = await _preambleSource.LoadPreambleAsync(ct);
+            if (bytecode != null && bytecode.Length > 0) _state.LoadBytecode(bytecode);
         }
 
         public void Dispose()
