@@ -50,3 +50,6 @@ Icon
 
 # NuGet (for Unity NuGet)
 Assets/Packages/
+
+# uloop CLI のローカルキャッシュ / 出力
+/.uloop/
