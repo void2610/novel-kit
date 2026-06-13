@@ -1,0 +1,21 @@
+{
+    "name": "Novel.Samples",
+    "rootNamespace": "Novel.Samples",
+    "references": [
+        "Novel.Runtime",
+        "Novel.View",
+        "Novel.VContainer",
+        "VContainer",
+        "UniTask",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
