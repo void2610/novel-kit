@@ -52,6 +52,20 @@ lipsync は対象外）で確定。残るのは `se`/`bgm` コマンドの引数
 → [MRuby エラー処理・サンドボックス](/design/decisions/error-handling.md)（try/catch で backtrace surface・
 `NovelResult.Faulted` でフェイルセーフ・`INovelErrorHandler` 注入・サンドボックスは v1 無し＝一次コンテンツ前提）で確定。
 
+# 実装フェーズで生じた要再整理事項（fix-later）
+
+> 2026-06-14: 実装を一気に進める中で、確定 ADR と一部食い違う実装判断を暫定で採用した。後で再整理する。
+
+- **ハンドラ所有権**: [ルーター所有権](/design/decisions/router-ownership.md) は `NovelCommandHandler` を game の
+  `RegisterVitalRouter(routing => routing.Map<...>())` でマップする想定。しかし実装では handler が runner 私有の
+  `MRubyStateStore`（MRuby 共有テーブル背後）に依存するため、**runner が handler を構築し注入 Router へ `MapTo`** した。
+  DI 市民性と所有権の再整理が必要（`NovelScenarioRunner.cs` の FIXME）。
+- **IStateStore の所有権**: [状態モデル](/design/decisions/state-model.md) / [api-surface](/design/api-surface.md) は
+  game 供給サービス扱いだが、Ruby の `state[:key]` 同期のため**実装では runner 内部の `MRubyStateStore`** を既定とした。
+  game 供給の余地（永続専用は `ISaveStore`）と整合させるか要検討。
+- **preamble ロード**: Runtime を純 C# に保つため `IPreambleSource` 抽象に留め、Resources 実装は `Novel.View` に置いた。
+  ライブラリ同梱 preamble の配布形態（Resources 固定か）を後で確定。
+
 # 機能バックログ（v1 スコープ外だが将来検討）
 
 - ロールバック（Ren'Py 式巻き戻し）。[実行モデル](/design/decisions/execution-model.md) のリプレイ基盤の上で将来。
