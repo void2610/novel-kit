@@ -19,3 +19,5 @@
 * **Update**: [残論点](/design/open-questions.md) のコマンドスキーマ versioning を解決済みに、シナリオ内容 versioning を save の課題として明記。
 * **Update**: [行内インラインタグ](/design/decisions/inline-tags.md) にタグ構文を確定（TMP `<...>` 単一・ライブラリ所有 lexer・非タグはエスケープ・パースは Runtime）。
 * **Update**: [残論点](/design/open-questions.md) のインラインタグ構文を解決済みに（凍結前の高優先が全て解決）。
+* **Creation**: [フロー/シーケンサの境界](/design/decisions/flow-boundary.md) を確定（ゲーム内ノベルパート前提・進行は完全 game 所有・シーケンサ/goto 無し・PlayAsync のみ）。
+* **Update**: [概要](/design/overview.md) のスコープに「ゲーム内ノベルパート」を明記。[残論点](/design/open-questions.md) のフロー境界を解決済みに。
