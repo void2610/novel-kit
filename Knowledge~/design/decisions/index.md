@@ -15,3 +15,4 @@
 * [コマンド名規約と say スキーマ](/design/decisions/command-schema.md) - 最小 C# 層 + 糖衣。話者は id 基本のハイブリッド
 * [ルーター所有権](/design/decisions/router-ownership.md) - ノベル専用 Router を container 登録・ハンドラは DI 市民・世界エフェクトは明示ブリッジ
 * [音声スコープ](/design/decisions/audio-scope.md) - voice は v1 除外（将来は別コマンド+糖衣）・SE/BGM は v1 採用
+* [コマンドスキーマ versioning](/design/decisions/command-versioning.md) - versioning 機構は持たない（.rb 正・再生成で追従）・save/replay 互換は別概念

@@ -15,3 +15,5 @@
 * **Update**: [残論点](/design/open-questions.md) のルーター所有権を解決済みに、世界エフェクト await 意味論を残論点として明確化。
 * **Creation**: [音声スコープ](/design/decisions/audio-scope.md) を確定（voice は v1 除外で将来は別コマンド+糖衣、SE/BGM は v1 採用）。
 * **Update**: [コマンド名規約と say スキーマ](/design/decisions/command-schema.md) から VoiceId slot を撤去（say は最小に確定）。
+* **Creation**: [コマンドスキーマ versioning](/design/decisions/command-versioning.md) を確定（versioning 機構は持たない・.rb 正で再生成追従・save/replay 互換は別概念）。
+* **Update**: [残論点](/design/open-questions.md) のコマンドスキーマ versioning を解決済みに、シナリオ内容 versioning を save の課題として明記。
