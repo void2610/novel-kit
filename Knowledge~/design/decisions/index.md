@@ -17,3 +17,4 @@
 * [音声スコープ](/design/decisions/audio-scope.md) - voice は v1 除外（将来は別コマンド+糖衣）・SE/BGM は v1 採用
 * [コマンドスキーマ versioning](/design/decisions/command-versioning.md) - versioning 機構は持たない（.rb 正・再生成で追従）・save/replay 互換は別概念
 * [フロー/シーケンサの境界](/design/decisions/flow-boundary.md) - ゲーム内ノベルパート前提。進行は完全 game 所有・シーケンサ/goto 無し・PlayAsync のみ
+* [MRuby エラー処理・サンドボックス](/design/decisions/error-handling.md) - try/catch で backtrace surface・リリースは Faulted でフェイルセーフ・サンドボックス v1 無し

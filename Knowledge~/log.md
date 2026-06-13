@@ -21,3 +21,5 @@
 * **Update**: [残論点](/design/open-questions.md) のインラインタグ構文を解決済みに（凍結前の高優先が全て解決）。
 * **Creation**: [フロー/シーケンサの境界](/design/decisions/flow-boundary.md) を確定（ゲーム内ノベルパート前提・進行は完全 game 所有・シーケンサ/goto 無し・PlayAsync のみ）。
 * **Update**: [概要](/design/overview.md) のスコープに「ゲーム内ノベルパート」を明記。[残論点](/design/open-questions.md) のフロー境界を解決済みに。
+* **Creation**: [MRuby エラー処理・サンドボックス](/design/decisions/error-handling.md) を確定（backtrace surface・リリースは Faulted フェイルセーフ・サンドボックス v1 無し）。
+* **Update**: [残論点](/design/open-questions.md) の MRuby エラー処理を解決済みに、UGC サンドボックスをバックログへ。
