@@ -37,12 +37,14 @@ namespace Novel.Runtime
 
         public async UniTask On(SayCommand cmd, CancellationToken ct)
         {
-            var text = _text.Resolve(cmd.Text);
+            var resolved = _text.Resolve(cmd.Text);
             var displayName = ResolveDisplayName(cmd);
-            var textId = StableId.Of(cmd.SpeakerId, text);
+            // 既読 ID はタグを除いた素テキストで算出（タグ有無で既読が割れないように）
+            var textId = StableId.Of(cmd.SpeakerId, NovelTagLexer.ToPlainText(resolved));
             var alreadyRead = _state.IsRead(textId);
 
-            await _view.ShowMessageAsync(new NovelLine(cmd.SpeakerId, displayName, text, alreadyRead), ct);
+            // Text はタグ付き原文を渡し、View 側 typewriter が NovelTagLexer で逐次 Reveal する
+            await _view.ShowMessageAsync(new NovelLine(cmd.SpeakerId, displayName, resolved, alreadyRead), ct);
 
             _state.MarkRead(textId);
         }
