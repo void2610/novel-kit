@@ -9,6 +9,8 @@ status: 保留
 
 # 凍結前に決めるべき（高優先）
 
+> 2026-06-13: 本セクションは**全て解決済み**。残るは下記「中優先」と「機能バックログ」。
+
 ## コマンドスキーマのバージョニング/エイリアス戦略 ✅ 解決済み
 → [コマンドスキーマ versioning](/design/decisions/command-versioning.md)（versioning 機構は持たない・`.rb` 正で
 再生成追従・Ruby 名エイリアスは任意利便機能）で確定。シナリオ内容 versioning（save/replay 互換）は別概念として
@@ -17,9 +19,9 @@ status: 保留
 ## コマンド名規約 ✅ 解決済み
 → [コマンド名規約と say スキーマ](/design/decisions/command-schema.md)（`say` 一本 + 糖衣、話者は id 基本のハイブリッド、`[Routes]` 規約）で確定。
 
-## インラインタグ構文の正規定義
-[行内インラインタグ](/design/decisions/inline-tags.md) のタグ記法（`{w=0.5}` 等）の正式仕様と、
-パースを `Novel.Runtime` で行うか Ruby 文字列補間で表すか。タイプライタエンジンの契約に直結。
+## インラインタグ構文の正規定義 ✅ 解決済み
+→ [行内インラインタグ](/design/decisions/inline-tags.md)（TMP `<...>` 単一・ライブラリ所有 lexer・非タグはエスケープ・
+パースは Novel.Runtime・キーワードは TMP `<link>`・リテラルは `<noparse>`）で確定。v1 タグセットの細部は実装時に最終確定。
 
 ## ルーター所有権 ✅ 解決済み
 → [ルーター所有権](/design/decisions/router-ownership.md)（ノベル専用 Router を container 登録・ハンドラ DI 市民・

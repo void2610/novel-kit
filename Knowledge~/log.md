@@ -17,3 +17,5 @@
 * **Update**: [コマンド名規約と say スキーマ](/design/decisions/command-schema.md) から VoiceId slot を撤去（say は最小に確定）。
 * **Creation**: [コマンドスキーマ versioning](/design/decisions/command-versioning.md) を確定（versioning 機構は持たない・.rb 正で再生成追従・save/replay 互換は別概念）。
 * **Update**: [残論点](/design/open-questions.md) のコマンドスキーマ versioning を解決済みに、シナリオ内容 versioning を save の課題として明記。
+* **Update**: [行内インラインタグ](/design/decisions/inline-tags.md) にタグ構文を確定（TMP `<...>` 単一・ライブラリ所有 lexer・非タグはエスケープ・パースは Runtime）。
+* **Update**: [残論点](/design/open-questions.md) のインラインタグ構文を解決済みに（凍結前の高優先が全て解決）。
