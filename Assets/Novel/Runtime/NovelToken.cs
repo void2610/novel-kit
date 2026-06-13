@@ -14,6 +14,7 @@ namespace Novel.Runtime
         ShakePop,    // </shake>
         WavePush,    // <wave>
         WavePop,     // </wave>
+        Ignored,     // 認識するが出力しないタグ（ruby 等の任意モジュール対象）
     }
 
     // タイプライタが逐次 Reveal するトークン。タグは可視文字数に数えない（TMP 技法）

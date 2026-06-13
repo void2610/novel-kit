@@ -57,7 +57,7 @@ namespace Novel.Runtime
                     FlushText();
                     if (isTmpPassthrough)
                         tokens.Add(new NovelToken(NovelTokenKind.TmpTag, "<" + inner + ">"));
-                    else
+                    else if (token.Kind != NovelTokenKind.Ignored)
                         tokens.Add(token);
                     i = close + 1;
                 }
@@ -116,9 +116,12 @@ namespace Novel.Runtime
                 case "wave":
                     token = new NovelToken(isClose ? NovelTokenKind.WavePop : NovelTokenKind.WavePush);
                     return true;
+                case "ruby":
+                    // ruby は任意モジュール（inline-tags ADR）。コアは認識のみで読みは展開せず、漢字本体は素通し
+                    token = new NovelToken(NovelTokenKind.Ignored);
+                    return true;
             }
 
-            // TODO: <ruby=よみ>漢字</ruby> を TMP voffset/size/space へ展開（v1 は素通し扱い）
             if (TmpStyleTags.Contains(name))
             {
                 isTmpPassthrough = true;
