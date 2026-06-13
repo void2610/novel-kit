@@ -10,9 +10,9 @@ using VitalRouter.MRuby;
 namespace Novel.Runtime
 {
     // 「命令されたら 1 シナリオを再生する」プリミティブ。進行・章/分岐は game 所有（flow-boundary）。
-    // FIXME(後で直す): router-ownership ADR は handler を game の RegisterVitalRouter でマップする想定だが、
-    // handler が runner 私有の MRubyStateStore（共有テーブル背後）に依存するため、ここでは runner が
-    // handler を構築し注入された Router へ MapTo している。IStateStore の所有権含め後で再整理する。
+    // handler は runner 私有の MRubyStateStore（MRuby 共有テーブル背後）に結合するため runner が構築し
+    // 注入された Router へ MapTo する。Router は container 登録・IStateStore は runtime 内部（永続は ISaveStore）。
+    // → router-ownership / state-model ADR で確定。
     public sealed class NovelScenarioRunner : INovelScenarioRunner, IDisposable
     {
         private readonly IScenarioSource _source;
