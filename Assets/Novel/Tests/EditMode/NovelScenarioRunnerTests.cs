@@ -15,6 +15,7 @@ namespace Novel.Tests
         private sealed class FakeView : INovelView
         {
             public readonly List<NovelLine> Lines = new();
+            public int ChoiceResult;
 
             public UniTask ShowMessageAsync(NovelLine line, CancellationToken ct)
             {
@@ -23,7 +24,7 @@ namespace Novel.Tests
             }
 
             public UniTask<int> ShowChoicesAsync(IReadOnlyList<string> options, CancellationToken ct)
-                => UniTask.FromResult(0);
+                => UniTask.FromResult(ChoiceResult);
         }
 
         private sealed class EmptyCatalog : ICharacterCatalog
@@ -54,6 +55,26 @@ namespace Novel.Tests
             Assert.AreEqual("こんにちは", view.Lines[0].Text);
             Assert.AreEqual("alice", view.Lines[0].DisplayName);   // カタログ未登録 → id をそのまま表示名
             Assert.IsNull(view.Lines[1].DisplayName);              // narration はナレーション
+        });
+
+        // choose の結果が共有テーブル経由で Ruby の state[:key] に読み戻り分岐が成立することを検証
+        [UnityTest]
+        public IEnumerator choose_の選択が_Ruby_側の分岐へ反映される() => UniTask.ToCoroutine(async () =>
+        {
+            var view = new FakeView { ChoiceResult = 1 };   // B を選択
+            var runner = new NovelScenarioRunner(
+                new ResourcesScenarioSource(),
+                new Router(),
+                view,
+                new IdentityTextResolver(),
+                new EmptyCatalog(),
+                preambleSource: new ResourcesPreambleSource());
+
+            var result = await runner.PlayAsync("test_choose", CancellationToken.None);
+
+            Assert.AreEqual(NovelResult.Completed, result);
+            Assert.AreEqual(1, view.Lines.Count);
+            Assert.AreEqual("Bを選んだ", view.Lines[0].Text);
         });
     }
 }
