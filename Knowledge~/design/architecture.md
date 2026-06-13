@@ -3,7 +3,7 @@ type: Design
 title: novel-kit アーキテクチャ
 description: 4 アセンブリ構成・VitalRouter コマンドバス・INovelView 抽象・MRuby 進行モデル・game 配線。
 tags: [architecture, asmdef, vitalrouter, vcontainer, mruby]
-timestamp: 2026-06-13T00:00:00Z
+timestamp: 2026-06-13T14:57:00Z
 ---
 
 # アセンブリ分割
@@ -53,6 +53,31 @@ public interface INovelView {
 game は自前 UI を実装して供給でき、テストは fake view で進行（say/choice 待ち・auto/skip）を
 ヘッドレス検証できる（color-recollection が実証済み）。
 
+# 世界エフェクト（game への脱出経路）
+
+会話の外側（カメラ・画面・gameplay）へ作用するエフェクトは、game が任意で供給する `IWorldEffectSink`
+への明示ブリッジで送る。既定はブリッジ無し（VitalRouter を gameplay に使わない game でもノベルは動く）。
+
+```csharp
+public interface IWorldEffectSink {
+    UniTask DispatchAsync(IWorldEffect effect, CancellationToken ct);  // async（UniTask 返し）
+}
+```
+
+await 意味論は進行モデルと同一機構で統一する。**ハンドラが await するか否かで blocking/non-blocking が決まる**:
+非ブロッキング（`shake`/`flash`）は sink が即完了タスクを返し会話は止まらず、ブロッキング（`fade_out(2.0)`/
+`blackout`）は sink が完了時に解決するタスクを返し Fiber がサスペンドして次行が待つ。DSL に blocking フラグは
+持たず、per-call の `wait:` 上書きも v1 では持たない。[エフェクトの await 意味論](/design/decisions/effect-await.md)。
+
+# 実行結果とエラー処理
+
+- runner の表面は `UniTask<NovelResult> PlayAsync(scenarioKey, ct)`。`NovelResult` は完了状態を表し、
+  **completed / cancelled / faulted** を持つ。分岐に必要な outcome は `IStateStore` に残るので game は完了後に
+  状態を読む（[フロー/シーケンサの境界](/design/decisions/flow-boundary.md)）。
+- MRuby 実行時例外は try/catch で捕捉し backtrace を surface する。リリースではフェイルセーフとして
+  `NovelResult.Faulted` を返し、game が注入する `INovelErrorHandler` に委譲する。サンドボックスは v1 では持たない
+  （一次コンテンツ前提）。[MRuby エラー処理・サンドボックス](/design/decisions/error-handling.md)。
+
 # コマンドバスと語彙
 
 - ランナーが `DefineVitalRouter(config => config.AddCommand<SayCommand>("say"), ...)` で
@@ -62,18 +87,26 @@ game は自前 UI を実装して供給でき、テストは fake view で進行
 - enum は常に snake_case 文字列で受け、単一の `ParseSymbol<T>` ヘルパーで解決する
   （MRubyCS.Serializer の `EnumAsStringFormatter` に Deserialize が無い制約の回避を一本化）。
 - 著者向けには一度ロードされるプリアンブル `preamble.rb` が
-  `say/narration/choose/flag/portrait/bg/still/se/wait` 等の糖衣を提供し、game が拡張可能。
+  `say/narration/choose/flag/portrait/bg/still/se/bgm/wait` 等の糖衣を提供し、game が拡張可能。
+  voice は v1 除外（将来は別コマンド + 糖衣）。[音声スコープ](/design/decisions/audio-scope.md)。
 
-# ルーター所有権（未決）
+# ルーター所有権
 
-container 所有（`RegisterVitalRouter`）/ runner 私有 `new Router()` / 静的 `Router.Default` の
-3 モデルが既存プロジェクトで混在。`INovelRouterProvider` で抽象化し container 所有を既定とする
-案が有力だが未確定。[残論点](/design/open-questions.md) を参照。
+**ノベル専用 Router を `NovelLifetimeScope` に container 登録**し、`NovelCommandHandler` を
+DI 市民としてその Router にマップする（静的 `Router.Default` でも game の gameplay Router でもない）。
+container 所有 / runner 私有 `new Router()` / 静的 `Router.Default` の 3 モデル混在を本方針で一本化する。
+**`INovelRouterProvider` のような抽象は入れない**（既定を 1 つに決め切り、必要が出たら後から足す）。
+[ルーター所有権の ADR](/design/decisions/router-ownership.md) で確定。
+
+世界エフェクト（カメラ振動・ブラックアウト等）は静的 global ではなく、game が任意で供給する
+`IWorldEffectSink` への**明示ブリッジ**で脱出させる（既定はブリッジ無し）。詳細は下記「世界エフェクト」を参照。
 
 # 状態と永続化
 
 - フラグ / 変数 / 既読を単一の `IStateStore` に統一する。[状態モデルの ADR](/design/decisions/state-model.md)。
-- 永続化は game が実装する `ISaveStore` 経由（ライブラリはシリアライズ形式を持たない）。
+- 永続の対象は `IStateStore` のみ。永続化は game が実装する `ISaveStore` 経由（ライブラリはシリアライズ形式を持たない）。
+- **セーブ境界は `PlayAsync` の間**（シナリオ完了の狭間）。シナリオ途中での保存は v1 対象外。提示状態
+  （表示中の窓・進行中タイプライタ等）は非シリアライズ。[セーブのスナップショット粒度](/design/decisions/save-snapshot.md)。
 - リプレイのため、選択 index・フラグ操作などの入力履歴を day 1 から記録する。
 
 # シナリオソース
@@ -93,8 +126,8 @@ game は `NovelLifetimeScope` で以下を登録する。
 
 - `INovelView` 実装（`RegisterComponentInHierarchy` または `RegisterInstance`）
 - `IScenarioSource` / `ISaveStore` / `IStateStore` / `INovelPlaybackSettings`
-- 任意の `ICharacterCatalog` / `IAudioChannel`
-- novel 用 Router（`RegisterVitalRouter` または provider）
+- 任意の `ICharacterCatalog` / `IAudioChannel` / `IWorldEffectSink` / `INovelErrorHandler` / `ITextResolver`
+- novel 専用 Router（`RegisterVitalRouter`。`Router.Default` でも gameplay Router でもない）
 - `NovelScenarioRunner` をエントリポイントとして登録
 
 起動は `runner.PlayAsync(scenarioKey, ct)` を game の任意の箇所から呼ぶ。chapter/phase/

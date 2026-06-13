@@ -27,3 +27,8 @@
 * **Update**: [ルーター所有権](/design/decisions/router-ownership.md) の await 意味論を解決済みに相互参照。[残論点](/design/open-questions.md) のエフェクト await を解決済みに。
 * **Creation**: [セーブのスナップショット粒度](/design/decisions/save-snapshot.md) を確定（永続は IStateStore のみ・セーブ境界は PlayAsync の間・途中保存は v1 対象外）。
 * **Update**: [残論点](/design/open-questions.md) のセーブ粒度を解決済みに、途中再開（リプレイ式 save-anywhere）+ シナリオ内容 versioning をバックログへ。中優先が全て解決。
+* **Update**: CG 鑑賞（ギャラリー/コレクション）を明確にスコープ外と確定。[概要](/design/overview.md) の対象外に「ゲーム全体メタ機能」を追記、[残論点](/design/open-questions.md) のバックログで「メッセージ窓 hide（ノベルパート内アフォーダンス）」と分離。
+* **Update**: [アーキテクチャ](/design/architecture.md) を確定 15 ADR へ整合（API 凍結前の精査）。ルーター所有権の「未決・provider 案有力」記述を確定内容（ノベル専用 Router を container 登録・provider 抽象は入れない）へ修正。世界エフェクト（`IWorldEffectSink` async・明示ブリッジ）/ 実行結果（`NovelResult` completed/cancelled/faulted）/ エラー処理（`INovelErrorHandler`）の節を追加。セーブ境界・preamble の `bgm`・配線リストへ `IWorldEffectSink`/`INovelErrorHandler`/`ITextResolver` を反映。
+
+## 2026-06-14
+* **Creation**: [公開 API 表面（凍結）](/design/api-surface.md) - 確定 15 ADR を統合した公開シグネチャ（ランナー `PlayAsync`/`NovelResult`・`SayCommand`・`INovelView` + ファセット・game 供給サービス・ルーター所有権）を 1 箇所に集約。メンバ単位の細部（`se`/`bgm` 引数・v1 タグセット）は実装時確定と明記。[design/index](/design/index.md) に登録。

@@ -3,7 +3,7 @@ type: Design
 title: 残論点（未決の設計判断）
 description: ランナー API 凍結前に解消すべき未決事項と、後続で詰める設計トピック。
 tags: [open-questions, todo, design]
-timestamp: 2026-06-13T00:00:00Z
+timestamp: 2026-06-13T14:40:00Z
 status: 保留
 ---
 
@@ -56,7 +56,8 @@ lipsync は対象外）で確定。残るのは `se`/`bgm` コマンドの引数
 
 - ロールバック（Ren'Py 式巻き戻し）。[実行モデル](/design/decisions/execution-model.md) のリプレイ基盤の上で将来。
 - 長いノベルパートの途中再開（リプレイ式 save-anywhere）+ シナリオ内容 versioning。[セーブのスナップショット粒度](/design/decisions/save-snapshot.md) で v1 対象外。
-- メッセージ窓の hide（CG 鑑賞）トグル。
+- メッセージ窓の hide トグル（シーン中に窓を一時的に隠し背景/立ち絵を見る、ノベルパート内の提示アフォーダンス）。
+  - 注: CG 鑑賞ギャラリー（解放済み CG の一覧/コレクション）は**スコープ外**。ゲーム全体のメタ機能であり、本ライブラリはゲーム内ノベルパートのプリミティブに徹する（[フロー境界](/design/decisions/flow-boundary.md)）。
 - 選択肢のアフォーダンス: 無効/条件付き（grey out）・タイマー付き・一度のみ。
 - アクセシビリティ: 文字サイズ・可読フォント・reduce-motion・hold-to-skip。
 - 著者向けプレビュー/シーンジャンプ/分岐バリデータ（`Novel.Editor`）。
