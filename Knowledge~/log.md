@@ -33,3 +33,4 @@
 ## 2026-06-14
 * **Creation**: [公開 API 表面（凍結）](/design/api-surface.md) - 確定 15 ADR を統合した公開シグネチャ（ランナー `PlayAsync`/`NovelResult`・`SayCommand`・`INovelView` + ファセット・game 供給サービス・ルーター所有権）を 1 箇所に集約。メンバ単位の細部（`se`/`bgm` 引数・v1 タグセット）は実装時確定と明記。[design/index](/design/index.md) に登録。
 * **Update**: [アーキテクチャ](/design/architecture.md) の `Novel.Editor` 記述を実態へ修正。`.rb`→`.mrb` ScriptedImporter は mrubycs-compiler パッケージ提供のため再実装せず、Editor はカタログ/検証インスペクタに専念する（実装着手時に判明）。
+* **Update**: [公開 API 表面](/design/api-surface.md) の `IScenarioSource` を `Irep` 返しから `.mrb` バイトコード（`byte[]`）返しへ修正。`Irep` パースは MRubyState 依存で runner 側が行うため（実装時に判明）。
