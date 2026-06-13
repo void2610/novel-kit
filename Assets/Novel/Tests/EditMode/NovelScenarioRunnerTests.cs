@@ -52,6 +52,18 @@ namespace Novel.Tests
             public UniTask<NovelStateSnapshot> LoadAsync(CancellationToken ct) => UniTask.FromResult(_saved);
         }
 
+        private sealed class FakeErrorHandler : INovelErrorHandler
+        {
+            public bool Called;
+            public string? Key;
+
+            public void OnScenarioFaulted(string scenarioKey, Exception exception)
+            {
+                Called = true;
+                Key = scenarioKey;
+            }
+        }
+
         private static NovelScenarioRunner NewRunner(INovelView view, ISaveStore? saveStore = null)
             => new(new ResourcesScenarioSource(), new Router(), view,
                 new IdentityTextResolver(), new EmptyCatalog(),
@@ -112,6 +124,27 @@ namespace Novel.Tests
             var readResult = await NewRunner(view, save).PlayAsync("test_flag_read", CancellationToken.None);
             Assert.AreEqual(NovelResult.Completed, readResult);
             Assert.AreEqual("5", view.Lines[0].Text);          // 復元後に Ruby が読み戻せた
+        });
+
+        // MRuby 実行時例外で Faulted を返し INovelErrorHandler へ委譲することを検証
+        [UnityTest]
+        public IEnumerator MRuby例外で_Faulted_を返し_ErrorHandler_へ委譲する() => UniTask.ToCoroutine(async () =>
+        {
+            var handler = new FakeErrorHandler();
+            var runner = new NovelScenarioRunner(
+                new ResourcesScenarioSource(),
+                new Router(),
+                new FakeView(),
+                new IdentityTextResolver(),
+                new EmptyCatalog(),
+                errorHandler: handler,
+                preambleSource: new ResourcesPreambleSource());
+
+            var result = await runner.PlayAsync("test_error", CancellationToken.None);
+
+            Assert.AreEqual(NovelResult.Faulted, result);
+            Assert.IsTrue(handler.Called);
+            Assert.AreEqual("test_error", handler.Key);
         });
     }
 }
