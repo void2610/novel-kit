@@ -1,0 +1,19 @@
+{
+    "name": "Novel.VContainer",
+    "rootNamespace": "Novel.Integration",
+    "references": [
+        "Novel.Runtime",
+        "Novel.View",
+        "VContainer",
+        "UniTask"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
