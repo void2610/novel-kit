@@ -7,6 +7,8 @@
 [Ll]ogs/
 [Uu]ser[Ss]ettings/
 [Mm]emoryCaptures/
+[Ee]xported[Oo]bj/
+.[Cc]onsulo/
 *.csproj
 *.unityproj
 *.sln
@@ -16,7 +18,23 @@
 *.svd
 *.user
 *.tmp
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+sysinfo.txt
 crashlytics-build.properties
+
+# Unity ビルド成果物
+*.apk
+*.aab
+*.unitypackage
+*.app
+
+# Unity Addressables（自動生成キャッシュ）
+/[Aa]ssets/[Ss]treamingAssets/aa.meta
+/[Aa]ssets/[Ss]treamingAssets/aa/*
+/[Aa]ssets/[Aa]ssetStoreTools*
 
 # macOS
 .DS_Store
