@@ -11,3 +11,5 @@
 * **Creation**: [残論点](/design/open-questions.md) - 未決の設計判断（コマンドスキーマ versioning ほか）。
 * **Creation**: [コマンド名規約と say スキーマ](/design/decisions/command-schema.md) を確定（最小 C# 層 + 糖衣、話者は id 基本のハイブリッド）。
 * **Update**: [残論点](/design/open-questions.md) からコマンド名規約を解決済みとして除去。
+* **Creation**: [ルーター所有権](/design/decisions/router-ownership.md) を確定（ノベル専用 Router を container 登録・ハンドラ DI 市民・世界エフェクトは明示ブリッジ既定なし）。
+* **Update**: [残論点](/design/open-questions.md) のルーター所有権を解決済みに、世界エフェクト await 意味論を残論点として明確化。

@@ -21,17 +21,17 @@ record struct` が `.mrb` バイトコードに焼かれる互換境界が広い
 [行内インラインタグ](/design/decisions/inline-tags.md) のタグ記法（`{w=0.5}` 等）の正式仕様と、
 パースを `Novel.Runtime` で行うか Ruby 文字列補間で表すか。タイプライタエンジンの契約に直結。
 
-## ルーター所有権
-container 所有（`RegisterVitalRouter`）/ runner 私有 `new Router()` / 静的 `Router.Default` の 3 モデルが
-既存で混在。`INovelRouterProvider` で抽象化し container 所有を既定とする案が有力。世界エフェクトの
-ブリッジ・Fiber サスペンド・dispose 意味論が所有権で変わるため、抽象が漏れないか要検証。
+## ルーター所有権 ✅ 解決済み
+→ [ルーター所有権](/design/decisions/router-ownership.md)（ノベル専用 Router を container 登録・ハンドラ DI 市民・
+世界エフェクトは game 供給先への明示ブリッジ既定なし・provider 抽象は入れない）で確定。
 
 # 中優先（コア周辺）
 
 ## エフェクトブリッジの await 意味論
-非ブロッキング世界エフェクト（カメラ振動）を別 Router へ再発行する apocalyptic 方式は、ハンドラが
-同期的に返る前提（実装は shake 1 個のみ）。「次行前に終わる必要のある 2 秒ブラックアウト」のように
-完了待ちが要るエフェクトの ordering/await 契約（ブロッキング/非ブロッキングの明示分類）が未設計。
+脱出経路は [ルーター所有権](/design/decisions/router-ownership.md) で「game 供給先（`IWorldEffectSink` 等）への
+明示ブリッジ・既定なし」と決定済み。**残るのは await 意味論**: apocalyptic 方式はハンドラが同期的に返る前提
+（実装は shake 1 個のみ）。「次行前に終わる必要のある 2 秒ブラックアウト」のように完了待ちが要るエフェクトの
+ordering/await 契約（ブロッキング/非ブロッキングの明示分類）が未設計。
 
 ## フロー/シーケンサの境界
 ライブラリは `PlayAsync(key,ct)` + 完了結果のみ公開し、chapter/phase/auto-advance/retry は game 側、を
