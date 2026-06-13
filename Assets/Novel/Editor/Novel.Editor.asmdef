@@ -1,0 +1,20 @@
+{
+    "name": "Novel.Editor",
+    "rootNamespace": "Novel.Editor",
+    "references": [
+        "Novel.Runtime",
+        "Novel.Commands",
+        "MRubyCS.Compiler"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

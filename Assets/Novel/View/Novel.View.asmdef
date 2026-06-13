@@ -1,0 +1,17 @@
+{
+    "name": "Novel.View",
+    "rootNamespace": "Novel.View",
+    "references": [
+        "Novel.Runtime",
+        "UniTask"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
