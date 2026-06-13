@@ -3,7 +3,7 @@ type: Design
 title: novel-kit アーキテクチャ
 description: 4 アセンブリ構成・VitalRouter コマンドバス・INovelView 抽象・MRuby 進行モデル・game 配線。
 tags: [architecture, asmdef, vitalrouter, vcontainer, mruby]
-timestamp: 2026-06-13T14:57:00Z
+timestamp: 2026-06-14T02:45:00Z
 ---
 
 # アセンブリ分割
@@ -16,7 +16,7 @@ timestamp: 2026-06-13T14:57:00Z
 | `Novel.Commands` | VitalRouter, MRubyCS.Serializer のみ | 全 `[MRubyObject] readonly partial record struct : ICommand`。`IsExternalInit` ポリフィルを内包。publisher/receiver が型だけ共有し疎結合（apocalyptic-apartment-hunting の `Gameplay.Commands` 方式） |
 | `Novel.Runtime` | UniTask, VitalRouter, MRubyCS, Novel.Commands | 純 C# コア。シナリオランナー / `IScenarioSource` / `INovelView` / `[Routes] NovelCommandHandler` / プリアンブルローダ / `ParseSymbol<T>` / タイプライタエンジン / `IStateStore`（フラグ/変数/既読）/ バックログ / `INovelPlaybackSettings` + Default |
 | `Novel.View` | Novel.Runtime, (任意) LitMotion 等 | 任意の MonoBehaviour 参考 View（メッセージ窓・吹き出し・ナレ・立ち絵・背景・選択 UI）+ アニメツールキット。game は無視して自前 `INovelView` を供給可 |
-| `Novel.Editor` | Novel.Runtime, UnityEditor | `.rb` ScriptedImporter（`.mrb` sub-asset 生成）+ カタログ/検証インスペクタ |
+| `Novel.Editor` | Novel.Runtime, UnityEditor | カタログ/検証インスペクタ。`.rb`→`.mrb` の ScriptedImporter は **mrubycs-compiler パッケージが提供**するため再実装せず、それに乗る |
 
 > 範囲の根拠は [ライブラリ範囲の ADR](/design/decisions/library-scope.md) を参照。
 
