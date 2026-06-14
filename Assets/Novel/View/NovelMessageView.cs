@@ -10,14 +10,14 @@ using UnityEngine.UI;
 
 namespace Novel.View
 {
-    // INovelView の参考実装。TMP タイプライタ + 選択肢 UI + shake/wave 頂点アニメ。game は自前実装に差し替え可。
+    // INovelView の参考実装。TMP タイプライタ + 選択肢 UI + shake/wave 頂点アニメ + auto/skip。
+    // 速度/auto delay/skip 方針は INovelPlaybackSettings（game が Configure で供給、未供給なら Default）。
     // 送り入力は Advance() 経由（Input System / 旧 Input いずれにも結合しない）。
     public sealed class NovelMessageView : MonoBehaviour, INovelView
     {
         [SerializeField] private GameObject window = null!;
         [SerializeField] private TMP_Text nameLabel = null!;
         [SerializeField] private TMP_Text messageLabel = null!;
-        [SerializeField] private float charsPerSecond = 30f;
 
         [Header("Effects")]
         [SerializeField] private float shakeAmplitude = 3f;
@@ -28,12 +28,24 @@ namespace Novel.View
         [SerializeField] private RectTransform choiceContainer = null!;
         [SerializeField] private Button choiceButtonPrefab = null!;
 
+        private INovelPlaybackSettings _settings = new DefaultNovelPlaybackSettings();
         private bool _advanceRequested;
+        private bool _auto;
+        private bool _skip;
         private readonly List<(int start, int end)> _shake = new();
         private readonly List<(int start, int end)> _wave = new();
 
+        // game が再生設定（速度/auto delay/skip 方針）を供給する。未呼び出しなら Default
+        public void Configure(INovelPlaybackSettings settings) => _settings = settings;
+
+        public bool IsAuto => _auto;
+        public bool IsSkip => _skip;
+
         // game が送り入力（クリック/決定キー）を配線して呼ぶ
         public void Advance() => _advanceRequested = true;
+        public void ToggleAuto() { _auto = !_auto; if (_auto) _skip = false; }   // auto/skip は排他
+        public void SetSkip(bool on) { _skip = on; if (_skip) _auto = false; }
+        public void ToggleSkip() => SetSkip(!_skip);
 
         public async UniTask ShowMessageAsync(NovelLine line, CancellationToken ct)
         {
@@ -82,50 +94,56 @@ namespace Novel.View
             var anim = AnimateEffectsAsync(animCts.Token).SuppressCancellationThrow();
             try
             {
-                int shown = 0;
-                int ci = 0;
-                bool fast = false;
-                float speed = charsPerSecond;
-                float acc = 0f;
-
-                while (shown < total)
+                // skip 中はタイプライタを飛ばして即時全表示（SkipUnread=false なら既読行のみ対象）
+                bool skipThisLine = _skip && (_settings.SkipUnread || line.IsAlreadyRead);
+                if (!skipThisLine)
                 {
-                    while (ci < controls.Count && controls[ci].visible <= shown)
+                    int shown = 0;
+                    int ci = 0;
+                    bool fast = false;
+                    float speed = _settings.CharsPerSecond;
+                    float acc = 0f;
+
+                    while (shown < total)
                     {
-                        var tok = controls[ci].tok;
-                        ci++;
-                        switch (tok.Kind)
+                        while (ci < controls.Count && controls[ci].visible <= shown)
                         {
-                            case NovelTokenKind.Wait:
-                                if (!fast) await UniTask.Delay(TimeSpan.FromSeconds(tok.Value), cancellationToken: ct);
-                                break;
-                            case NovelTokenKind.ClickWait:
-                                await WaitAdvanceAsync(ct);
-                                break;
-                            case NovelTokenKind.Fast:
-                                fast = true;
-                                break;
-                            case NovelTokenKind.SpeedPush:
-                                speed = charsPerSecond * (tok.Value <= 0f ? 1f : tok.Value);
-                                break;
-                            case NovelTokenKind.SpeedPop:
-                                speed = charsPerSecond;
-                                break;
+                            var tok = controls[ci].tok;
+                            ci++;
+                            switch (tok.Kind)
+                            {
+                                case NovelTokenKind.Wait:
+                                    // skip/auto 中は明示待機も飛ばす
+                                    if (!fast && !_skip) await UniTask.Delay(TimeSpan.FromSeconds(tok.Value), cancellationToken: ct);
+                                    break;
+                                case NovelTokenKind.ClickWait:
+                                    if (!_skip && !_auto) await WaitAdvanceAsync(ct);
+                                    break;
+                                case NovelTokenKind.Fast:
+                                    fast = true;
+                                    break;
+                                case NovelTokenKind.SpeedPush:
+                                    speed = _settings.CharsPerSecond * (tok.Value <= 0f ? 1f : tok.Value);
+                                    break;
+                                case NovelTokenKind.SpeedPop:
+                                    speed = _settings.CharsPerSecond;
+                                    break;
+                            }
                         }
+
+                        if (fast || _skip) break;
+
+                        acc += speed * Time.deltaTime;
+                        while (acc >= 1f && shown < total) { shown++; acc -= 1f; }
+                        messageLabel.maxVisibleCharacters = shown;
+
+                        if (_advanceRequested) { _advanceRequested = false; break; }
+                        await UniTask.Yield(PlayerLoopTiming.Update, ct);
                     }
-
-                    if (fast) break;
-
-                    acc += speed * Time.deltaTime;
-                    while (acc >= 1f && shown < total) { shown++; acc -= 1f; }
-                    messageLabel.maxVisibleCharacters = shown;
-
-                    if (_advanceRequested) { _advanceRequested = false; break; }
-                    await UniTask.Yield(PlayerLoopTiming.Update, ct);
                 }
 
                 messageLabel.maxVisibleCharacters = total;
-                await WaitAdvanceAsync(ct);
+                await WaitNextLineAsync(line.IsAlreadyRead, ct);
             }
             finally
             {
@@ -157,6 +175,26 @@ namespace Novel.View
             {
                 foreach (var go in spawned) Destroy(go);
             }
+        }
+
+        // 行末の進行待ち。skip は既読/SkipUnread で即進行、auto は AutoAdvanceDelay 待ち（送り入力で短絡）
+        private async UniTask WaitNextLineAsync(bool alreadyRead, CancellationToken ct)
+        {
+            _advanceRequested = false;
+            if (_skip && (_settings.SkipUnread || alreadyRead)) return;
+            if (_auto)
+            {
+                float t = 0f;
+                while (t < _settings.AutoAdvanceDelay && !_advanceRequested)
+                {
+                    t += Time.deltaTime;
+                    await UniTask.Yield(PlayerLoopTiming.Update, ct);
+                }
+                _advanceRequested = false;
+                return;
+            }
+            await UniTask.WaitUntil(() => _advanceRequested, cancellationToken: ct);
+            _advanceRequested = false;
         }
 
         // shake/wave の頂点アニメ。表示中の毎フレーム、対象文字範囲のメッシュ頂点をずらす
@@ -201,6 +239,7 @@ namespace Novel.View
             }
         }
 
+        // <p>（クリック待ち）専用。auto/skip は呼び出し側で短絡済み
         private async UniTask WaitAdvanceAsync(CancellationToken ct)
         {
             _advanceRequested = false;
