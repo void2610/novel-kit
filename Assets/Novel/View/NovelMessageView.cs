@@ -10,8 +10,9 @@ using UnityEngine.UI;
 
 namespace Novel.View
 {
-    // INovelView の参考実装。TMP タイプライタ + 選択肢 UI + shake/wave 頂点アニメ + auto/skip。
-    // 速度/auto delay/skip 方針は INovelPlaybackSettings（game が Configure で供給、未供給なら Default）。
+    // INovelView の参考実装。進行ロジック（タイプライタ/速度/区間/待機/auto/skip）は Runtime の TextRevealEngine に委譲し、
+    // 本クラスは TMP への文字列構築・可視文字数の反映・shake/wave 頂点演出という TMP 固有の描画 I/O だけを担う。
+    // → 自前 View はこの薄いアダプタ部分だけ書けばよい（進行ロジックの再実装が不要）。
     // 送り入力は Advance() 経由（Input System / 旧 Input いずれにも結合しない）。
     public sealed class NovelMessageView : MonoBehaviour, INovelView
     {
@@ -28,122 +29,62 @@ namespace Novel.View
         [SerializeField] private RectTransform choiceContainer = null!;
         [SerializeField] private Button choiceButtonPrefab = null!;
 
+        private readonly IFrameClock _clock = new UnityFrameClock();
         private INovelPlaybackSettings _settings = new DefaultNovelPlaybackSettings();
-        private bool _advanceRequested;
-        private bool _auto;
-        private bool _skip;
-        private readonly List<(int start, int end)> _shake = new();
-        private readonly List<(int start, int end)> _wave = new();
+        private TextRevealEngine? _engine;
 
         // game が再生設定（速度/auto delay/skip 方針）を供給する。未呼び出しなら Default
-        public void Configure(INovelPlaybackSettings settings) => _settings = settings;
+        public void Configure(INovelPlaybackSettings settings)
+        {
+            _settings = settings;
+            // 設定差し替え時はエンジンを作り直す。auto/skip セッション状態は引き継ぐ
+            if (_engine != null)
+            {
+                var (auto, skip) = (_engine.Auto, _engine.Skip);
+                _engine = new TextRevealEngine(_settings, _clock) { Auto = auto, Skip = skip };
+            }
+        }
 
-        public bool IsAuto => _auto;
-        public bool IsSkip => _skip;
+        private TextRevealEngine Engine => _engine ??= new TextRevealEngine(_settings, _clock);
+
+        public bool IsAuto => Engine.Auto;
+        public bool IsSkip => Engine.Skip;
 
         // game が送り入力（クリック/決定キー）を配線して呼ぶ
-        public void Advance() => _advanceRequested = true;
-        public void ToggleAuto() { _auto = !_auto; if (_auto) _skip = false; }   // auto/skip は排他
-        public void SetSkip(bool on) { _skip = on; if (_skip) _auto = false; }
-        public void ToggleSkip() => SetSkip(!_skip);
+        public void Advance() => Engine.RequestAdvance();
+        public void ToggleAuto() => Engine.Auto = !Engine.Auto;     // auto/skip は排他（エンジン側で保証）
+        public void SetSkip(bool on) => Engine.Skip = on;
+        public void ToggleSkip() => Engine.Skip = !Engine.Skip;
 
         public async UniTask ShowMessageAsync(NovelLine line, CancellationToken ct)
         {
             if (window != null) window.SetActive(true);
             nameLabel.text = line.DisplayName ?? "";
 
-            var controls = new List<(int visible, NovelToken tok)>();
-            var sb = new System.Text.StringBuilder();
-            int visibleTotal = 0;
-            int shakeStart = -1, waveStart = -1;
-            _shake.Clear();
-            _wave.Clear();
+            var tokens = NovelTagLexer.Parse(line.Text);
+            Engine.Build(tokens);   // 制御列・shake/wave 区間・総可視文字数を構築
 
-            foreach (var t in NovelTagLexer.Parse(line.Text))
+            // TMP 表示文字列を構築（素テキストは noparse で包み、リテラル '<' 等が TMP タグと誤認されないようにする）
+            var sb = new System.Text.StringBuilder();
+            foreach (var t in tokens)
             {
-                switch (t.Kind)
-                {
-                    case NovelTokenKind.Text:
-                        // 素テキストは noparse で包み、リテラル '<' 等が TMP タグと誤認されないようにする
-                        sb.Append("<noparse>").Append(t.Payload).Append("</noparse>");
-                        visibleTotal += t.Payload.Length;
-                        break;
-                    case NovelTokenKind.TmpTag:
-                        sb.Append(t.Payload);
-                        break;
-                    case NovelTokenKind.ShakePush: shakeStart = visibleTotal; break;
-                    case NovelTokenKind.ShakePop:
-                        if (shakeStart >= 0) { _shake.Add((shakeStart, visibleTotal)); shakeStart = -1; }
-                        break;
-                    case NovelTokenKind.WavePush: waveStart = visibleTotal; break;
-                    case NovelTokenKind.WavePop:
-                        if (waveStart >= 0) { _wave.Add((waveStart, visibleTotal)); waveStart = -1; }
-                        break;
-                    default:
-                        controls.Add((visibleTotal, t));
-                        break;
-                }
+                if (t.Kind == NovelTokenKind.Text)
+                    sb.Append("<noparse>").Append(t.Payload).Append("</noparse>");
+                else if (t.Kind == NovelTokenKind.TmpTag)
+                    sb.Append(t.Payload);
             }
 
             messageLabel.text = sb.ToString();
             messageLabel.ForceMeshUpdate();
-            int total = messageLabel.textInfo.characterCount;
+            int tmpTotal = messageLabel.textInfo.characterCount;
             messageLabel.maxVisibleCharacters = 0;
 
             using var animCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             var anim = AnimateEffectsAsync(animCts.Token).SuppressCancellationThrow();
             try
             {
-                // skip 中はタイプライタを飛ばして即時全表示（SkipUnread=false なら既読行のみ対象）
-                bool skipThisLine = _skip && (_settings.SkipUnread || line.IsAlreadyRead);
-                if (!skipThisLine)
-                {
-                    int shown = 0;
-                    int ci = 0;
-                    bool fast = false;
-                    float speed = _settings.CharsPerSecond;
-                    float acc = 0f;
-
-                    while (shown < total)
-                    {
-                        while (ci < controls.Count && controls[ci].visible <= shown)
-                        {
-                            var tok = controls[ci].tok;
-                            ci++;
-                            switch (tok.Kind)
-                            {
-                                case NovelTokenKind.Wait:
-                                    // skip/auto 中は明示待機も飛ばす
-                                    if (!fast && !_skip) await UniTask.Delay(TimeSpan.FromSeconds(tok.Value), cancellationToken: ct);
-                                    break;
-                                case NovelTokenKind.ClickWait:
-                                    if (!_skip && !_auto) await WaitAdvanceAsync(ct);
-                                    break;
-                                case NovelTokenKind.Fast:
-                                    fast = true;
-                                    break;
-                                case NovelTokenKind.SpeedPush:
-                                    speed = _settings.CharsPerSecond * (tok.Value <= 0f ? 1f : tok.Value);
-                                    break;
-                                case NovelTokenKind.SpeedPop:
-                                    speed = _settings.CharsPerSecond;
-                                    break;
-                            }
-                        }
-
-                        if (fast || _skip) break;
-
-                        acc += speed * Time.deltaTime;
-                        while (acc >= 1f && shown < total) { shown++; acc -= 1f; }
-                        messageLabel.maxVisibleCharacters = shown;
-
-                        if (_advanceRequested) { _advanceRequested = false; break; }
-                        await UniTask.Yield(PlayerLoopTiming.Update, ct);
-                    }
-                }
-
-                messageLabel.maxVisibleCharacters = total;
-                await WaitNextLineAsync(line.IsAlreadyRead, ct);
+                await Engine.RevealAsync(line.IsAlreadyRead,
+                    v => messageLabel.maxVisibleCharacters = Mathf.Min(v, tmpTotal), ct);
             }
             finally
             {
@@ -177,26 +118,12 @@ namespace Novel.View
             }
         }
 
-        // 行末の進行待ち。待機中の auto/skip 切り替えにも毎フレーム反応する
-        private async UniTask WaitNextLineAsync(bool alreadyRead, CancellationToken ct)
-        {
-            _advanceRequested = false;
-            float elapsed = 0f;
-            while (true)
-            {
-                if (_advanceRequested) break;                                  // 送り入力
-                if (_skip && (_settings.SkipUnread || alreadyRead)) break;     // skip: 即進行
-                if (_auto && elapsed >= _settings.AutoAdvanceDelay) break;     // auto: 行末待ち経過
-                elapsed += Time.deltaTime;
-                await UniTask.Yield(PlayerLoopTiming.Update, ct);
-            }
-            _advanceRequested = false;
-        }
-
-        // shake/wave の頂点アニメ。表示中の毎フレーム、対象文字範囲のメッシュ頂点をずらす
+        // shake/wave の頂点アニメ。区間（可視文字 index）は Runtime のエンジンが算出済み。表示中の毎フレーム頂点をずらす
         private async UniTask AnimateEffectsAsync(CancellationToken ct)
         {
-            if (_shake.Count == 0 && _wave.Count == 0) return;
+            var shake = Engine.ShakeSpans;
+            var wave = Engine.WaveSpans;
+            if (shake.Count == 0 && wave.Count == 0) return;
 
             while (!ct.IsCancellationRequested)
             {
@@ -204,8 +131,8 @@ namespace Novel.View
                 var info = messageLabel.textInfo;
                 int visible = messageLabel.maxVisibleCharacters;
 
-                ApplyOffset(info, _shake, visible, isWave: false);
-                ApplyOffset(info, _wave, visible, isWave: true);
+                ApplyOffset(info, shake, visible, isWave: false);
+                ApplyOffset(info, wave, visible, isWave: true);
 
                 for (int m = 0; m < info.meshInfo.Length; m++)
                     messageLabel.UpdateGeometry(info.meshInfo[m].mesh, m);
@@ -214,7 +141,7 @@ namespace Novel.View
             }
         }
 
-        private void ApplyOffset(TMP_TextInfo info, List<(int start, int end)> ranges, int visible, bool isWave)
+        private void ApplyOffset(TMP_TextInfo info, IReadOnlyList<(int start, int end)> ranges, int visible, bool isWave)
         {
             foreach (var (start, end) in ranges)
             {
@@ -233,15 +160,6 @@ namespace Novel.View
                     for (int k = 0; k < 4; k++) verts[vi + k] += offset;
                 }
             }
-        }
-
-        // <p>（クリック待ち）専用。待機中に auto/skip へ切り替えたら抜ける
-        private async UniTask WaitAdvanceAsync(CancellationToken ct)
-        {
-            _advanceRequested = false;
-            while (!_advanceRequested && !_skip && !_auto)
-                await UniTask.Yield(PlayerLoopTiming.Update, ct);
-            _advanceRequested = false;
         }
     }
 }
