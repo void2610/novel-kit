@@ -15,8 +15,10 @@ namespace Novel.View
 
         public UniTask<byte[]?> LoadBytecodeAsync(string scenarioKey, CancellationToken ct)
         {
+            // 空キーで Resources.LoadAll("Scenarios/") が root 配下を総なめし、意図しない .mrb を返す事故を防ぐ
+            if (string.IsNullOrEmpty(scenarioKey)) return UniTask.FromResult<byte[]?>(null);
             foreach (var a in Resources.LoadAll<TextAsset>(_root + scenarioKey))
-                if (a.name.EndsWith(".mrb"))
+                if (a.name.EndsWith(".mrb", System.StringComparison.Ordinal))
                     return UniTask.FromResult<byte[]?>(a.bytes);
             return UniTask.FromResult<byte[]?>(null);
         }
