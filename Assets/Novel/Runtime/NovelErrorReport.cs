@@ -1,6 +1,5 @@
 #nullable enable
 using System;
-using System.Reflection;
 
 namespace Novel.Runtime
 {

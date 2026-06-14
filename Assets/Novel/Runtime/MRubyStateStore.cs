@@ -42,7 +42,7 @@ namespace Novel.Runtime
             var values = new Dictionary<string, int>(_keys.Count);
             foreach (var k in _keys)
             {
-                if (k.StartsWith("__")) continue;
+                if (k.StartsWith("__", System.StringComparison.Ordinal)) continue;
                 values[k] = _shared.GetOrDefault<int>(k);
             }
             return new NovelStateSnapshot(values, new List<string>(_read));
