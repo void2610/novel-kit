@@ -6,10 +6,15 @@ void2610 の複数 Unity プロジェクト（color-recollection / unity1week-20
 apocalyptic-apartment-hunting ほか）で個別実装されていたノベルゲーム機能を、
 1 つの再利用可能なライブラリへ統合することを目的とする。
 
-> **ステータス: 設計フェーズ**
-> 既存実装の調査と設計判断の合意を進めている段階。実装コードはまだ無い。
-> 設計判断・機能棚卸し・残論点は [`Knowledge~/design/`](./Knowledge~/design/index.md) に
-> OKF (Open Knowledge Format) 形式で記録している。
+> **ステータス: 実装初期（API は流動的）**
+> コア（ランナー / DSL 語彙 / 状態ブリッジ / インラインタグ / 参考 View）は実装済みで、
+> サンプルシーンで全パイプラインの動作を確認済み。ただし型名・API・DSL は変わる可能性がある。
+> 設計判断・残論点は [`Knowledge~/design/`](./Knowledge~/design/index.md) に OKF 形式で記録している。
+
+## 使い方
+
+最小チュートリアル → [`Docs/getting-started.md`](./Docs/getting-started.md)
+（セットアップ・シナリオの書き方・シーン配線・再生・自前 View 差し替え）。
 
 ## 前提スタック
 
