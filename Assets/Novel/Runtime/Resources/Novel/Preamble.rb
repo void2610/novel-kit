@@ -17,8 +17,31 @@ def narration(text)
   cmd :say, speaker_id: '', text: text
 end
 
+# キャラ名コマンド糖衣（command-schema ADR）を生やす。登場キャラの分だけ chara :alice と書けば、
+# 以降 alice "セリフ" が say "alice", "セリフ" の糖衣になり、alice "…", as: "？？？" で表示名も上書きできる。
+# プロジェクトごとのキャラ差はこの糖衣層で吸収する。MRubyCS は method_missing 未対応のため、
+# define_method で実メソッドを定義する（インタプリタ機能でネイティブコンパイラ不要・移植性を保てる）。
+def chara(id)
+  id = id.to_s
+  Object.class_eval do
+    define_method(id) do |text, as: nil|
+      say id, text, display_as: as
+    end
+  end
+end
+
 def flag(key, value = 1)
   cmd :flag, key: key.to_s, value: value
+end
+
+# 変数 read 糖衣（flag の読み出し側）。state[:key] のショートカット。未設定は 0 扱い。
+def val(key)
+  state[key.to_sym] || 0
+end
+
+# 真偽判定（0 以外を真とみなす）。例: `if flag?(:answered)`
+def flag?(key)
+  val(key) != 0
 end
 
 def portrait(character, portrait_key)
@@ -45,10 +68,47 @@ def wait(seconds)
   cmd :wait, seconds: seconds
 end
 
-# 選択肢提示 → 選んだ index を返す。キーはユニーク採番（state-model: 衝突回避）。
+# 世界エフェクト（カメラ/画面/gameplay への脱出）。blocking 性は game の sink が決める
+# （即完了タスク=非ブロッキング / 完了時解決タスク=ブロッキングで次行が待つ。effect-await）。
+# 注: テキスト内の <shake> は文字演出で別物。こちらはカメラ等ゲーム本体への作用。
+def world_effect(key, *args)
+  cmd :world_effect, effect_key: key.to_s, args: args.map(&:to_f)
+end
+
+def shake(intensity = 1.0)
+  world_effect :shake, intensity
+end
+
+def flash(duration = 0.2)
+  world_effect :flash, duration
+end
+
+def fade_out(duration = 1.0)
+  world_effect :fade_out, duration
+end
+
+def fade_in(duration = 1.0)
+  world_effect :fade_in, duration
+end
+
+def blackout(duration = 0.0)
+  world_effect :blackout, duration
+end
+
+# 選択肢提示 → 選んだ index を返す。
+# 既定キーは `__` 始まりのユニーク採番で、一時スクラッチ（セーブに残さない）。
+# 跨シナリオで選択結果を残したいときは key: を渡して `__` 以外の安定キーに書く（改稿耐性・セーブ対象）。
+# 例: n = choose(["はい","いいえ"], key: :ask_truth)
 # グローバルはローカルと違い Fiber resume を跨いで残るため、cmd 後に同じキーで読み戻せる。
-def choose(options)
-  $__novel_choice_seq = ($__novel_choice_seq || 0) + 1
-  cmd :choose, options: options, state_key: "__choice_#{$__novel_choice_seq}"
-  state["__choice_#{$__novel_choice_seq}".to_sym]
+def choose(options, key: nil)
+  # キーはグローバルに保持する。ローカル変数は cmd（choose の入力待ち）の resume を跨ぐと失われるため、
+  # cmd 後に読み戻すキーをローカルに置いてはいけない（グローバルは resume を跨いで残る）。
+  if key.nil?
+    $__novel_choice_seq = ($__novel_choice_seq || 0) + 1
+    $__novel_choice_key = "__choice_#{$__novel_choice_seq}"
+  else
+    $__novel_choice_key = key.to_s
+  end
+  cmd :choose, options: options, state_key: $__novel_choice_key
+  state[$__novel_choice_key.to_sym]
 end

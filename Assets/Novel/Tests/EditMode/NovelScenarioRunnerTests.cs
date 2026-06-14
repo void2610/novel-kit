@@ -57,10 +57,10 @@ namespace Novel.Tests
             public bool Called;
             public string? Key;
 
-            public void OnScenarioFaulted(string scenarioKey, Exception exception)
+            public void OnScenarioFaulted(NovelErrorInfo error)
             {
                 Called = true;
-                Key = scenarioKey;
+                Key = error.ScenarioKey;
             }
         }
 
