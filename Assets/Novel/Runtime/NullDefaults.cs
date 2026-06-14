@@ -40,8 +40,9 @@ namespace Novel.Runtime
             => UniTask.FromResult(new NovelStateSnapshot(new Dictionary<string, int>(), Array.Empty<string>()));
     }
 
+    // 明示的に無音化したい game 向け（既定は View 層の Debug ログ実装。dsl-vocabulary の no-op とは別物）
     public sealed class NullErrorHandler : INovelErrorHandler
     {
-        public void OnScenarioFaulted(string scenarioKey, Exception exception) { }
+        public void OnScenarioFaulted(NovelErrorInfo error) { }
     }
 }
