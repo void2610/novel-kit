@@ -177,23 +177,19 @@ namespace Novel.View
             }
         }
 
-        // 行末の進行待ち。skip は既読/SkipUnread で即進行、auto は AutoAdvanceDelay 待ち（送り入力で短絡）
+        // 行末の進行待ち。待機中の auto/skip 切り替えにも毎フレーム反応する
         private async UniTask WaitNextLineAsync(bool alreadyRead, CancellationToken ct)
         {
             _advanceRequested = false;
-            if (_skip && (_settings.SkipUnread || alreadyRead)) return;
-            if (_auto)
+            float elapsed = 0f;
+            while (true)
             {
-                float t = 0f;
-                while (t < _settings.AutoAdvanceDelay && !_advanceRequested)
-                {
-                    t += Time.deltaTime;
-                    await UniTask.Yield(PlayerLoopTiming.Update, ct);
-                }
-                _advanceRequested = false;
-                return;
+                if (_advanceRequested) break;                                  // 送り入力
+                if (_skip && (_settings.SkipUnread || alreadyRead)) break;     // skip: 即進行
+                if (_auto && elapsed >= _settings.AutoAdvanceDelay) break;     // auto: 行末待ち経過
+                elapsed += Time.deltaTime;
+                await UniTask.Yield(PlayerLoopTiming.Update, ct);
             }
-            await UniTask.WaitUntil(() => _advanceRequested, cancellationToken: ct);
             _advanceRequested = false;
         }
 
@@ -239,11 +235,12 @@ namespace Novel.View
             }
         }
 
-        // <p>（クリック待ち）専用。auto/skip は呼び出し側で短絡済み
+        // <p>（クリック待ち）専用。待機中に auto/skip へ切り替えたら抜ける
         private async UniTask WaitAdvanceAsync(CancellationToken ct)
         {
             _advanceRequested = false;
-            await UniTask.WaitUntil(() => _advanceRequested, cancellationToken: ct);
+            while (!_advanceRequested && !_skip && !_auto)
+                await UniTask.Yield(PlayerLoopTiming.Update, ct);
             _advanceRequested = false;
         }
     }
