@@ -10,7 +10,7 @@ namespace Novel.Runtime
 
     public sealed class NullPortraitView : IPortraitView
     {
-        public UniTask ShowAsync(string portraitKey, CancellationToken ct) => UniTask.CompletedTask;
+        public UniTask ShowAsync(string character, string portraitKey, CancellationToken ct) => UniTask.CompletedTask;
         public UniTask HideAsync(CancellationToken ct) => UniTask.CompletedTask;
     }
 

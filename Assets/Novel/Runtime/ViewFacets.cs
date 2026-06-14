@@ -7,7 +7,7 @@ namespace Novel.Runtime
     // 立ち絵: 単一スロットに 1 枚スプライトを差し替える（多層合成/複数配置は v1 無し）
     public interface IPortraitView
     {
-        UniTask ShowAsync(string portraitKey, CancellationToken ct);
+        UniTask ShowAsync(string character, string portraitKey, CancellationToken ct);
         UniTask HideAsync(CancellationToken ct);
     }
 

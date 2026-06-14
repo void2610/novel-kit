@@ -60,7 +60,7 @@ namespace Novel.Runtime
 
         public async UniTask On(PortraitCommand cmd, CancellationToken ct)
         {
-            if (_portrait != null) await _portrait.ShowAsync(cmd.PortraitKey, ct);
+            if (_portrait != null) await _portrait.ShowAsync(cmd.Character, cmd.PortraitKey, ct);
         }
 
         public async UniTask On(BackgroundCommand cmd, CancellationToken ct)
