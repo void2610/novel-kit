@@ -26,7 +26,9 @@ namespace Novel.Integration
             builder.Register<IWorldEffectSink, NullWorldEffectSink>(Lifetime.Singleton);
             builder.Register<ISaveStore, NullSaveStore>(Lifetime.Singleton);
             builder.Register<INovelErrorHandler, NullErrorHandler>(Lifetime.Singleton);
-            builder.Register<IBacklog, RingBufferBacklog>(Lifetime.Singleton);
+            // RingBufferBacklog(int maxLines=200) の既定引数を VContainer は解決できない (int 未登録で Build が落ちる)。
+            // インスタンス登録で既定容量を使う (容量を変えたい game は後勝ちで RegisterInstance<IBacklog> すればよい)。
+            builder.RegisterInstance<IBacklog>(new RingBufferBacklog());
 
             builder.Register<INovelScenarioRunner, NovelScenarioRunner>(Lifetime.Singleton);
         }
