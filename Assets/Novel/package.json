@@ -4,8 +4,10 @@
   "displayName": "novel-kit",
   "description": "ゲーム内ノベルパートを組み込むための Unity 向けノベルエンジン（VContainer + VitalRouter.MRuby 前提）。スタンドアロン VN ではなく、より大きなゲームの一要素としてのノベルパートに徹する。MRuby (.rb→.mrb) でシナリオを記述し、INovelView でビューを差し替え可能。",
   "unity": "6000.3",
+  "license": "MIT",
   "documentationUrl": "https://github.com/void2610/novel-kit",
   "changelogUrl": "https://github.com/void2610/novel-kit/blob/main/Assets/Novel/CHANGELOG.md",
+  "licensesUrl": "https://github.com/void2610/novel-kit/blob/main/Assets/Novel/LICENSE.md",
   "keywords": [
     "novel",
     "visual-novel",
@@ -21,5 +23,12 @@
   },
   "dependencies": {
     "com.unity.ugui": "2.0.0"
-  }
+  },
+  "samples": [
+    {
+      "displayName": "Basic",
+      "description": "最小構成の配線（LifetimeScope）・サンプルシナリオ・Auto/Skip 制御パネル。Input System が必要。",
+      "path": "Samples~/Basic"
+    }
+  ]
 }
