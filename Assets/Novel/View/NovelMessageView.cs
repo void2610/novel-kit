@@ -66,12 +66,28 @@ namespace Novel.View
 
             // TMP 表示文字列を構築（素テキストは noparse で包み、リテラル '<' 等が TMP タグと誤認されないようにする）
             var sb = new System.Text.StringBuilder();
+            string? pendingRuby = null;   // <ruby=よみ> 受領後、直後の Text（親文字）に重ねるためのよみ
             foreach (var t in tokens)
             {
-                if (t.Kind == NovelTokenKind.Text)
-                    sb.Append("<noparse>").Append(t.Payload).Append("</noparse>");
-                else if (t.Kind == NovelTokenKind.TmpTag)
-                    sb.Append(t.Payload);
+                switch (t.Kind)
+                {
+                    case NovelTokenKind.RubyPush:
+                        pendingRuby = t.Payload;
+                        break;
+                    case NovelTokenKind.RubyPop:
+                        pendingRuby = null;
+                        break;
+                    case NovelTokenKind.Text when pendingRuby != null:
+                        sb.Append(RubyMarkup.BuildOverlay(t.Payload, pendingRuby));   // よみを親文字の上に重ねる
+                        pendingRuby = null;
+                        break;
+                    case NovelTokenKind.Text:
+                        sb.Append("<noparse>").Append(t.Payload).Append("</noparse>");
+                        break;
+                    case NovelTokenKind.TmpTag:
+                        sb.Append(t.Payload);
+                        break;
+                }
             }
 
             messageLabel.text = sb.ToString();

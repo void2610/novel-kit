@@ -69,5 +69,41 @@ namespace Novel.Tests
             var plain = NovelTagLexer.ToPlainText("a<noparse>b<color=#fff>c");
             Assert.AreEqual("ab<color=#fff>c", plain);
         }
+
+        [Test]
+        public void Parse_rubyはよみ付きのRubyPush_親Text_RubyPopへ分解する()
+        {
+            var tokens = new List<NovelToken>(NovelTagLexer.Parse("彼は<ruby=かんじ>漢字</ruby>を書く"));
+            Assert.AreEqual(NovelTokenKind.Text, tokens[0].Kind);
+            Assert.AreEqual("彼は", tokens[0].Payload);
+            Assert.AreEqual(NovelTokenKind.RubyPush, tokens[1].Kind);
+            Assert.AreEqual("かんじ", tokens[1].Payload);   // よみが Payload に載る
+            Assert.AreEqual(NovelTokenKind.Text, tokens[2].Kind);
+            Assert.AreEqual("漢字", tokens[2].Payload);      // 親文字は素通しの Text
+            Assert.AreEqual(NovelTokenKind.RubyPop, tokens[3].Kind);
+        }
+
+        [Test]
+        public void ToPlainText_rubyのよみは平文に含めず親文字だけ残す()
+        {
+            var plain = NovelTagLexer.ToPlainText("<ruby=かんじ>漢字</ruby>");
+            Assert.AreEqual("漢字", plain);   // 既読ハッシュ/バックログ平文はふりがなで割れない
+        }
+
+        [Test]
+        public void Build_rubyのよみと親文字を可視数に算入する()
+        {
+            var engine = new TextRevealEngine(new DefaultNovelPlaybackSettings(), new ImmediateClock());
+            var total = engine.Build(NovelTagLexer.Parse("<ruby=かんじ>漢字</ruby>"));
+            Assert.AreEqual(5, total);   // よみ3 + 親2 = TMP の characterCount と一致
+        }
+
+        // Build はクロックを使わないため最小スタブで足りる
+        private sealed class ImmediateClock : IFrameClock
+        {
+            public float DeltaTime => 1f;
+            public Cysharp.Threading.Tasks.UniTask NextFrameAsync(System.Threading.CancellationToken ct)
+                => Cysharp.Threading.Tasks.UniTask.CompletedTask;
+        }
     }
 }

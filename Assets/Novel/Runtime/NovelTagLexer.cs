@@ -131,8 +131,10 @@ namespace Novel.Runtime
                     token = new NovelToken(isClose ? NovelTokenKind.WavePop : NovelTokenKind.WavePush);
                     return true;
                 case "ruby":
-                    // ruby は任意モジュール（inline-tags ADR）。コアは認識のみで読みは展開せず、漢字本体は素通し
-                    token = new NovelToken(NovelTokenKind.Ignored);
+                    // <ruby=よみ>親</ruby>。開きは Payload によみ（ふりがな）を載せ、直後の Text を親文字として View が重ねる。
+                    token = isClose
+                        ? new NovelToken(NovelTokenKind.RubyPop)
+                        : new NovelToken(NovelTokenKind.RubyPush, payload: nameEnd >= 0 ? body.Substring(nameEnd + 1).Trim() : "");
                     return true;
             }
 

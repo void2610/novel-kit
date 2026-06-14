@@ -35,7 +35,8 @@ namespace Novel.Runtime
             IWorldEffectSink? worldEffectSink = null,
             ISaveStore? saveStore = null, INovelErrorHandler? errorHandler = null,
             IEnumerable<IPreambleSource>? preambleSources = null,
-            IEnumerable<INovelCommandModule>? commandModules = null)
+            IEnumerable<INovelCommandModule>? commandModules = null,
+            IBacklog? backlog = null)
         {
             _source = source;
             _router = router;
@@ -62,7 +63,7 @@ namespace Novel.Runtime
                 foreach (var module in modules) module.RegisterVocabulary(config);
             });
 
-            var handler = new NovelCommandHandler(view, _store, text, catalog, portrait, background, audio, worldEffectSink);
+            var handler = new NovelCommandHandler(view, _store, text, catalog, portrait, background, audio, worldEffectSink, backlog);
             _subscriptions = new List<IDisposable> { handler.MapTo(_router) };
             // 独自コマンドハンドラを同じノベル専用 Router へ写像（購読は Dispose でまとめて解除）
             foreach (var module in modules) _subscriptions.Add(module.MapHandlers(_router));

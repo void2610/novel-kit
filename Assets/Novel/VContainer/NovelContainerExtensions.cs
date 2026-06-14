@@ -26,6 +26,7 @@ namespace Novel.Integration
             builder.Register<IWorldEffectSink, NullWorldEffectSink>(Lifetime.Singleton);
             builder.Register<ISaveStore, NullSaveStore>(Lifetime.Singleton);
             builder.Register<INovelErrorHandler, NullErrorHandler>(Lifetime.Singleton);
+            builder.Register<IBacklog, RingBufferBacklog>(Lifetime.Singleton);
 
             builder.Register<INovelScenarioRunner, NovelScenarioRunner>(Lifetime.Singleton);
         }

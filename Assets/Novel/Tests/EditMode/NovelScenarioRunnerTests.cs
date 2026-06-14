@@ -229,6 +229,29 @@ namespace Novel.Tests
             Assert.AreEqual(NovelResult.Completed, result);
             CollectionAssert.AreEqual(new[] { "echoed" }, module.Received);   // 独自 cmd がハンドラへ届いた
         });
+
+        // say の表示ごとに IBacklog へ話者・本文（rich）が記録されることを検証
+        [UnityTest]
+        public IEnumerator say表示ごとにバックログへ話者と本文が積まれる() => UniTask.ToCoroutine(async () =>
+        {
+            var backlog = new RingBufferBacklog();
+            var runner = new NovelScenarioRunner(
+                new ResourcesScenarioSource(),
+                new Router(),
+                new FakeView(),
+                new IdentityTextResolver(),
+                new EmptyCatalog(),
+                preambleSources: new IPreambleSource[] { new ResourcesPreambleSource() },
+                backlog: backlog);
+
+            var result = await runner.PlayAsync("test_hello", CancellationToken.None);
+
+            Assert.AreEqual(NovelResult.Completed, result);
+            Assert.AreEqual(2, backlog.Count);
+            Assert.AreEqual("alice", backlog.Entries[0].Speaker);
+            Assert.AreEqual("こんにちは", backlog.Entries[0].Text);
+            Assert.AreEqual("", backlog.Entries[1].Speaker);   // narration は話者なし
+        });
     }
 }
 

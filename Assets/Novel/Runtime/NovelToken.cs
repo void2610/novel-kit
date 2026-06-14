@@ -14,14 +14,16 @@ namespace Novel.Runtime
         ShakePop,    // </shake>
         WavePush,    // <wave>
         WavePop,     // </wave>
-        Ignored,     // 認識するが出力しないタグ（ruby 等の任意モジュール対象）
+        RubyPush,    // <ruby=よみ> Payload=よみ（ふりがな）。直後の Text が親文字、</ruby> で閉じる
+        RubyPop,     // </ruby>
+        Ignored,     // 認識するが出力しないタグ（任意モジュール対象）
     }
 
     // タイプライタが逐次 Reveal するトークン。タグは可視文字数に数えない（TMP 技法）
     public readonly struct NovelToken
     {
         public NovelTokenKind Kind { get; }
-        public string Payload { get; }   // Text: 素テキスト / TmpTag: タグ文字列
+        public string Payload { get; }   // Text: 素テキスト / TmpTag: タグ文字列 / RubyPush: よみ
         public float Value { get; }      // Wait: 秒 / SpeedPush: 倍率
 
         public NovelToken(NovelTokenKind kind, string payload = "", float value = 0f)

@@ -72,6 +72,12 @@ namespace Novel.Runtime
                     case NovelTokenKind.WavePop:
                         if (waveStack.Count > 0) _wave.Add((waveStack.Pop(), visible));
                         break;
+                    case NovelTokenKind.RubyPush:
+                        // よみ（ふりがな）も TMP 上は文字なので可視数に算入する（View 展開と総数を一致させ Reveal をずらさない）
+                        visible += t.Payload.Length;
+                        break;
+                    case NovelTokenKind.RubyPop:
+                        break;   // 親文字は直後の Text が数える
                     default:
                         // Wait/ClickWait/Fast/SpeedPush/SpeedPop は可視位置つきの制御として保持
                         _controls.Add((visible, t));

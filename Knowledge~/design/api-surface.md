@@ -117,6 +117,22 @@ public interface IAudioChannel   { /* se / bgm。引数詳細は実装時確定 
 | `IWorldEffectSink` | 世界エフェクトの脱出先（async）。既定はブリッジ無し | [エフェクト await](/design/decisions/effect-await.md) |
 | `INovelErrorHandler` | MRuby 実行時例外の委譲先（backtrace surface） | [エラー処理](/design/decisions/error-handling.md) |
 | `ITextResolver` | テキスト解決フック（既定は恒等）。`say` 本文・表示名・`choose` 選択肢に適用。多言語は非破壊後付け | [ローカライズ](/design/decisions/localization.md) |
+| `IBacklog` | 表示済みセリフ履歴。**runtime 既定 `RingBufferBacklog`（200 行・rich 保持）が登録済み**。閲覧 UI / Clear 契機は game 所有 | [アーキテクチャ](/design/architecture.md) |
+
+## IBacklog（表示済み履歴）
+
+```csharp
+public readonly struct BacklogEntry { public string Speaker { get; } public string Text { get; } }   // Text は rich
+public interface IBacklog {
+    IReadOnlyList<BacklogEntry> Entries { get; }
+    int Count { get; }
+    void Add(string speaker, string text);   // handler が say 表示ごとに rich 本文で追記
+    void Clear();                            // リトライ/ロード/章移動で game が呼ぶ
+}
+```
+
+- 既定 `RingBufferBacklog` は上限超過で最古から捨てる（既定 200 行）。本文は rich のまま保持し、`<link>`/`<color>` を
+  残してバックログ内のキーワード収集・再スタイルを成立させる。Clear 契機は flow なので game 所有。
 
 ## IStateStore
 

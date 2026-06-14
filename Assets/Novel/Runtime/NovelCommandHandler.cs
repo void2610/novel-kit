@@ -20,10 +20,11 @@ namespace Novel.Runtime
         private readonly IBackgroundView? _background;
         private readonly IAudioChannel? _audio;
         private readonly IWorldEffectSink? _worldEffectSink;
+        private readonly IBacklog? _backlog;
 
         public NovelCommandHandler(INovelView view, IStateStore state, ITextResolver text, ICharacterCatalog catalog,
             IPortraitView? portrait = null, IBackgroundView? background = null, IAudioChannel? audio = null,
-            IWorldEffectSink? worldEffectSink = null)
+            IWorldEffectSink? worldEffectSink = null, IBacklog? backlog = null)
         {
             _view = view;
             _state = state;
@@ -33,6 +34,7 @@ namespace Novel.Runtime
             _background = background;
             _audio = audio;
             _worldEffectSink = worldEffectSink;
+            _backlog = backlog;
         }
 
         public async UniTask On(SayCommand cmd, CancellationToken ct)
@@ -43,6 +45,9 @@ namespace Novel.Runtime
             // 既読 ID はタグを除いた素テキストで算出（タグ有無で既読が割れないように）
             var textId = StableId.Of(cmd.SpeakerId, NovelTagLexer.ToPlainText(resolved));
             var alreadyRead = _state.IsRead(textId);
+
+            // バックログは rich のまま記録（link/color を残し再表示・キーワード収集できるように。Clear 契機は game 所有）
+            _backlog?.Add(displayName ?? "", resolved);
 
             // Text はタグ付き原文を渡し、View 側 typewriter が NovelTagLexer で逐次 Reveal する
             await _view.ShowMessageAsync(new NovelLine(cmd.SpeakerId, displayName, resolved, alreadyRead), ct);

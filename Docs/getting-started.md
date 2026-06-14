@@ -69,8 +69,13 @@ TMP リッチテキストと同じ `<...>` 記法。
 | `<speed=2x>…</speed>` | 区間の表示速度 |
 | `<fast>` | 以降を即時表示 |
 | `<shake>…</shake>` / `<wave>…</wave>` | 文字を揺らす |
+| `<ruby=よみ>漢字</ruby>` | ふりがな（よみを親文字の上に重ねて表示。参考 View が TMP 座標で展開） |
 | `<color>` `<size>` `<b>` `<link>` など | TMP スタイル（そのまま反映） |
 | `<noparse>…</noparse>` | リテラル表示 |
+
+> ふりがなの「初出のみ表示」や辞書一括付与といった作品固有の制御は game 側で `<ruby=…>` タグを挿入して実現します
+> （ライブラリはタグの展開だけを担います）。表示済みセリフは `IBacklog`（既定 `RingBufferBacklog`・200 行・rich 保持）に
+> 自動で積まれ、バックログ UI から `IBacklog.Entries` を読めます。消去契機（リトライ/ロード/章移動）は game が `Clear()` します。
 
 話者 `:alice` 等の表示名は `ICharacterCatalog` で解決します（未登録なら id をそのまま表示）。
 
