@@ -3,14 +3,26 @@
 VContainer + VitalRouter.MRuby 前提の、Unity 向け汎用ノベルゲームライブラリ。
 既存 Unity プロジェクト群のノベル実装を 1 つの再利用可能ライブラリへ統合する。
 
-現在は **設計フェーズ**。実装コードはまだ無く、設計判断・機能棚卸し・残論点を
-`Knowledge~/design/` に OKF 形式で蓄積している段階。
+現在は **実装フェーズ（初期）**。確定済み 16 ADR を `Assets/Novel/` に実装中で、
+EditMode テスト・サンプルシーンで全パイプラインの動作を確認済み。API は流動的。
+
+## 構成
+
+- 本体は `Assets/Novel/` 配下。アセンブリ:
+  - `Novel.Commands` — コマンド語彙（`SayCommand` ほか `NovelVocabulary`、`[MRubyObject] record struct : ICommand`）。
+  - `Novel.Runtime` — 純 C# コア（`NovelScenarioRunner` / `NovelCommandHandler` / `NovelTagLexer` / 各 interface）。MonoBehaviour 非依存。
+  - `Novel.View` — 参考 TMP View・Resources ローダ・SO カタログ（省略可）。
+  - `Novel.VContainer` — `RegisterNovelKit()` 一括登録ヘルパ。
+  - `Novel.Editor` — シナリオ検証メニュー。
+  - `Novel.Samples` / `Novel.Tests.EditMode` — 動作確認シーンと EditMode テスト。
+- 利用手順は `Docs/getting-started.md`。
 
 ## 前提
 
 - スタック: VContainer / VitalRouter / VitalRouter.MRuby (MRubyCS) / UniTask / R3。
 - シナリオは MRuby (`.rb` → `.mrb`) で記述。スプレッドシート読み込みは対象外。
-- 設計の最新状態は必ず `Knowledge~/design/index.md` を起点に確認すること。
+- 設計の最新状態は必ず `Knowledge~/design/index.md` を起点に確認すること。実装が
+  ADR を上書き/精緻化した場合は該当 ADR の「実装で確定」節へ追認し、`log.md` に追記する。
 
 <!-- OKF:START -->
 ## Knowledge~/ バンドル (OKF 知識ベース) の取り扱い
