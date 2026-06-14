@@ -50,6 +50,14 @@ Fiber サスペンションと同一機構）。
 - `IWorldEffectSink` は `UniTask` を返すインターフェース。
 - 内蔵エフェクトコマンド（`fade_out`/`blackout`/`shake`/`flash` 等）の blocking 性は実装時に各コマンドで定義する。
 
+## 実装で確定（2026-06-14, 実装レビュー後）
+
+世界エフェクトを実装。`WorldEffectCommand{EffectKey, Args}` を `world_effect` として登録し、
+`NovelCommandHandler.On(WorldEffectCommand)` が常に `await _worldEffectSink.DispatchAsync(...)` する。
+blocking/non-blocking は本 ADR どおり sink が返すタスクで決まる（DSL にフラグは持たない）。`IWorldEffect` の
+汎用搬送体 `WorldEffect{Key, Args}` を Runtime に追加し、preamble に `shake`/`flash`/`fade_out`/`fade_in`/`blackout`
+糖衣を追加。配管だけで未呼び出しだった状態（[実装レビュー](/design/implementation-review.md) `NK-WORLDFX-DEAD`）を解消。
+
 # 検討した代替案
 
 - **全エフェクト fire-and-forget + 明示 `wait` コマンドで同期**: 著者が手動同期。ハンドラ await 統一の方が自然で不採用。

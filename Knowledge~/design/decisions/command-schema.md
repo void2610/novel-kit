@@ -67,6 +67,19 @@ C# プロパティ名は MRubyCS.Serializer の名前マッピングで吸収で
 - voice は v1 対象外で `SayCommand` は voice フィールドを持たない（将来は独立 `voice` コマンド + 糖衣で吸収）
   → [音声スコープ](/design/decisions/audio-scope.md)。
 
+## 実装で確定（2026-06-14, 実装レビュー後）
+
+話者解決の核（id 基本ハイブリッド = 解決規則 1-3）は `SayCommand` + カタログフォールバックとして実装済み。
+
+**キャラ名コマンド糖衣（`alice "…"`）は preamble の `chara` ヘルパで実装**。登場キャラの分だけ
+`chara :alice` と書けば、以降 `alice "…"` が `say "alice", "…"` の糖衣になり、`alice "…", as: "？？？"` で
+表示名も上書きできる。プロジェクトごとのキャラ差はこの糖衣層で吸収する（ライブラリ側の自動生成はしない）。
+
+当初 `method_missing` で実装したが **MRubyCS 0.19.2 がユーザー定義 `method_missing` 未対応**
+（`MRubyState.PrepareMethodMissing` で `NullReferenceException`）と実機確認したため、`define_method` 方式
+（インタプリタ機能・ネイティブコンパイラ不要・移植性維持）へ変更した。
+[実装レビュー](/design/implementation-review.md) `NK-CHARNAME-SUGAR` に対応。
+
 # 検討した代替案
 
 - **表示名一本**（`Speaker="アリス"` 直書き）: 無設定で書けるが、改名が全 .rb 置換・多言語破綻・立ち絵/音声連動不可。
