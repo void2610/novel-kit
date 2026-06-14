@@ -7,7 +7,9 @@
         "Novel.VContainer",
         "VContainer",
         "UniTask",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "Unity.TextMeshPro",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
