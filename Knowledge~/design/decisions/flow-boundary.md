@@ -46,7 +46,7 @@ status: 確定
 - [アーキテクチャ](/design/architecture.md) の「フロー制御は game 側」を本決定が確定・強化する。
 - [概要](/design/overview.md) のスコープに「ゲーム内ノベルパート（スタンドアロン VN ではない）」を明記する。
 - save-anywhere の優先度は相対的に下がる（埋め込みの短いノベルパートはゲーム全体のセーブ機構に従うことが多い）。
-  ただし [実行モデル](/design/decisions/execution-model.md) の履歴 day1 記録方針は維持。
+  [実行モデル](/design/decisions/execution-model.md) は前進専用 + チェックポイント割り切り（履歴記録/save-anywhere は持たない）。
 
 # 検討した代替案
 

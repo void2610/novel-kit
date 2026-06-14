@@ -16,7 +16,7 @@ namespace Novel.View
         public UniTask<byte[]?> LoadPreambleAsync(CancellationToken ct)
         {
             foreach (var a in Resources.LoadAll<TextAsset>(_path))
-                if (a.name.EndsWith(".mrb"))
+                if (a.name.EndsWith(".mrb", System.StringComparison.Ordinal))
                     return UniTask.FromResult<byte[]?>(a.bytes);
             return UniTask.FromResult<byte[]?>(null);
         }

@@ -24,6 +24,7 @@ namespace Novel.Runtime
         private readonly MRubyStateStore _store;
         private readonly IDisposable _subscription;
         private bool _preambleLoaded;
+        private bool _playing;
         private bool _disposed;
 
         public NovelScenarioRunner(IScenarioSource source, Router router,
@@ -61,6 +62,11 @@ namespace Novel.Runtime
 
         public async UniTask<NovelResult> PlayAsync(string scenarioKey, CancellationToken ct)
         {
+            // 単一 MRubyState を共有するため再入/同時再生はできない。完了前の再呼び出しは fail-fast する
+            if (_playing)
+                throw new InvalidOperationException(
+                    "NovelScenarioRunner は前の PlayAsync 完了前に再生できません（単一 MRubyState 共有のため）。");
+            _playing = true;
             try
             {
                 await EnsurePreambleLoadedAsync(ct);
@@ -91,6 +97,10 @@ namespace Novel.Runtime
                 // Ruby backtrace を含めて surface しつつフェイルセーフで Faulted を返す（error-handling）
                 _errorHandler?.OnScenarioFaulted(NovelErrorReport.Describe(scenarioKey, ex));
                 return NovelResult.Faulted;
+            }
+            finally
+            {
+                _playing = false;
             }
         }
 

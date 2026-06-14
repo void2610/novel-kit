@@ -38,6 +38,10 @@ public enum NovelResult {
 - 線形シーケンサ / シナリオ間 `goto` は持たない。次シナリオの選択は game が `PlayAsync` 完了後に
   `IStateStore` を読んで決める。[フロー境界](/design/decisions/flow-boundary.md)。
 - セーブ境界は `PlayAsync` の狭間。シナリオ途中保存は v1 対象外。[セーブ粒度](/design/decisions/save-snapshot.md)。
+- **再入契約**: シナリオ実行中の例外は握って `Faulted`/`Cancelled` に畳む（フェイルセーフ）。ただし
+  **再生中（前の `PlayAsync` 完了前）の再入呼び出しは `InvalidOperationException` を投げる**（単一 `MRubyState`
+  共有のための fail-fast。API 誤用＝配線バグの検出であり、コンテンツ障害の `Faulted` とは別カテゴリ）。
+  game は同一 runner の再生を直列化する。
 
 # 2. コマンド層（`Novel.Commands`）
 
