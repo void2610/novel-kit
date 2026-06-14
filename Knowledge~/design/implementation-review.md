@@ -3,8 +3,8 @@ type: Design
 title: 実装レビュー（設計との乖離監査）
 description: 確定 16 ADR と実装を突き合わせた批判的レビュー。多角レビュー + 敵対的検証で確認した乖離・バグ・設計疑問と、優先度付き改善ロードマップ。
 tags: [review, audit, drift, findings, roadmap]
-timestamp: 2026-06-14T22:30:00Z
-status: 実施（P0-P2 実装済み・ADR 追認済み）
+timestamp: 2026-06-14T23:30:00Z
+status: 実施（P0-P2 + 残課題の安全分 実装済み・ADR 追認済み）
 ---
 
 # 位置づけ
@@ -125,9 +125,16 @@ ID は後続修正の追跡キー。深刻度は検証後の補正値。
 | P2 堅牢性・整合 | ✅ 実装済 | `NK-PREAMBLE-RACE` `NK-CHOOSE-KEY` `NK-STATE-NS` `NK-RESOLVE-CHOICES` `NK-TMP-WHITELIST` `NK-VAR-READ-SUGAR` |
 | P3 ADR 追認 | ✅ 実施 | effect-await / inline-tags / command-schema / error-handling / state-model / dsl-vocabulary |
 
-**未対応（低優先・残課題）**: `NK-VC-VIEW-COUPLE`（ヘルパの View 結合分離）、`NK-READ-GROWTH`（既読プルーン）、
-`NK-SCENSRC-DRIFT`（構造化ソース or doc 縮小）、`NK-REENTRANCY`（再入ガード）、`NK-NOPARSE-INDEX`（要検証）、
-`NK-STABLEID`（既読ハッシュ強化）、`NK-REPLAY-FOUND`（履歴 day1 記録 or ADR 格下げ）。
+**追加対応済（2026-06-14, ブランチ fix/robustness-quality-enhancements）**:
+`NK-REENTRANCY`（`PlayAsync` の再入/同時再生を `InvalidOperationException` で fail-fast）、
+`NK-STABLEID`（既読ハッシュを 32bit → 64bit FNV-1a に強化し衝突を低減）、
+`NK-SCENSRC-DRIFT`（`ResourcesScenarioSource` に空キーガード追加・`EndsWith` を Ordinal 化、architecture.md を実装（1実装+ガード）へ整合）。
+`NK-NOPARSE-INDEX` は検証の結果、TMP の `<noparse>` タグは characterInfo を生成せず shake/wave の可視 index と素テキスト index が一致するため**非問題**と判断（コード変更不要）。
+
+**未対応（低優先・要設計判断）**:
+`NK-VC-VIEW-COUPLE`（ヘルパの View 結合分離。`RegisterNovelKit` の asmdef 構造に影響するため設計判断が要る）、
+`NK-READ-GROWTH`（既読プルーン。当面は game が `ISaveStore` 実装側で `ReadTextIds` を間引けるため緊急度低）、
+`NK-REPLAY-FOUND`（入力履歴 day1 記録を入れるか、`execution-model` ADR の「リプレイ前提」を「チェックポイント割り切り」へ格下げするか＝設計判断）。
 
 > 実装は Unity 未コンパイル状態でのコード変更。`.rb`（Preamble/サンプル）は再 import で `.mrb` 再生成が必要。
 > EditMode テスト（`NovelScenarioRunnerTests` / `TextRevealEngineTests` / `NovelTagLexerTests`）で検証すること。

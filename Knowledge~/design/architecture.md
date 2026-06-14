@@ -112,9 +112,12 @@ container 所有 / runner 私有 `new Router()` / 静的 `Router.Default` の 3 
 
 # シナリオソース
 
-`IScenarioSource` が論理キー → `Irep`（`.mrb` sub-asset 優先、editor のみソースコンパイル
-fallback）を解決する。flat な Resources 方式と、構造化 `{key}/{Common}` fallback 方式の
-2 実装を用意（`LoadAll('Scenarios/')` の空 id フットガンを内部でガード）。
+`IScenarioSource` が論理キー → `.mrb` バイトコード（`byte[]`、sub-asset の `TextAsset`）を解決する。
+`Irep` パースは MRubyState 依存のため runner 側で行う。
+
+実装は flat な Resources 方式（`ResourcesScenarioSource`）の 1 実装。空キーで `LoadAll('Scenarios/')` が
+root 配下を総なめする空 id フットガンは内部でガードする（空キーは即 `null`）。`{key}/{Common}` 構造化 fallback 方式は
+当面持たない（必要が出たら追加。game は `IScenarioSource` を自前実装で差し替え可）。
 
 # テキスト提示
 
