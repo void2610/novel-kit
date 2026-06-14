@@ -118,7 +118,9 @@ public sealed class NovelLifetimeScope : LifetimeScope
 `NovelMessageView`（参考 View）は TMP のメッセージ窓・選択肢ボタンを serialized 参照で持ちます。
 送り入力（クリック/決定）は `view.Advance()` を呼んで進めます（入力方式に依存しないため）。
 
-完成形の例は [`Assets/Novel/Samples/`](../Assets/Novel/Samples) のサンプルシーンを参照してください。
+完成形の例は **Basic サンプル**（`Samples~/Basic`）を参照。UPM パッケージとして導入した場合は
+Package Manager の novel-kit → *Samples* → **Basic** を Import すると `Assets/Samples/` に展開されます
+（リポジトリ上は [`Assets/Novel/Samples~/Basic`](../Assets/Novel/Samples~/Basic)）。
 
 ---
 

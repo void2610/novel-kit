@@ -1,7 +1,7 @@
 ---
 type: Design
 title: novel-kit アーキテクチャ
-description: 6 アセンブリ構成（+ Samples/Tests）・VitalRouter コマンドバス・INovelView 抽象・MRuby 進行モデル・game 配線。
+description: 6 アセンブリ構成（+ opt-in Samples~ / Tests）・VitalRouter コマンドバス・INovelView 抽象・MRuby 進行モデル・game 配線。
 tags: [architecture, asmdef, vitalrouter, vcontainer, mruby]
 timestamp: 2026-06-14T23:59:00Z
 ---
