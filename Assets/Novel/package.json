@@ -1,0 +1,25 @@
+{
+  "name": "com.void2610.novel-kit",
+  "version": "0.1.0",
+  "displayName": "novel-kit",
+  "description": "ゲーム内ノベルパートを組み込むための Unity 向けノベルエンジン（VContainer + VitalRouter.MRuby 前提）。スタンドアロン VN ではなく、より大きなゲームの一要素としてのノベルパートに徹する。MRuby (.rb→.mrb) でシナリオを記述し、INovelView でビューを差し替え可能。",
+  "unity": "6000.3",
+  "documentationUrl": "https://github.com/void2610/novel-kit",
+  "changelogUrl": "https://github.com/void2610/novel-kit/blob/main/Assets/Novel/CHANGELOG.md",
+  "keywords": [
+    "novel",
+    "visual-novel",
+    "adv",
+    "scenario",
+    "mruby",
+    "vcontainer",
+    "vitalrouter"
+  ],
+  "author": {
+    "name": "void2610",
+    "url": "https://github.com/void2610"
+  },
+  "dependencies": {
+    "com.unity.ugui": "2.0.0"
+  }
+}
