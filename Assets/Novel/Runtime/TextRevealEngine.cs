@@ -88,6 +88,7 @@ namespace Novel.Runtime
         public async UniTask RevealAsync(bool alreadyRead, Action<int> onVisible, CancellationToken ct)
         {
             bool skipThisLine = _skip && (_settings.SkipUnread || alreadyRead);
+            int lastNotified = -1;   // 可視文字数が変化したフレームだけ通知する（無変化フレームの View 更新を避ける）
 
             if (!skipThisLine)
             {
@@ -145,14 +146,14 @@ namespace Novel.Runtime
 
                     acc += speed * _clock.DeltaTime;
                     while (acc >= 1f && shown < _total) { shown++; acc -= 1f; }
-                    onVisible(shown);
+                    if (shown != lastNotified) { onVisible(shown); lastNotified = shown; }
 
                     if (_advance) { _advance = false; break; }   // クリックで残りを即時全表示
                     await _clock.NextFrameAsync(ct);
                 }
             }
 
-            onVisible(_total);
+            if (_total != lastNotified) onVisible(_total);
             await WaitForAdvanceAsync(alreadyRead, ct);
         }
 
