@@ -40,6 +40,17 @@ game: 参考 View を使う or 自前実装を供給
 - `Novel.View` の外部依存スタンス（template/LitMotion を依存とするか vendoring するか）は要検討
   → [残論点](/design/open-questions.md)。
 
+## 実装で確定（2026-06-14, 実装レビュー後）
+
+DI 統合ヘルパを「コア」と「参考 View 込み」に分割し、アセンブリ結合を本 ADR の方針へ揃えた。
+- `Novel.VContainer`（コア）: `RegisterNovelKitCore()`。純 `Novel.Runtime` のみ依存（View/Resources/TMP 非依存）。
+  `IScenarioSource`/`IPreambleSource`/`INovelView`/`ICharacterCatalog` は game が登録する。
+- `Novel.View.VContainer`（新規）: `RegisterNovelKit()` = Core + Resources ローダ + dev 警告ファセット + ログ既定。
+  箱出し用。内部で Core を呼ぶ。
+
+当初は `RegisterNovelKit()` が `Novel.View` にコンパイル依存し「最小プロジェクトは View 層を引きずらない」方針と
+緊張していた（[実装レビュー](/design/implementation-review.md) `NK-VC-VIEW-COUPLE`）のを解消。
+
 # 検討した代替案
 
 - **batteries-included フルキット**: View 込みで template/LitMotion/R3 前提。即使えるが全 consumer を

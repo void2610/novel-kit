@@ -5,6 +5,7 @@
         "Novel.Runtime",
         "Novel.View",
         "Novel.VContainer",
+        "Novel.View.VContainer",
         "VContainer",
         "UniTask",
         "Unity.InputSystem",

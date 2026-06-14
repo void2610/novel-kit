@@ -1,34 +1,31 @@
 #nullable enable
 using Novel.Runtime;
-using Novel.View;
 using VContainer;
 using VitalRouter;
 
 namespace Novel.Integration
 {
-    // novel-kit の既定実装を VContainer に一括登録するヘルパ。
-    // INovelView と ICharacterCatalog は game 固有のため、別途 game が登録する前提。
-    // 省略可能サービスは no-op 既定で埋める（game が上書き登録すればそちらが優先）。
+    // novel-kit の「コア」（純 C# / Novel.Runtime のみ）を VContainer に登録するヘルパ。View/Resources には依存しない。
+    // game が別途登録するもの: INovelView / ICharacterCatalog / IScenarioSource / IPreambleSource（＝シナリオと
+    // preamble のローダ。Resources を使うなら参考実装が Novel.View にある）。
+    // 参考 TMP View・Resources ローダ・dev 警告/ログ既定込みで箱出しに使いたい場合は、
+    // Novel.View.VContainer の RegisterNovelKit() を使う（こちらは本 Core を内部で呼ぶ）。
     public static class NovelContainerExtensions
     {
-        public static void RegisterNovelKit(this IContainerBuilder builder, string scenarioRoot = "Scenarios/")
+        public static void RegisterNovelKitCore(this IContainerBuilder builder)
         {
             builder.RegisterInstance(new Router());
-            builder.RegisterInstance<IScenarioSource>(new ResourcesScenarioSource(scenarioRoot));
-            builder.RegisterInstance<IPreambleSource>(new ResourcesPreambleSource());
 
             builder.Register<ITextResolver, IdentityTextResolver>(Lifetime.Singleton);
             builder.Register<INovelPlaybackSettings, DefaultNovelPlaybackSettings>(Lifetime.Singleton);
 
-            // 省略可能ファセットの no-op 既定（game が view 実装で上書き可）。
-            // dev ビルドでは未供給コマンドを一度だけ警告する（無言ドロップを避ける。本番は黙る）。
-            builder.Register<IPortraitView, WarningPortraitView>(Lifetime.Singleton);
-            builder.Register<IBackgroundView, WarningBackgroundView>(Lifetime.Singleton);
-            builder.Register<IAudioChannel, WarningAudioChannel>(Lifetime.Singleton);
+            // 省略可能ファセット/サービスの no-op 既定（silent）。dev 警告版/ログ版は View ヘルパが上書きする
+            builder.Register<IPortraitView, NullPortraitView>(Lifetime.Singleton);
+            builder.Register<IBackgroundView, NullBackgroundView>(Lifetime.Singleton);
+            builder.Register<IAudioChannel, NullAudioChannel>(Lifetime.Singleton);
             builder.Register<IWorldEffectSink, NullWorldEffectSink>(Lifetime.Singleton);
             builder.Register<ISaveStore, NullSaveStore>(Lifetime.Singleton);
-            // 既定は無音にしない（シナリオ名 + Ruby backtrace をログ）。game は自前実装で上書き可
-            builder.Register<INovelErrorHandler, DebugNovelErrorHandler>(Lifetime.Singleton);
+            builder.Register<INovelErrorHandler, NullErrorHandler>(Lifetime.Singleton);
 
             builder.Register<INovelScenarioRunner, NovelScenarioRunner>(Lifetime.Singleton);
         }

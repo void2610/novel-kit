@@ -104,6 +104,12 @@ public sealed class NovelLifetimeScope : LifetimeScope
 `RegisterNovelKit()` が登録するもの: ランナー・Router・`Resources` ローダ・preamble ローダ・
 テキスト解決（恒等）・各 View ファセットの no-op 既定・エラーハンドラ（dev では `Debug.LogError` で
 シナリオ名 + Ruby backtrace を出力）。`INovelView` と `ICharacterCatalog` だけは game が登録します。
+`RegisterNovelKit()` は `Novel.View.VContainer` アセンブリにあるので、game の LifetimeScope の asmdef は
+`Novel.View.VContainer`（と `Novel.View`）を参照してください。
+
+> **コアだけ欲しい場合**（自前 View / Addressables 等の独自ローダで、参考 View・Resources・TMP に依存したくない）は、
+> `Novel.VContainer` の `builder.RegisterNovelKitCore()` を使います。これは純 `Novel.Runtime` だけに依存し、
+> `IScenarioSource` / `IPreambleSource` は game が登録します（`RegisterNovelKit()` は内部でこの Core を呼んでいます）。
 
 > **ファセット/サービスの差し替えは `RegisterNovelKit()` の後に登録**してください（後勝ち）。立ち絵・背景・音声・
 > セーブ・世界エフェクトを供給するときは `builder.Register<IPortraitView, MyPortraitView>(...)` 等を後に書きます。

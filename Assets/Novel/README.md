@@ -9,7 +9,8 @@
 | `Novel.Commands` | `[MRubyObject]` コマンド record struct（say/choose/flag/portrait/bg/still/se/bgm/wait） |
 | `Novel.Runtime` | 純 C# コア。`NovelScenarioRunner` / `NovelCommandHandler` / 抽象群 / インラインタグ lexer / 状態ブリッジ |
 | `Novel.View` | TMP 参考 View・Resources ローダ・ScriptableObject カタログ（game は差し替え可） |
-| `Novel.VContainer` | 任意 DI 統合（`RegisterNovelKit`） |
+| `Novel.VContainer` | コア DI 統合（`RegisterNovelKitCore`）。純 `Novel.Runtime` のみ依存・View/Resources 非依存 |
+| `Novel.View.VContainer` | 参考 View 込みの DI 統合（`RegisterNovelKit` = Core + Resources ローダ + 警告ファセット + ログ） |
 | `Novel.Editor` | （未実装）カタログ/検証インスペクタ。`.rb`→`.mrb` は mrubycs-compiler パッケージが担当 |
 
 ## 使い方（VContainer）

@@ -1,10 +1,11 @@
 {
-    "name": "Novel.VContainer",
+    "name": "Novel.View.VContainer",
     "rootNamespace": "Novel.Integration",
     "references": [
         "Novel.Runtime",
-        "VContainer",
-        "UniTask"
+        "Novel.View",
+        "Novel.VContainer",
+        "VContainer"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

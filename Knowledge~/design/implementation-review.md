@@ -137,8 +137,13 @@ ID は後続修正の追跡キー。深刻度は検証後の補正値。
 下流（save-snapshot / determinism-contract / command-versioning / overview / architecture / open-questions）も整合済み。
 現実装（境界セーブ）が既にこの形なのでコード変更は不要。
 
-**未対応（低優先・要設計判断）**:
-`NK-VC-VIEW-COUPLE`（ヘルパの View 結合分離。`RegisterNovelKit` の asmdef 構造に影響するため設計判断が要る）、
+**追加対応済（2026-06-14, ブランチ refac/separate-di-helper-view-resources）**:
+`NK-VC-VIEW-COUPLE` → DI ヘルパを分割。`Novel.VContainer` を **コア専用**（`RegisterNovelKitCore()`・純 `Novel.Runtime`
+依存・View/Resources 非依存）にし、参考 View + Resources ローダ + 警告ファセット + ログ既定の登録は新規 asmdef
+**`Novel.View.VContainer`** の `RegisterNovelKit()` へ分離（内部で Core を呼ぶ）。`Novel.VContainer.asmdef` から
+`Novel.View` 参照を除去し、asmdef レベルの結合を解消。既存 `RegisterNovelKit()` の実行時挙動は不変。
+
+**未対応（低優先）**:
 `NK-READ-GROWTH`（既読プルーン。当面は game が `ISaveStore` 実装側で `ReadTextIds` を間引けるため緊急度低）。
 
 > 実装は Unity 未コンパイル状態でのコード変更。`.rb`（Preamble/サンプル）は再 import で `.mrb` 再生成が必要。
