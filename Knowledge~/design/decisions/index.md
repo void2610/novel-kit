@@ -8,7 +8,7 @@
 * [ライブラリ範囲: インターフェースコア + 参考 View 別パッケージ](/design/decisions/library-scope.md) - Runtime は純 C#、View は任意依存
 * [インラインタグ: 行内タグ言語を v1 実装](/design/decisions/inline-tags.md) - 字句解析ベースのタイプライタ
 * [DSL 語彙: リッチ統一語彙を常設](/design/decisions/dsl-vocabulary.md) - 未配線コマンドは no-op
-* [決定性コントラクト: 当面は後回し](/design/decisions/determinism-contract.md) - 履歴記録のみ先行
+* [決定性コントラクト: moot（リプレイ前提消失）](/design/decisions/determinism-contract.md) - 実行モデルが前進専用へ格下げされリプレイ自体が消えたため当面 moot。入力履歴の day1 記録は持たない
 * [キャラクターモデル: 単一スプライト差し替え](/design/decisions/character-model.md) - 単一スロット
 * [ローカライズ: 日本語のみ + 抽出フック](/design/decisions/localization.md) - `ITextResolver` で多言語は非破壊後付け
 * [状態モデル: 単一 IStateStore に統一](/design/decisions/state-model.md) - `choose()` はユニークキー割当

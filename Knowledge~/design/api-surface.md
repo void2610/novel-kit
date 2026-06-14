@@ -3,7 +3,7 @@ type: Design
 title: 公開 API 表面（凍結）
 description: 確定 15 ADR を統合した novel-kit の公開表面。ランナー / コマンド / View 抽象 / game 供給サービスのシグネチャを 1 箇所に集約する。
 tags: [api, surface, freeze, contract, runner, view]
-timestamp: 2026-06-14T19:35:00Z
+timestamp: 2026-06-14T23:59:00Z
 status: 確定
 ---
 
@@ -63,7 +63,7 @@ readonly partial record struct SayCommand : ICommand {
 - voice フィールドは持たない（v1 除外・将来は独立 `voice` コマンド + 糖衣）。[音声スコープ](/design/decisions/audio-scope.md)。
 - 語彙はリッチ統一語彙を常設し、未配線コマンドは no-op デフォルトハンドラで握りつぶす。[DSL 語彙](/design/decisions/dsl-vocabulary.md)。
 - versioning 機構は持たない（`.rb` 正・再生成で追従）。[コマンドスキーマ versioning](/design/decisions/command-versioning.md)。
-- preamble 糖衣: `say/narration/choose/flag/portrait/bg/still/se/bgm/wait` 等。各コマンドの引数詳細は実装時確定。
+- preamble 糖衣: `say/narration/chara/flag/val/flag?/portrait/bg/still/se/bgm/wait/choose` に加え、世界エフェクト系（`world_effect/shake/flash/fade_out/fade_in/blackout`）。各コマンドの引数詳細は実装時確定。
 
 # 3. View 抽象（game が実装、またはライブラリ参考 View を使用）
 
@@ -96,7 +96,7 @@ public interface IAudioChannel   { /* se / bgm。引数詳細は実装時確定 
 | `ICharacterCatalog` | id → 表示名/立ち絵/side/既定ボイス。未登録は id を表示名にフォールバック | [コマンド名規約](/design/decisions/command-schema.md) |
 | `IWorldEffectSink` | 世界エフェクトの脱出先（async）。既定はブリッジ無し | [エフェクト await](/design/decisions/effect-await.md) |
 | `INovelErrorHandler` | MRuby 実行時例外の委譲先（backtrace surface） | [エラー処理](/design/decisions/error-handling.md) |
-| `ITextResolver` | `say` テキスト解決フック（既定は恒等）。多言語は非破壊後付け | [ローカライズ](/design/decisions/localization.md) |
+| `ITextResolver` | テキスト解決フック（既定は恒等）。`say` 本文・表示名・`choose` 選択肢に適用。多言語は非破壊後付け | [ローカライズ](/design/decisions/localization.md) |
 
 ## IStateStore
 
@@ -126,6 +126,8 @@ public interface ITextResolver {
     string Resolve(string raw);   // 既定は恒等変換。将来キー外部化/ロケール解決を差し替え
 }
 ```
+
+- 適用範囲は `say` 本文に加え、話者の表示名と `choose` 選択肢（多言語化 seam を提示テキスト全体で揃える）。
 
 # 5. ルーター所有権
 

@@ -3,17 +3,19 @@
 VContainer + VitalRouter.MRuby 前提の、Unity 向け汎用ノベルゲームライブラリ。
 既存 Unity プロジェクト群のノベル実装を 1 つの再利用可能ライブラリへ統合する。
 
-現在は **実装フェーズ（初期）**。確定済み 16 ADR を `Assets/Novel/` に実装中で、
-EditMode テスト・サンプルシーンで全パイプラインの動作を確認済み。API は流動的。
+現在は **実装フェーズ**。確定済み 16 ADR は `Assets/Novel/` に主要部まで実装済みで、
+EditMode テスト・サンプルシーンで全パイプラインの動作を確認済み。
+設計との乖離は `Knowledge~/design/implementation-review.md` で監査・改善済み。
 
 ## 構成
 
 - 本体は `Assets/Novel/` 配下。アセンブリ:
   - `Novel.Commands` — コマンド語彙（`SayCommand` ほか `NovelVocabulary`、`[MRubyObject] record struct : ICommand`）。
   - `Novel.Runtime` — 純 C# コア（`NovelScenarioRunner` / `NovelCommandHandler` / `NovelTagLexer` / 各 interface）。MonoBehaviour 非依存。
-  - `Novel.View` — 参考 TMP View・Resources ローダ・SO カタログ（省略可）。
-  - `Novel.VContainer` — `RegisterNovelKit()` 一括登録ヘルパ。
-  - `Novel.Editor` — シナリオ検証メニュー。
+  - `Novel.View` — 参考 TMP View・`UnityFrameClock`・Resources ローダ・SO カタログ・dev 警告ファセット/`DebugNovelErrorHandler`（省略可）。
+  - `Novel.VContainer` — `RegisterNovelKitCore()` 一括登録ヘルパ（純 `Novel.Runtime` 依存・View/Resources 非依存）。
+  - `Novel.View.VContainer` — `RegisterNovelKit()` 箱出し登録ヘルパ（Core + Resources ローダ + 警告ファセット + Debug エラーログ）。
+  - `Novel.Editor` — シナリオ検証メニュー（`Novel/Validate Scenarios`）。
   - `Novel.Samples` / `Novel.Tests.EditMode` — 動作確認シーンと EditMode テスト。
 - 利用手順は `Docs/getting-started.md`。
 

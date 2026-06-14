@@ -3,7 +3,7 @@ type: Design
 title: 残論点（未決の設計判断）
 description: ランナー API 凍結前に解消すべき未決事項と、後続で詰める設計トピック。
 tags: [open-questions, todo, design]
-timestamp: 2026-06-14T19:35:00Z
+timestamp: 2026-06-14T23:59:00Z
 status: 保留
 ---
 
@@ -73,7 +73,8 @@ lipsync は対象外）で確定。残るのは `se`/`bgm` コマンドの引数
   - 注: CG 鑑賞ギャラリー（解放済み CG の一覧/コレクション）は**スコープ外**。ゲーム全体のメタ機能であり、本ライブラリはゲーム内ノベルパートのプリミティブに徹する（[フロー境界](/design/decisions/flow-boundary.md)）。
 - 選択肢のアフォーダンス: 無効/条件付き（grey out）・タイマー付き・一度のみ。
 - アクセシビリティ: 文字サイズ・可読フォント・reduce-motion・hold-to-skip。
-- 著者向けプレビュー/シーンジャンプ/分岐バリデータ（`Novel.Editor`）。
+- 著者向けプレビュー/シーンジャンプ/分岐（フロー）バリデータ（`Novel.Editor`）。
+  - 注: 基本のコンパイル検証は実装済み（`ScenarioValidator` / メニュー `Novel/Validate Scenarios`・全 `.rb` が `.mrb` バイトコードを生成できているか確認）。残るのはプレビュー/シーンジャンプと、コンパイル成否を超えた分岐・フローの意味検証。
 - `.rb` のホットリロード（編集 → 再 import なしの反復ループ）。
 - `Novel.View` の外部依存スタンス（`Void2610.UnityTemplate`/LitMotion を依存とするか vendoring するか）。
 - コンテキスト駆動セリフ選択（systemic barks、U1W 由来）を任意モジュール化。

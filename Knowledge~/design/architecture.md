@@ -1,14 +1,14 @@
 ---
 type: Design
 title: novel-kit アーキテクチャ
-description: 4 アセンブリ構成・VitalRouter コマンドバス・INovelView 抽象・MRuby 進行モデル・game 配線。
+description: 6 アセンブリ構成（+ Samples/Tests）・VitalRouter コマンドバス・INovelView 抽象・MRuby 進行モデル・game 配線。
 tags: [architecture, asmdef, vitalrouter, vcontainer, mruby]
-timestamp: 2026-06-14T02:45:00Z
+timestamp: 2026-06-14T23:59:00Z
 ---
 
 # アセンブリ分割
 
-4 アセンブリ + game 側配線層に分割する。CLAUDE.md の DI 規約に従い、MonoBehaviour は
+6 アセンブリ（+ `Novel.Samples` / `Novel.Tests.EditMode`）+ game 側配線層に分割する。CLAUDE.md の DI 規約に従い、MonoBehaviour は
 `Novel.View` のみに置き、`Novel.Runtime` は純 C# とする。
 
 | asmdef | 依存 | 内容 |
@@ -17,7 +17,8 @@ timestamp: 2026-06-14T02:45:00Z
 | `Novel.Runtime` | UniTask, VitalRouter, MRubyCS, Novel.Commands | 純 C# コア。シナリオランナー / `IScenarioSource` / `INovelView` / `[Routes] NovelCommandHandler` / プリアンブルローダ / `ParseSymbol<T>` / タイプライタエンジン / `IStateStore`（フラグ/変数/既読）/ バックログ / `INovelPlaybackSettings` + Default |
 | `Novel.View` | Novel.Runtime, (任意) LitMotion 等 | 任意の MonoBehaviour 参考 View（メッセージ窓・吹き出し・ナレ・立ち絵・背景・選択 UI）+ アニメツールキット。game は無視して自前 `INovelView` を供給可 |
 | `Novel.Editor` | Novel.Runtime, UnityEditor | カタログ/検証インスペクタ。`.rb`→`.mrb` の ScriptedImporter は **mrubycs-compiler パッケージが提供**するため再実装せず、それに乗る |
-| `Novel.VContainer` | Novel.Runtime, Novel.View, VContainer | 任意の DI 統合層。`RegisterNovelKit` で既定実装を一括登録（実装時に追加した 5 つ目の任意アセンブリ） |
+| `Novel.VContainer` | Novel.Runtime, VContainer, UniTask | 任意の DI 統合層（純 `Novel.Runtime` 依存・View/Resources 非依存）。`RegisterNovelKitCore()` でコア実装（runner / no-op 既定ファセット / silent な NullErrorHandler）を一括登録。game が自前 View / 独自ローダを供給する場合に使う |
+| `Novel.View.VContainer` | Novel.Runtime, Novel.View, Novel.VContainer, VContainer | 箱出し用 DI 統合層。`RegisterNovelKit()` = コア（`RegisterNovelKitCore()`）+ Resources ローダ + dev 警告ファセット + `DebugNovelErrorHandler`（Ruby backtrace をログ） |
 
 > 範囲の根拠は [ライブラリ範囲の ADR](/design/decisions/library-scope.md) を参照。
 
