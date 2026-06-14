@@ -48,6 +48,15 @@ status: 確定
 - `INovelErrorHandler` を DI で注入（既定実装をビルド種別で提供）。
 - 「UGC シナリオを許す」用途は将来のハードニング課題として [残論点](/design/open-questions.md) のバックログに記載。
 
+## 実装で確定（2026-06-14, 実装レビュー後）
+
+`INovelErrorHandler.OnScenarioFaulted` の引数を生 `Exception` から `NovelErrorInfo{ScenarioKey, Message, Detail,
+Exception}` へ拡張し、runner が `MRubyRaiseException.GetBacktraceString()`（リフレクションでバージョン差を吸収）で
+Ruby backtrace を `Detail` に surface する。既定ハンドラを無音の `NullErrorHandler` から、dev ビルドで
+`Debug.LogError` する `DebugNovelErrorHandler`（View 層）へ変更した（明示的に黙らせたい game は `NullErrorHandler`
+を登録）。当初は既定が無音で作家にエラーが一切届かなかった（[実装レビュー](/design/implementation-review.md)
+`NK-ERROR-SILENT`）のを解消。`NovelResult` は enum のまま（情報はハンドラ経由で運ぶ）。
+
 # 検討した代替案
 
 - **行スキップ継続**: Fiber が例外で巻き戻るため非現実的。不採用。

@@ -39,6 +39,7 @@ namespace Novel.Runtime
         {
             var resolved = _text.Resolve(cmd.Text);
             var displayName = ResolveDisplayName(cmd);
+            if (displayName != null) displayName = _text.Resolve(displayName);   // 表示名も多言語 seam を通す（localization）
             // 既読 ID はタグを除いた素テキストで算出（タグ有無で既読が割れないように）
             var textId = StableId.Of(cmd.SpeakerId, NovelTagLexer.ToPlainText(resolved));
             var alreadyRead = _state.IsRead(textId);
@@ -52,7 +53,12 @@ namespace Novel.Runtime
         // 選択 → index を共有テーブル経由で StateKey に書く（Ruby の state[:key] が読む）
         public async UniTask On(ChooseCommand cmd, CancellationToken ct)
         {
-            var selected = await _view.ShowChoicesAsync(cmd.Options, ct);
+            // 選択肢も say と同じく ITextResolver を通す（多言語化の seam を say と揃える）
+            var options = cmd.Options;
+            var resolved = new string[options.Length];
+            for (int i = 0; i < options.Length; i++) resolved[i] = _text.Resolve(options[i]);
+
+            var selected = await _view.ShowChoicesAsync(resolved, ct);
             _state.Set(cmd.StateKey, selected);
         }
 
@@ -89,6 +95,14 @@ namespace Novel.Runtime
         public async UniTask On(WaitCommand cmd, CancellationToken ct)
         {
             await UniTask.Delay(TimeSpan.FromSeconds(cmd.Seconds), cancellationToken: ct);
+        }
+
+        // 世界エフェクト（カメラ/画面/gameplay への脱出）。常に await し、blocking/non-blocking は sink が返すタスクで決まる
+        // （非ブロッキング=即完了タスク / ブロッキング=完了時解決タスク。effect-await ADR）。未供給なら no-op
+        public async UniTask On(WorldEffectCommand cmd, CancellationToken ct)
+        {
+            if (_worldEffectSink == null) return;
+            await _worldEffectSink.DispatchAsync(new WorldEffect(cmd.EffectKey, cmd.Args ?? Array.Empty<float>()), ct);
         }
 
         // command-schema の解決 3 規則: 空=ナレーション / カタログ有=表示名（DisplayAs で上書き）/ 未登録=id をそのまま

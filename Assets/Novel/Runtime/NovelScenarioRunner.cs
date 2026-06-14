@@ -52,6 +52,7 @@ namespace Novel.Runtime
                 config.AddCommand<SeCommand>("se");
                 config.AddCommand<BgmCommand>("bgm");
                 config.AddCommand<WaitCommand>("wait");
+                config.AddCommand<WorldEffectCommand>("world_effect");
             });
 
             var handler = new NovelCommandHandler(view, _store, text, catalog, portrait, background, audio, worldEffectSink);
@@ -87,8 +88,8 @@ namespace Novel.Runtime
             }
             catch (Exception ex)
             {
-                // backtrace を surface しつつフェイルセーフで Faulted を返す（error-handling）
-                _errorHandler?.OnScenarioFaulted(scenarioKey, ex);
+                // Ruby backtrace を含めて surface しつつフェイルセーフで Faulted を返す（error-handling）
+                _errorHandler?.OnScenarioFaulted(NovelErrorReport.Describe(scenarioKey, ex));
                 return NovelResult.Faulted;
             }
         }
@@ -97,9 +98,10 @@ namespace Novel.Runtime
         private async UniTask EnsurePreambleLoadedAsync(CancellationToken ct)
         {
             if (_preambleLoaded || _preambleSource == null) return;
-            _preambleLoaded = true;
+            // 例外/キャンセル時はフラグを立てず次回再試行する（途中失敗で糖衣未定義のまま恒久 Faulted になるのを防ぐ）
             var bytecode = await _preambleSource.LoadPreambleAsync(ct);
             if (bytecode != null && bytecode.Length > 0) _state.LoadBytecode(bytecode);
+            _preambleLoaded = true;   // ロード成功（または preamble 不在の確定結果）後にのみ確定
         }
 
         public void Dispose()

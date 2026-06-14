@@ -10,13 +10,13 @@ namespace Novel.Runtime
     // TMP 文字列化/エスケープ・頂点アニメ駆動は View 層の責務。
     public static class NovelTagLexer
     {
-        // 素通しする TMP リッチテキストタグ名（小文字・先頭 '/' 除去後で照合）
+        // 素通しする TMP リッチテキストタグ名（小文字・先頭 '/' 除去後で照合）。TMP の主要タグを網羅する
         private static readonly HashSet<string> TmpStyleTags = new()
         {
-            "color", "b", "i", "u", "s", "size", "sub", "sup", "mark", "link",
-            "align", "voffset", "space", "indent", "nobr", "sprite", "font",
-            "cspace", "line-height", "lowercase", "uppercase", "smallcaps",
-            "gradient", "rotate", "width", "style", "pos", "alpha",
+            "color", "b", "i", "u", "s", "strikethrough", "size", "sub", "sup", "mark", "link",
+            "align", "voffset", "space", "indent", "line-indent", "nobr", "sprite", "font",
+            "cspace", "mspace", "margin", "line-height", "lowercase", "uppercase", "smallcaps",
+            "allcaps", "gradient", "rotate", "width", "style", "pos", "alpha", "page", "font-weight",
         };
 
         private const string NoparseClose = "</noparse>";

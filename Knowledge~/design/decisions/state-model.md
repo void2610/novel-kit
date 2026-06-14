@@ -54,6 +54,14 @@ replay: 記録対象をこのストアに一元化
 「game 供給サービス」ではなく runtime が提供する。game が触れる永続化境界は `ISaveStore` のみで、runner が
 `PlayAsync` の狭間で `MRubyStateStore.Capture()/Restore()` のスナップショットを授受する（[セーブ粒度](/design/decisions/save-snapshot.md)）。
 
+## 実装で確定（2026-06-14, 実装レビュー後）
+
+永続/一時の境界（帰結の「属性として扱う」）を、スクラッチキーの命名規約で実装した: `__` 始まりのキー（choose の
+自動採番 `__choice_N` 等）は `MRubyStateStore.Capture` が永続スナップショットから除外する。跨シナリオで残したい
+選択結果は `choose(..., key: :explicit)` で `__` 以外の安定キー（改稿耐性あり・セーブ対象）に書く。当初は choose
+スクラッチが永続セーブに混入していた（[実装レビュー](/design/implementation-review.md) `NK-CHOOSE-KEY`/`NK-STATE-NS`）
+のを解消。値型は v1 では int 単一を維持（bool/float/string 判別は将来課題）。
+
 # 検討した代替案
 
 - **3 ストア維持 + choose() のみ修正**: color-recollection 構造を踏襲し単一スロット衝突だけ

@@ -64,4 +64,12 @@ namespace Novel.Commands
     {
         public float Seconds { get; init; }
     }
+
+    // 世界エフェクト（カメラ/画面/gameplay への脱出）。blocking 性は game の sink が返すタスクで決まる（effect-await）
+    [MRubyObject]
+    public readonly partial record struct WorldEffectCommand : ICommand
+    {
+        public string EffectKey { get; init; }
+        public float[] Args { get; init; }
+    }
 }

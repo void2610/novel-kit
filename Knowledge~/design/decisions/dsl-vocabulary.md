@@ -42,6 +42,14 @@ MRuby コマンド語彙はプロジェクトごとに差がある（U1W は 10+
 - コマンド名規約（`say` か `speak` か、`[Routes]` 規約か `[Route]` per-method か）は要確定
   → [残論点](/design/open-questions.md)。
 
+## 実装で確定（2026-06-14, 実装レビュー後）
+
+未配線コマンドの no-op は維持しつつ、「無言」をやめた。dev ビルド（Editor / Development Build）では「コマンドは来たが
+対応 View が未供給」を一度だけ警告する no-op ファセット（`WarningPortraitView`/`WarningBackgroundView`/
+`WarningAudioChannel`）を既定にした（本番は無音）。埋め込み用途で「なぜ出ないのか分からない」デバッグ地獄を避けるため
+（[実装レビュー](/design/implementation-review.md) `NK-NOOP-SILENT`）。完全に黙らせたい game は Runtime の
+`Null*` ファセットを登録すればよい。
+
 # 検討した代替案
 
 - **最小コア + オプトインモジュール**（当初推奨）: 最小 game が未使用ハンドラを抱えない。可搬性より

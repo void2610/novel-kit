@@ -34,11 +34,17 @@ namespace Novel.Runtime
         public bool IsRead(string textId) => _read.Contains(textId);
         public void MarkRead(string textId) => _read.Add(textId);
 
-        // セーブ境界（PlayAsync の狭間）でのスナップショット採取/復元
+        // セーブ境界（PlayAsync の狭間）でのスナップショット採取/復元。
+        // `__` 始まりは一時スクラッチ（choose の自動採番キー等）として永続から除外する（state-model: 永続/一時の境界）。
+        // 跨シナリオで残したい選択結果は choose(..., key: :explicit) で `__` 以外の安定キーに書く。
         public NovelStateSnapshot Capture()
         {
             var values = new Dictionary<string, int>(_keys.Count);
-            foreach (var k in _keys) values[k] = _shared.GetOrDefault<int>(k);
+            foreach (var k in _keys)
+            {
+                if (k.StartsWith("__", System.StringComparison.Ordinal)) continue;
+                values[k] = _shared.GetOrDefault<int>(k);
+            }
             return new NovelStateSnapshot(values, new List<string>(_read));
         }
 
