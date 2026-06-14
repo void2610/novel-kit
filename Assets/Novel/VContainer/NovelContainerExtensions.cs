@@ -29,5 +29,14 @@ namespace Novel.Integration
 
             builder.Register<INovelScenarioRunner, NovelScenarioRunner>(Lifetime.Singleton);
         }
+
+        // game 独自コマンドモジュール（[Routes] + INovelCommandModule）を登録する。runner が
+        // IEnumerable<INovelCommandModule> として集約注入し、語彙束縛とハンドラ写像を行う。
+        // 糖衣の .rb は別途 IPreambleSource として追加登録する（RegisterNovelKit() の後勝ち登録）。
+        public static void RegisterNovelCommand<TModule>(this IContainerBuilder builder)
+            where TModule : INovelCommandModule
+        {
+            builder.Register<TModule>(Lifetime.Singleton).As<INovelCommandModule>();
+        }
     }
 }

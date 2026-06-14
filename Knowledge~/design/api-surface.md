@@ -3,7 +3,7 @@ type: Design
 title: 公開 API 表面（凍結）
 description: 確定 15 ADR を統合した novel-kit の公開表面。ランナー / コマンド / View 抽象 / game 供給サービスのシグネチャを 1 箇所に集約する。
 tags: [api, surface, freeze, contract, runner, view]
-timestamp: 2026-06-14T23:59:00Z
+timestamp: 2026-06-15T00:00:00Z
 status: 確定
 ---
 
@@ -64,6 +64,26 @@ readonly partial record struct SayCommand : ICommand {
 - 語彙はリッチ統一語彙を常設し、未配線コマンドは no-op デフォルトハンドラで握りつぶす。[DSL 語彙](/design/decisions/dsl-vocabulary.md)。
 - versioning 機構は持たない（`.rb` 正・再生成で追従）。[コマンドスキーマ versioning](/design/decisions/command-versioning.md)。
 - preamble 糖衣: `say/narration/chara/flag/val/flag?/portrait/bg/still/se/bgm/wait/choose` に加え、世界エフェクト系（`world_effect/shake/flash/fade_out/fade_in/blackout`）。各コマンドの引数詳細は実装時確定。
+
+## プロジェクト独自コマンドの拡張口（`INovelCommandModule`）
+
+組込語彙は閉じた集合ではない。game 固有コマンドは語彙束縛とハンドラ写像を 1 クラスに束ねて差し込む。
+糖衣は別 `.rb`→`.mrb` を追加 `IPreambleSource` で供給する（任意。`cmd :my_cmd, ...` 直書きでも動く）。
+[DSL 語彙の拡張節](/design/decisions/dsl-vocabulary.md)。
+
+```csharp
+public interface INovelCommandModule {
+    void        RegisterVocabulary(MRubyState state);              // state.AddCommand<MyCommand>("my_cmd")
+    IDisposable MapHandlers(ICommandSubscribable router);          // [Routes] を兼ね MapTo(router) を返す
+}
+
+// VContainer 配線（Novel.VContainer）
+builder.RegisterNovelCommand<GameplayNovelCommands>();             // runner が IEnumerable<INovelCommandModule> で集約注入
+builder.RegisterInstance<IPreambleSource>(myExtraSugar);          // 糖衣を足すなら追加登録（後勝ち・登録順に評価）
+```
+
+- runner ctor は `IEnumerable<IPreambleSource>` / `IEnumerable<INovelCommandModule>` を受ける（0 件→空で解決）。
+- 写像の購読は runner が `Dispose` でまとめて解除する。名前衝突（組込語彙との重複）は game 責任。
 
 # 3. View 抽象（game が実装、またはライブラリ参考 View を使用）
 

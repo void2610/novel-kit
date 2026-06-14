@@ -3,7 +3,7 @@ type: Design
 title: 実装レビュー（設計との乖離監査）
 description: 確定 16 ADR と実装を突き合わせた批判的レビュー。多角レビュー + 敵対的検証で確認した乖離・バグ・設計疑問と、優先度付き改善ロードマップ。
 tags: [review, audit, drift, findings, roadmap]
-timestamp: 2026-06-14T23:30:00Z
+timestamp: 2026-06-15T00:00:00Z
 status: 実施（P0-P2 + 残課題の安全分 実装済み・ADR 追認済み）
 ---
 
@@ -142,6 +142,16 @@ ID は後続修正の追跡キー。深刻度は検証後の補正値。
 依存・View/Resources 非依存）にし、参考 View + Resources ローダ + 警告ファセット + ログ既定の登録は新規 asmdef
 **`Novel.View.VContainer`** の `RegisterNovelKit()` へ分離（内部で Core を呼ぶ）。`Novel.VContainer.asmdef` から
 `Novel.View` 参照を除去し、asmdef レベルの結合を解消。既存 `RegisterNovelKit()` の実行時挙動は不変。
+
+**追加対応済（2026-06-15, プロジェクト独自コマンドの拡張口）**:
+`NK-PROJECT-CMD` → color-recollection 導入検討で発覚した「game 固有コマンドを定義できない」隘路を解消。独自コマンド 1 つに
+本来要る 3 配線（①語彙束縛 `AddCommand<T>(name)` ②ハンドラ写像 `On(T)`→Router ③Ruby 糖衣）が全て runner 内に封印されていた。
+拡張口 `INovelCommandModule`（`RegisterVocabulary(MRubyState)` + `MapHandlers(ICommandSubscribable):IDisposable`）を 1 つ開け、
+runner は `IEnumerable<INovelCommandModule>` を集約注入で受けて組込語彙の後に ①、組込ハンドラ写像の後に ② を実施（購読は
+`Dispose` で解除）。糖衣 ③ は runner を `IEnumerable<IPreambleSource>` 化し登録順評価（組込先・game 後）で積み増す（MRubyCS は
+実行時 eval 不可のため別 `.rb`→`.mrb` を追加プリアンブルで供給）。VContainer 配線は `RegisterNovelCommand<TModule>()` 1 行。
+EditMode テスト 18/18 緑（`cmd :custom_echo` が game 側 `On(CustomEchoCommand)` へ到達する回帰を追加）。
+詳細は [DSL 語彙の拡張節](/design/decisions/dsl-vocabulary.md)・[公開 API 表面](/design/api-surface.md)。
 
 **未対応（低優先）**:
 `NK-READ-GROWTH`（既読プルーン。当面は game が `ISaveStore` 実装側で `ReadTextIds` を間引けるため緊急度低）。

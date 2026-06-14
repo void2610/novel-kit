@@ -74,6 +74,49 @@ TMP リッチテキストと同じ `<...>` 記法。
 
 話者 `:alice` 等の表示名は `ICharacterCatalog` で解決します（未登録なら id をそのまま表示）。
 
+### プロジェクト独自コマンドを足す
+
+組込語彙で足りないゲーム固有コマンド（gameplay への作用・独自演出など）は、`INovelCommandModule` を実装して
+差し込みます。1 クラスに「語彙束縛（Ruby 名→C# 型）」と「ハンドラ（`On(...)`）」を同居させます。
+
+```csharp
+using Novel.Runtime;
+using Novel.Commands;       // ICommand
+using MRubyCS;
+using MRubyCS.Serializer;   // [MRubyObject]
+using VitalRouter;          // [Routes] / ICommandSubscribable
+using VitalRouter.MRuby;    // AddCommand
+
+[MRubyObject]
+public readonly partial record struct ScreenShakeCommand : ICommand
+{
+    public float Power { get; init; }
+}
+
+[Routes]
+public sealed partial class GameplayNovelCommands : INovelCommandModule
+{
+    readonly ICameraShaker _shaker;
+    public GameplayNovelCommands(ICameraShaker shaker) => _shaker = shaker;
+
+    public void RegisterVocabulary(MRubyState state) => state.AddCommand<ScreenShakeCommand>("screen_shake");
+    public IDisposable MapHandlers(ICommandSubscribable router) => MapTo(router);   // VitalRouter 生成
+
+    public async UniTask On(ScreenShakeCommand cmd, CancellationToken ct) => await _shaker.ShakeAsync(cmd.Power, ct);
+}
+```
+
+配線は LifetimeScope で 1 行足すだけです（runner が `IEnumerable<INovelCommandModule>` として集約注入します）。
+
+```csharp
+builder.RegisterNovelKit();
+builder.RegisterNovelCommand<GameplayNovelCommands>();   // 追加
+```
+
+シナリオからは `cmd :screen_shake, power: 2.0` で直接呼べます。糖衣 `def screen_shake(p); cmd :screen_shake, power: p.to_f; end`
+を足したい場合は、その `.rb`（→`.mrb`）を **追加の `IPreambleSource`** として登録します（組込糖衣はそのまま残り、登録順で
+後に評価されます）。MRubyCS は実行時に Ruby ソースを eval できないため、糖衣もインポート時コンパイル経由の追加プリアンブルで供給します。
+
 ---
 
 ## 3. シーンに配線する

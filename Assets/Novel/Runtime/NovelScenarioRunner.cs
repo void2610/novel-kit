@@ -1,5 +1,7 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using MRubyCS;
@@ -19,10 +21,10 @@ namespace Novel.Runtime
         private readonly Router _router;
         private readonly ISaveStore? _saveStore;
         private readonly INovelErrorHandler? _errorHandler;
-        private readonly IPreambleSource? _preambleSource;
+        private readonly IReadOnlyList<IPreambleSource> _preambleSources;
         private readonly MRubyState _state;
         private readonly MRubyStateStore _store;
-        private readonly IDisposable _subscription;
+        private readonly List<IDisposable> _subscriptions;
         private bool _preambleLoaded;
         private bool _playing;
         private bool _disposed;
@@ -32,13 +34,15 @@ namespace Novel.Runtime
             IPortraitView? portrait = null, IBackgroundView? background = null, IAudioChannel? audio = null,
             IWorldEffectSink? worldEffectSink = null,
             ISaveStore? saveStore = null, INovelErrorHandler? errorHandler = null,
-            IPreambleSource? preambleSource = null)
+            IEnumerable<IPreambleSource>? preambleSources = null,
+            IEnumerable<INovelCommandModule>? commandModules = null)
         {
             _source = source;
             _router = router;
             _saveStore = saveStore;
             _errorHandler = errorHandler;
-            _preambleSource = preambleSource;
+            _preambleSources = preambleSources?.ToArray() ?? Array.Empty<IPreambleSource>();
+            var modules = commandModules?.ToArray() ?? Array.Empty<INovelCommandModule>();
             _state = MRubyState.Create();
             _store = new MRubyStateStore(_state.GetSharedVariables());
 
@@ -54,10 +58,14 @@ namespace Novel.Runtime
                 config.AddCommand<BgmCommand>("bgm");
                 config.AddCommand<WaitCommand>("wait");
                 config.AddCommand<WorldEffectCommand>("world_effect");
+                // game 独自コマンドの語彙束縛（組込語彙の後・名前衝突は game 責任）
+                foreach (var module in modules) module.RegisterVocabulary(config);
             });
 
             var handler = new NovelCommandHandler(view, _store, text, catalog, portrait, background, audio, worldEffectSink);
-            _subscription = handler.MapTo(_router);
+            _subscriptions = new List<IDisposable> { handler.MapTo(_router) };
+            // 独自コマンドハンドラを同じノベル専用 Router へ写像（購読は Dispose でまとめて解除）
+            foreach (var module in modules) _subscriptions.Add(module.MapHandlers(_router));
         }
 
         public async UniTask<NovelResult> PlayAsync(string scenarioKey, CancellationToken ct)
@@ -104,21 +112,25 @@ namespace Novel.Runtime
             }
         }
 
-        // 糖衣ヘルパ（say/choose 等）を定義する preamble を起動時に一度だけ state へ評価する
+        // 糖衣ヘルパ（say/choose 等）を定義する preamble を起動時に一度だけ state へ評価する。
+        // 登録順に評価するため、組込糖衣が先・game 追加糖衣が後になる（getting-started の登録順契約）。
         private async UniTask EnsurePreambleLoadedAsync(CancellationToken ct)
         {
-            if (_preambleLoaded || _preambleSource == null) return;
+            if (_preambleLoaded) return;
             // 例外/キャンセル時はフラグを立てず次回再試行する（途中失敗で糖衣未定義のまま恒久 Faulted になるのを防ぐ）
-            var bytecode = await _preambleSource.LoadPreambleAsync(ct);
-            if (bytecode != null && bytecode.Length > 0) _state.LoadBytecode(bytecode);
-            _preambleLoaded = true;   // ロード成功（または preamble 不在の確定結果）後にのみ確定
+            foreach (var preambleSource in _preambleSources)
+            {
+                var bytecode = await preambleSource.LoadPreambleAsync(ct);
+                if (bytecode != null && bytecode.Length > 0) _state.LoadBytecode(bytecode);
+            }
+            _preambleLoaded = true;   // 全 preamble ロード成功（または不在の確定結果）後にのみ確定
         }
 
         public void Dispose()
         {
             if (_disposed) return;
             _disposed = true;
-            _subscription.Dispose();
+            foreach (var subscription in _subscriptions) subscription.Dispose();
         }
     }
 }

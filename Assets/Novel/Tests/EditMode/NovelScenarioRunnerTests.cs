@@ -4,14 +4,33 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using MRubyCS;
+using MRubyCS.Serializer;
 using Novel.Runtime;
 using Novel.View;
 using NUnit.Framework;
 using UnityEngine.TestTools;
 using VitalRouter;
+using VitalRouter.MRuby;
 
 namespace Novel.Tests
 {
+    // 独自コマンドの語彙束縛 + ハンドラ写像を 1 クラスに束ねる拡張口の検証用コマンド/モジュール
+    [MRubyObject]
+    public readonly partial record struct CustomEchoCommand : ICommand
+    {
+        public string Text { get; init; }
+    }
+
+    [Routes]
+    public sealed partial class CustomEchoModule : INovelCommandModule
+    {
+        public readonly List<string> Received = new();
+        public void RegisterVocabulary(MRubyState state) => state.AddCommand<CustomEchoCommand>("custom_echo");
+        public IDisposable MapHandlers(ICommandSubscribable router) => MapTo(router);
+        public void On(CustomEchoCommand cmd) => Received.Add(cmd.Text);
+    }
+
     public sealed class NovelScenarioRunnerTests
     {
         private sealed class FakeView : INovelView
@@ -78,7 +97,7 @@ namespace Novel.Tests
         private static NovelScenarioRunner NewRunner(INovelView view, ISaveStore? saveStore = null)
             => new(new ResourcesScenarioSource(), new Router(), view,
                 new IdentityTextResolver(), new EmptyCatalog(),
-                saveStore: saveStore, preambleSource: new ResourcesPreambleSource());
+                saveStore: saveStore, preambleSources: new IPreambleSource[] { new ResourcesPreambleSource() });
 
         [UnityTest]
         public IEnumerator シナリオを実行し_say_が_View_へ順に届く() => UniTask.ToCoroutine(async () =>
@@ -90,7 +109,7 @@ namespace Novel.Tests
                 view,
                 new IdentityTextResolver(),
                 new EmptyCatalog(),
-                preambleSource: new ResourcesPreambleSource());
+                preambleSources: new IPreambleSource[] { new ResourcesPreambleSource() });
 
             var result = await runner.PlayAsync("test_hello", CancellationToken.None);
 
@@ -112,7 +131,7 @@ namespace Novel.Tests
                 view,
                 new IdentityTextResolver(),
                 new EmptyCatalog(),
-                preambleSource: new ResourcesPreambleSource());
+                preambleSources: new IPreambleSource[] { new ResourcesPreambleSource() });
 
             var result = await runner.PlayAsync("test_choose", CancellationToken.None);
 
@@ -182,7 +201,7 @@ namespace Novel.Tests
                 new IdentityTextResolver(),
                 new EmptyCatalog(),
                 errorHandler: handler,
-                preambleSource: new ResourcesPreambleSource());
+                preambleSources: new IPreambleSource[] { new ResourcesPreambleSource() });
 
             var result = await runner.PlayAsync("test_error", CancellationToken.None);
 
@@ -190,5 +209,31 @@ namespace Novel.Tests
             Assert.IsTrue(handler.Called);
             Assert.AreEqual("test_error", handler.Key);
         });
+
+        // INovelCommandModule が独自コマンドの語彙束縛とハンドラ写像を差し込めることを検証（拡張口）
+        [UnityTest]
+        public IEnumerator 独自コマンドモジュールが語彙とハンドラを差し込める() => UniTask.ToCoroutine(async () =>
+        {
+            var module = new CustomEchoModule();
+            var runner = new NovelScenarioRunner(
+                new ResourcesScenarioSource(),
+                new Router(),
+                new FakeView(),
+                new IdentityTextResolver(),
+                new EmptyCatalog(),
+                preambleSources: new IPreambleSource[] { new ResourcesPreambleSource() },
+                commandModules: new INovelCommandModule[] { module });
+
+            var result = await runner.PlayAsync("test_custom_command", CancellationToken.None);
+
+            Assert.AreEqual(NovelResult.Completed, result);
+            CollectionAssert.AreEqual(new[] { "echoed" }, module.Received);   // 独自 cmd がハンドラへ届いた
+        });
     }
+}
+
+namespace System.Runtime.CompilerServices
+{
+    // record struct の init アクセサ用ポリフィル（テストアセンブリは Novel.Commands の内包版を共有しないため）
+    internal static class IsExternalInit { }
 }
