@@ -51,5 +51,23 @@ namespace Novel.Tests
             var plain = NovelTagLexer.ToPlainText("a<unknown>b");
             Assert.AreEqual("a<unknown>b", plain);
         }
+
+        [Test]
+        public void Parse_noparse区間は内部の制御タグもリテラル化する()
+        {
+            // 内部の <w=1> は Wait トークンにならずリテラル文字として残る
+            var plain = NovelTagLexer.ToPlainText("前<noparse>foo<w=1></noparse>後");
+            Assert.AreEqual("前foo<w=1>後", plain);
+
+            foreach (var t in NovelTagLexer.Parse("前<noparse>foo<w=1></noparse>後"))
+                Assert.AreNotEqual(NovelTokenKind.Wait, t.Kind);
+        }
+
+        [Test]
+        public void Parse_閉じないnoparseは残り全部をリテラル化する()
+        {
+            var plain = NovelTagLexer.ToPlainText("a<noparse>b<color=#fff>c");
+            Assert.AreEqual("ab<color=#fff>c", plain);
+        }
     }
 }

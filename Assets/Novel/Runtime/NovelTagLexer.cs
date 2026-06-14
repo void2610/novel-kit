@@ -16,8 +16,10 @@ namespace Novel.Runtime
             "color", "b", "i", "u", "s", "size", "sub", "sup", "mark", "link",
             "align", "voffset", "space", "indent", "nobr", "sprite", "font",
             "cspace", "line-height", "lowercase", "uppercase", "smallcaps",
-            "gradient", "rotate", "width", "style", "pos", "alpha", "noparse",
+            "gradient", "rotate", "width", "style", "pos", "alpha",
         };
+
+        private const string NoparseClose = "</noparse>";
 
         public static IReadOnlyList<NovelToken> Parse(string raw)
         {
@@ -52,6 +54,18 @@ namespace Novel.Runtime
                 }
 
                 var inner = raw.Substring(i + 1, close - i - 1);   // '<' '>' の中身
+
+                // noparse は区間まるごとリテラル: 中身の制御タグも解釈せず素テキストとして取り込む
+                if (inner.Trim().Equals("noparse", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    int end = raw.IndexOf(NoparseClose, close + 1, System.StringComparison.OrdinalIgnoreCase);
+                    int from = close + 1;
+                    int to = end < 0 ? raw.Length : end;   // 閉じない noparse は残り全部
+                    text.Append(raw, from, to - from);
+                    i = end < 0 ? raw.Length : end + NoparseClose.Length;
+                    continue;
+                }
+
                 if (TryClassify(inner, out var token, out var isTmpPassthrough))
                 {
                     FlushText();
