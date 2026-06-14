@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using Novel.Runtime;
@@ -124,6 +125,22 @@ namespace Novel.Tests
             var readResult = await NewRunner(view, save).PlayAsync("test_flag_read", CancellationToken.None);
             Assert.AreEqual(NovelResult.Completed, readResult);
             Assert.AreEqual("5", view.Lines[0].Text);          // 復元後に Ruby が読み戻せた
+        });
+
+        // __ 始まりの choose 自動キーはセーブ境界のスナップショットから除外し、明示キーと flag は永続することを固定（回帰防止）
+        [UnityTest]
+        public IEnumerator choose自動キーはセーブ除外され明示キーとflagは永続する() => UniTask.ToCoroutine(async () =>
+        {
+            var save = new MemorySaveStore();
+
+            var result = await NewRunner(new FakeView { ChoiceResult = 1 }, save)
+                .PlayAsync("test_choose_keys", CancellationToken.None);
+
+            Assert.AreEqual(NovelResult.Completed, result);
+            var keys = save.Saved.Values.Keys;
+            Assert.IsTrue(keys.Contains("picked"));   // 明示キーは永続
+            Assert.IsTrue(keys.Contains("kept"));     // flag は永続
+            Assert.IsFalse(keys.Any(k => k.StartsWith("__", StringComparison.Ordinal)));   // 自動採番は除外
         });
 
         // MRuby 実行時例外で Faulted を返し INovelErrorHandler へ委譲することを検証
