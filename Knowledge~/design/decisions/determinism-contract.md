@@ -1,11 +1,16 @@
 ---
 type: Decision
 title: 決定性コントラクトは当面後回し
-description: リプレイ前提だが、著者への決定性強制（seed 付き RNG・Time 禁止）は当面課さず、履歴記録のみ先行する。
+description: 旧リプレイ前提下での暫定判断。実行モデルが前進専用へ格下げされリプレイ自体が消えたため当面 moot。
 tags: [decision, runtime, replay, determinism]
-timestamp: 2026-06-13T00:00:00Z
-status: 暫定
+timestamp: 2026-06-14T23:50:00Z
+status: moot（2026-06-14: 実行モデルがリプレイ前提から格下げされ前提が消失）
 ---
+
+> **2026-06-14 追記**: [実行モデル](/design/decisions/execution-model.md) が「前進専用 + チェックポイント割り切り」へ
+> 格下げされ、リプレイ自体を持たなくなった。リプレイが無ければ決定性強制の動機も消えるため、**本 ADR は当面 moot**。
+> 入力履歴の day1 記録も行わない。決定性契約は、将来 save-anywhere/ロールバックを一括導入する段で改めて検討する。
+> 以下は格下げ前（リプレイ前提時）の記録として残す。
 
 # 状況
 

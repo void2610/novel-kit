@@ -36,8 +36,9 @@ timestamp: 2026-06-14T02:45:00Z
 Ruby の Fiber が 1 行ごとにサスペンドし、手書きの状態機械なしに「表示 → 待ち → 次」の
 線形進行が成立する。これを進行モデルの基盤とする。
 
-ただしこの前進専用モデルは save-anywhere / ロールバックと構造的に衝突する。対処は
-[実行モデルの ADR](/design/decisions/execution-model.md)（リプレイ前提設計）を参照。
+ただしこの前進専用モデルは save-anywhere / ロールバックと構造的に衝突する。本ライブラリはこれを割り切り、
+セーブ/復元を `PlayAsync` 境界のチェックポイントに限定する（save-anywhere は持たない）。
+[実行モデルの ADR](/design/decisions/execution-model.md)（前進専用 + チェックポイント割り切り）を参照。
 
 # INovelView 抽象（最重要の境界）
 
@@ -108,7 +109,7 @@ container 所有 / runner 私有 `new Router()` / 静的 `Router.Default` の 3 
 - 永続の対象は `IStateStore` のみ。永続化は game が実装する `ISaveStore` 経由（ライブラリはシリアライズ形式を持たない）。
 - **セーブ境界は `PlayAsync` の間**（シナリオ完了の狭間）。シナリオ途中での保存は v1 対象外。提示状態
   （表示中の窓・進行中タイプライタ等）は非シリアライズ。[セーブのスナップショット粒度](/design/decisions/save-snapshot.md)。
-- リプレイのため、選択 index・フラグ操作などの入力履歴を day 1 から記録する。
+- 入力履歴（選択 index・フラグ列）の記録は持たない（実行モデルが前進専用 + チェックポイント割り切りへ格下げされたため）。
 
 # シナリオソース
 

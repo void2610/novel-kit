@@ -37,7 +37,7 @@ replay: 記録対象をこのストアに一元化
 # 理由
 
 - 3 ストア分散はエイリアス/不整合バグの温床。実際に choose() の単一スロット衝突という既存バグがある。
-- リプレイ前提（[実行モデル](/design/decisions/execution-model.md)）では記録対象を一元化したい。
+- 永続対象（セーブ）を単一ストアに一元化したい（[実行モデル](/design/decisions/execution-model.md) はチェックポイント境界でこのストアを Capture/Restore する）。
 - 著者に一貫した変数モデル（read/算術/条件）を提供できる。
 
 # 帰結

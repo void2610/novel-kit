@@ -131,10 +131,15 @@ ID は後続修正の追跡キー。深刻度は検証後の補正値。
 `NK-SCENSRC-DRIFT`（`ResourcesScenarioSource` に空キーガード追加・`EndsWith` を Ordinal 化、architecture.md を実装（1実装+ガード）へ整合）。
 `NK-NOPARSE-INDEX` は検証の結果、TMP の `<noparse>` タグは characterInfo を生成せず shake/wave の可視 index と素テキスト index が一致するため**非問題**と判断（コード変更不要）。
 
+**設計判断・決定済**:
+`NK-REPLAY-FOUND` → **「チェックポイント割り切り」で決着**（2026-06-14）。`execution-model` ADR を「リプレイ前提設計」から
+「前進専用 + チェックポイント割り切り」へ格下げし、入力履歴 day1 記録・save-anywhere・ロールバックは v1 で持たないと確定。
+下流（save-snapshot / determinism-contract / command-versioning / overview / architecture / open-questions）も整合済み。
+現実装（境界セーブ）が既にこの形なのでコード変更は不要。
+
 **未対応（低優先・要設計判断）**:
 `NK-VC-VIEW-COUPLE`（ヘルパの View 結合分離。`RegisterNovelKit` の asmdef 構造に影響するため設計判断が要る）、
-`NK-READ-GROWTH`（既読プルーン。当面は game が `ISaveStore` 実装側で `ReadTextIds` を間引けるため緊急度低）、
-`NK-REPLAY-FOUND`（入力履歴 day1 記録を入れるか、`execution-model` ADR の「リプレイ前提」を「チェックポイント割り切り」へ格下げするか＝設計判断）。
+`NK-READ-GROWTH`（既読プルーン。当面は game が `ISaveStore` 実装側で `ReadTextIds` を間引けるため緊急度低）。
 
 > 実装は Unity 未コンパイル状態でのコード変更。`.rb`（Preamble/サンプル）は再 import で `.mrb` 再生成が必要。
 > EditMode テスト（`NovelScenarioRunnerTests` / `TextRevealEngineTests` / `NovelTagLexerTests`）で検証すること。

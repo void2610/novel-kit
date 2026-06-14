@@ -65,8 +65,10 @@ lipsync は対象外）で確定。残るのは `se`/`bgm` コマンドの引数
 
 # 機能バックログ（v1 スコープ外だが将来検討）
 
-- ロールバック（Ren'Py 式巻き戻し）。[実行モデル](/design/decisions/execution-model.md) のリプレイ基盤の上で将来。
-- 長いノベルパートの途中再開（リプレイ式 save-anywhere）+ シナリオ内容 versioning。[セーブのスナップショット粒度](/design/decisions/save-snapshot.md) で v1 対象外。
+- ロールバック（Ren'Py 式巻き戻し）+ 長いノベルパートの途中再開（リプレイ式 save-anywhere）+ シナリオ内容 versioning。
+  [実行モデル](/design/decisions/execution-model.md) が前進専用 + チェックポイント割り切りへ格下げされ、**リプレイ基盤は持たない**ため、
+  これらは「やるなら決定性契約 + 入力履歴記録 + 内容 versioning + リプレイ実行系を一括導入する**実質作り直し**」として将来検討
+  （非破壊の後付けではない）。[セーブのスナップショット粒度](/design/decisions/save-snapshot.md) でも v1 対象外。
 - メッセージ窓の hide トグル（シーン中に窓を一時的に隠し背景/立ち絵を見る、ノベルパート内の提示アフォーダンス）。
   - 注: CG 鑑賞ギャラリー（解放済み CG の一覧/コレクション）は**スコープ外**。ゲーム全体のメタ機能であり、本ライブラリはゲーム内ノベルパートのプリミティブに徹する（[フロー境界](/design/decisions/flow-boundary.md)）。
 - 選択肢のアフォーダンス: 無効/条件付き（grey out）・タイマー付き・一度のみ。
