@@ -11,10 +11,7 @@ using VitalRouter.MRuby;
 
 namespace Novel.Runtime
 {
-    // 「命令されたら 1 シナリオを再生する」プリミティブ。進行・章/分岐は game 所有（flow-boundary）。
-    // handler は runner 私有の MRubyStateStore（MRuby 共有テーブル背後）に結合するため runner が構築し
-    // 注入された Router へ MapTo する。Router は container 登録・IStateStore は runtime 内部（永続は ISaveStore）。
-    // → router-ownership / state-model ADR で確定。
+    // 1 シナリオ再生のプリミティブ。進行・章/分岐は game 所有（flow-boundary / router-ownership・state-model ADR）
     public sealed class NovelScenarioRunner : INovelScenarioRunner, IDisposable
     {
         private readonly IScenarioSource _source;
@@ -28,9 +25,8 @@ namespace Novel.Runtime
         private bool _preambleLoaded;
         private bool _disposed;
 
-        // switch-latest 直列化用: 進行中の再生の「完了(teardown)通知」と、その中断用トークン源。
-        // 単一 MRubyState を共有するため、再入時は前再生を cancel し完了通知を待ってから差し替える。
-        // 戻り値タスクではなく専用の通知ソースで待ち合わせ、同一 UniTask の二重 await を避ける。
+        // switch-latest 直列化用: 単一 MRubyState 共有のため前再生の完了通知を待ってから差し替える
+        // 戻り値タスクでなく専用の通知ソース(UTCS)で待つのは、同一 UniTask の二重 await を避けるため
         private UniTaskCompletionSource? _previousDone;
         private CancellationTokenSource? _inFlightCts;
 
@@ -74,15 +70,12 @@ namespace Novel.Runtime
             foreach (var module in modules) _subscriptions.Add(module.MapHandlers(_router));
         }
 
-        // 命令されたら 1 シナリオを再生する。再生中に再度呼ぶと switch-latest:
-        // 進行中の再生を cancel し、その後始末（単一 MRubyState の巻き戻し）完了を待ってから新シナリオへ差し替える。
-        // 差し替えられた前呼び出しは NovelResult.Cancelled を受け取る。呼び出し側は直列化を意識しなくてよい。
+        // 再生中に再度呼ぶと switch-latest: 前再生を cancel し後始末完了を待って差し替える（前呼び出しは Cancelled）
         public UniTask<NovelResult> PlayAsync(string scenarioKey, CancellationToken ct)
         {
             if (_disposed) throw new ObjectDisposedException(nameof(NovelScenarioRunner));
 
-            // 同期的に「自分の完了通知」と中断トークンを差し込んでから返す
-            // (Unity 単一スレッドのため、次の呼び出しは必ず更新後の値を見て自分を直列に繋げられる)
+            // Unity 単一スレッドのため、同期的に完了通知/中断トークンを差し込めば次呼び出しが直列に繋がる
             var previousDone = _previousDone;
             var previousCts = _inFlightCts;
             var myDone = new UniTaskCompletionSource();
@@ -92,10 +85,8 @@ namespace Novel.Runtime
             return RunChainedAsync(previousDone, previousCts, scenarioKey, myCts, myDone);
         }
 
-        // 直前の再生を中断し、その完了通知を待ってから自分を直列に実行する。
-        // 戻り値タスクではなく専用の完了通知(UTCS)で待ち合わせるため、同一 UniTask を二重 await しない
-        // (UniTask の単一 await 制約を回避する)。前 cts は中断 → 待機後にここで破棄する
-        // (後継が前任を破棄する規約: 破棄後 Cancel / 二重破棄を避ける)。
+        // 前再生を中断し専用の完了通知(UTCS)を待ってから直列実行する（同一 UniTask の二重 await 回避）
+        // 前 cts は中断→待機後にここで破棄する（後継が前任を破棄する規約: 破棄後 Cancel / 二重破棄を避ける）
         private async UniTask<NovelResult> RunChainedAsync(
             UniTaskCompletionSource? previousDone, CancellationTokenSource? previousCts,
             string scenarioKey, CancellationTokenSource myCts, UniTaskCompletionSource myDone)
@@ -154,8 +145,7 @@ namespace Novel.Runtime
             }
         }
 
-        // 糖衣ヘルパ（say/choose 等）を定義する preamble を起動時に一度だけ state へ評価する。
-        // 登録順に評価するため、組込糖衣が先・game 追加糖衣が後になる（getting-started の登録順契約）。
+        // 糖衣定義 preamble を起動時に一度だけ登録順で評価する（組込が先・game 追加が後）
         private async UniTask EnsurePreambleLoadedAsync(CancellationToken ct)
         {
             if (_preambleLoaded) return;

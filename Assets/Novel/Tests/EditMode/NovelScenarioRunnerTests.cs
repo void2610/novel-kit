@@ -48,8 +48,7 @@ namespace Novel.Tests
                 => UniTask.FromResult(ChoiceResult);
         }
 
-        // ShowMessageAsync を gate が解放されるまでブロックする View（switch-latest テスト用）。
-        // ct で中断可能にし、差し替え時に前再生が確実に巻き戻ることを検証できるようにする。
+        // gate 解放までブロックし ct で中断可能な View（switch-latest 検証用）
         private sealed class GatedView : INovelView
         {
             private readonly UniTaskCompletionSource _gate;
@@ -157,7 +156,7 @@ namespace Novel.Tests
             Assert.AreEqual("5", view.Lines[0].Text);          // 復元後に Ruby が読み戻せた
         });
 
-        // __ 始まりの choose 自動キーはセーブ境界のスナップショットから除外し、明示キーと flag は永続することを固定（回帰防止）
+        // choose 自動キー(__始まり)はセーブ除外、明示キーと flag は永続（回帰防止）
         [UnityTest]
         public IEnumerator choose自動キーはセーブ除外され明示キーとflagは永続する() => UniTask.ToCoroutine(async () =>
         {
