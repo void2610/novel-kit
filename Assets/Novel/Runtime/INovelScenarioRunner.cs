@@ -7,9 +7,9 @@ namespace Novel.Runtime
     public interface INovelScenarioRunner
     {
         // シナリオ実行中の例外は握って NovelResult.Faulted/Cancelled に畳む（フェイルセーフ）。
-        // ただし再生中（前の PlayAsync 完了前）の再入呼び出しだけは InvalidOperationException を投げる
-        // — 単一 MRubyState を共有するための fail-fast で、これは API 誤用（配線バグ）の検出であり、
-        //   シナリオ/コンテンツ障害を表す Faulted とは別カテゴリ。呼び出し側は再生を直列化すること。
+        // 再生中（前の PlayAsync 完了前）に再度呼ぶと switch-latest: 進行中の再生を cancel し、
+        // その後始末（単一 MRubyState の巻き戻し）完了を待ってから新シナリオへ差し替える。
+        // 差し替えられた前呼び出しは NovelResult.Cancelled を受け取る。呼び出し側は直列化を意識しなくてよい。
         UniTask<NovelResult> PlayAsync(string scenarioKey, CancellationToken ct);
     }
 }

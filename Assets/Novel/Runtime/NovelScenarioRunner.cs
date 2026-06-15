@@ -26,8 +26,13 @@ namespace Novel.Runtime
         private readonly MRubyStateStore _store;
         private readonly List<IDisposable> _subscriptions;
         private bool _preambleLoaded;
-        private bool _playing;
         private bool _disposed;
+
+        // switch-latest 直列化用: 進行中の再生の「完了(teardown)通知」と、その中断用トークン源。
+        // 単一 MRubyState を共有するため、再入時は前再生を cancel し完了通知を待ってから差し替える。
+        // 戻り値タスクではなく専用の通知ソースで待ち合わせ、同一 UniTask の二重 await を避ける。
+        private UniTaskCompletionSource? _previousDone;
+        private CancellationTokenSource? _inFlightCts;
 
         public NovelScenarioRunner(IScenarioSource source, Router router,
             INovelView view, ITextResolver text, ICharacterCatalog catalog,
@@ -69,13 +74,53 @@ namespace Novel.Runtime
             foreach (var module in modules) _subscriptions.Add(module.MapHandlers(_router));
         }
 
-        public async UniTask<NovelResult> PlayAsync(string scenarioKey, CancellationToken ct)
+        // 命令されたら 1 シナリオを再生する。再生中に再度呼ぶと switch-latest:
+        // 進行中の再生を cancel し、その後始末（単一 MRubyState の巻き戻し）完了を待ってから新シナリオへ差し替える。
+        // 差し替えられた前呼び出しは NovelResult.Cancelled を受け取る。呼び出し側は直列化を意識しなくてよい。
+        public UniTask<NovelResult> PlayAsync(string scenarioKey, CancellationToken ct)
         {
-            // 単一 MRubyState を共有するため再入/同時再生はできない。完了前の再呼び出しは fail-fast する
-            if (_playing)
-                throw new InvalidOperationException(
-                    "NovelScenarioRunner は前の PlayAsync 完了前に再生できません（単一 MRubyState 共有のため）。");
-            _playing = true;
+            if (_disposed) throw new ObjectDisposedException(nameof(NovelScenarioRunner));
+
+            // 同期的に「自分の完了通知」と中断トークンを差し込んでから返す
+            // (Unity 単一スレッドのため、次の呼び出しは必ず更新後の値を見て自分を直列に繋げられる)
+            var previousDone = _previousDone;
+            var previousCts = _inFlightCts;
+            var myDone = new UniTaskCompletionSource();
+            var myCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            _previousDone = myDone;
+            _inFlightCts = myCts;
+            return RunChainedAsync(previousDone, previousCts, scenarioKey, myCts, myDone);
+        }
+
+        // 直前の再生を中断し、その完了通知を待ってから自分を直列に実行する。
+        // 戻り値タスクではなく専用の完了通知(UTCS)で待ち合わせるため、同一 UniTask を二重 await しない
+        // (UniTask の単一 await 制約を回避する)。前 cts は中断 → 待機後にここで破棄する
+        // (後継が前任を破棄する規約: 破棄後 Cancel / 二重破棄を避ける)。
+        private async UniTask<NovelResult> RunChainedAsync(
+            UniTaskCompletionSource? previousDone, CancellationTokenSource? previousCts,
+            string scenarioKey, CancellationTokenSource myCts, UniTaskCompletionSource myDone)
+        {
+            previousCts?.Cancel();
+            if (previousDone != null)
+            {
+                try { await previousDone.Task; }
+                catch { /* 前再生の結果/例外は前呼び出しが受け取る。ここは teardown 完了の同期だけが目的 */ }
+            }
+            previousCts?.Dispose();
+
+            try
+            {
+                return await RunOnceAsync(scenarioKey, myCts.Token);
+            }
+            finally
+            {
+                myDone.TrySetResult();   // 自分の完了(teardown 完走)を次の再生へ通知する
+            }
+        }
+
+        // 1 シナリオの実体。例外は握って NovelResult.Faulted/Cancelled に畳む（フェイルセーフ）。
+        private async UniTask<NovelResult> RunOnceAsync(string scenarioKey, CancellationToken ct)
+        {
             try
             {
                 await EnsurePreambleLoadedAsync(ct);
@@ -107,10 +152,6 @@ namespace Novel.Runtime
                 _errorHandler?.OnScenarioFaulted(NovelErrorReport.Describe(scenarioKey, ex));
                 return NovelResult.Faulted;
             }
-            finally
-            {
-                _playing = false;
-            }
         }
 
         // 糖衣ヘルパ（say/choose 等）を定義する preamble を起動時に一度だけ state へ評価する。
@@ -131,6 +172,13 @@ namespace Novel.Runtime
         {
             if (_disposed) return;
             _disposed = true;
+            // 進行中の再生を中断し、最後の cts（後継がいないため未破棄のまま残る）を破棄する
+            if (_inFlightCts != null)
+            {
+                _inFlightCts.Cancel();
+                _inFlightCts.Dispose();
+                _inFlightCts = null;
+            }
             foreach (var subscription in _subscriptions) subscription.Dispose();
         }
     }

@@ -48,13 +48,14 @@ namespace Novel.Tests
                 => UniTask.FromResult(ChoiceResult);
         }
 
-        // ShowMessageAsync を gate が解放されるまでブロックする View（再入テスト用）
+        // ShowMessageAsync を gate が解放されるまでブロックする View（switch-latest テスト用）。
+        // ct で中断可能にし、差し替え時に前再生が確実に巻き戻ることを検証できるようにする。
         private sealed class GatedView : INovelView
         {
             private readonly UniTaskCompletionSource _gate;
             public GatedView(UniTaskCompletionSource gate) => _gate = gate;
 
-            public UniTask ShowMessageAsync(NovelLine line, CancellationToken ct) => _gate.Task;
+            public UniTask ShowMessageAsync(NovelLine line, CancellationToken ct) => _gate.Task.AttachExternalCancellation(ct);
             public UniTask<int> ShowChoicesAsync(IReadOnlyList<string> options, CancellationToken ct) => UniTask.FromResult(0);
         }
 
@@ -172,21 +173,19 @@ namespace Novel.Tests
             Assert.IsFalse(keys.Any(k => k.StartsWith("__", StringComparison.Ordinal)));   // 自動採番は除外
         });
 
-        // 再生中（前の PlayAsync 完了前）の再入は InvalidOperationException で弾くことを検証（単一 MRubyState 共有）
+        // 再生中の再入は前を中断して新シナリオへ差し替える（switch-latest・単一 MRubyState 共有）
         [UnityTest]
-        public IEnumerator 再生中の再入PlayAsyncは例外を投げる() => UniTask.ToCoroutine(async () =>
+        public IEnumerator 再生中の再入PlayAsyncは前を中断して差し替える() => UniTask.ToCoroutine(async () =>
         {
             var gate = new UniTaskCompletionSource();
             var runner = NewRunner(new GatedView(gate));
             var first = runner.PlayAsync("test_hello", CancellationToken.None);   // 最初の say で gate 待ちに入る
 
-            var threw = false;
-            try { await runner.PlayAsync("test_hello", CancellationToken.None); }
-            catch (InvalidOperationException) { threw = true; }
-            Assert.IsTrue(threw);   // 再入は弾かれる
+            var second = runner.PlayAsync("test_hello", CancellationToken.None);  // 差し替え: first を cancel する
+            Assert.AreEqual(NovelResult.Cancelled, await first);                  // 前は中断され Cancelled
 
-            gate.TrySetResult();     // 解放して 1 本目を完了させる
-            Assert.AreEqual(NovelResult.Completed, await first);
+            gate.TrySetResult();                                                  // second の gate を解放
+            Assert.AreEqual(NovelResult.Completed, await second);                 // 差し替え後が完走する
         });
 
         // MRuby 実行時例外で Faulted を返し INovelErrorHandler へ委譲することを検証
