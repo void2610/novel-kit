@@ -31,6 +31,24 @@ namespace Novel.Tests
         public void On(CustomEchoCommand cmd) => Received.Add(cmd.Text);
     }
 
+    // 数値 (float) 引数の独自コマンドが MRuby cmd 経由でハンドラに届くかの再現用。
+    // ゲーム側 (apocalyptic-apartment-hunting) で WorldEffectCommand (float[]) と WaitCommand (float) が
+    // ランタイムでハンドラまで到達しない症状を観測したため、最小ケースとして float 1 つで切り出した。
+    [MRubyObject]
+    public readonly partial record struct CustomNumberCommand : ICommand
+    {
+        public float Value { get; init; }
+    }
+
+    [Routes]
+    public sealed partial class CustomNumberModule : INovelCommandModule
+    {
+        public readonly List<float> Received = new();
+        public void RegisterVocabulary(MRubyState state) => state.AddCommand<CustomNumberCommand>("custom_number");
+        public IDisposable MapHandlers(ICommandSubscribable router) => MapTo(router);
+        public void On(CustomNumberCommand cmd) => Received.Add(cmd.Value);
+    }
+
     public sealed class NovelScenarioRunnerTests
     {
         private sealed class FakeView : INovelView
@@ -226,6 +244,28 @@ namespace Novel.Tests
 
             Assert.AreEqual(NovelResult.Completed, result);
             CollectionAssert.AreEqual(new[] { "echoed" }, module.Received);   // 独自 cmd がハンドラへ届いた
+        });
+
+        // float 引数つきの独自コマンドが MRuby cmd 経由でハンドラへ届くかの回帰再現。
+        // 既存の int FlagCommand と string CustomEchoCommand は通っているが、float (および float[]) は
+        // ゲーム側ランタイムでハンドラまで到達しない症状が出ているため最小ケースを置く。
+        [UnityTest]
+        public IEnumerator float引数の独自コマンドがハンドラへ届く() => UniTask.ToCoroutine(async () =>
+        {
+            var module = new CustomNumberModule();
+            var runner = new NovelScenarioRunner(
+                new ResourcesScenarioSource(),
+                new Router(),
+                new FakeView(),
+                new IdentityTextResolver(),
+                new EmptyCatalog(),
+                preambleSources: new IPreambleSource[] { new ResourcesPreambleSource() },
+                commandModules: new INovelCommandModule[] { module });
+
+            var result = await runner.PlayAsync("test_custom_number", CancellationToken.None);
+
+            Assert.AreEqual(NovelResult.Completed, result);
+            CollectionAssert.AreEqual(new[] { 0.5f }, module.Received);   // float cmd がハンドラへ届いた
         });
 
         // say の表示ごとに IBacklog へ話者・本文（rich）が記録されることを検証
