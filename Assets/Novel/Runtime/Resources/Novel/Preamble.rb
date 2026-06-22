@@ -5,11 +5,13 @@
 # 制約: cmd（特に入力待ちを挟む choose）を跨ぐとローカル変数が失われる（mruby Fiber の resume 挙動）。
 # よって choose のキーはグローバルカウンタで採番し、cmd 直後にその場で読む。
 
-def say(speaker, text = nil, display_as: nil)
+# 第3引数 portrait_key を渡すと、この行と同時に立ち絵を切り替えられる (話者と立ち絵の独立制御)。
+# 例: say '？？？', '正体は伏せたまま', 'kii/default'
+def say(speaker, text = nil, portrait_key = nil, display_as: nil)
   if text.nil?
     cmd :say, speaker_id: '', text: speaker
   else
-    cmd :say, speaker_id: speaker.to_s, display_as: display_as, text: text
+    cmd :say, speaker_id: speaker.to_s, display_as: display_as, text: text, portrait_key: portrait_key.to_s
   end
 end
 
