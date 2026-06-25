@@ -70,9 +70,12 @@ namespace Novel.Tests
             view.Calls.Clear();
             await director.StageAsync(PortraitLayout.Pair, new[] { "taylor", "kii" }, CancellationToken.None);
 
-            // protagonist は旧 cast の slot 2 にいたので Hide される
-            Assert.Contains("hide:2", view.Calls);
-            Assert.Contains("switch:pair", view.Calls);
+            // protagonist は旧 cast の slot 2 にいたので Hide される。 順序 (Hide → SwitchLayout) も担保する
+            var hideIdx = view.Calls.IndexOf("hide:2");
+            var switchIdx = view.Calls.IndexOf("switch:pair");
+            Assert.GreaterOrEqual(hideIdx, 0, "退場キャラの Hide が発火していない");
+            Assert.GreaterOrEqual(switchIdx, 0, "SwitchLayout が発火していない");
+            Assert.Less(hideIdx, switchIdx, "Hide は SwitchLayout より前に呼ばれるべき");
         });
 
         // 未宣言キャラの portrait は slot 0 にフォールバック (警告ログは想定挙動なので吸収)
