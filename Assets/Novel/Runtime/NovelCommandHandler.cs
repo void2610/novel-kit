@@ -1,8 +1,10 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using Novel.Commands;
+using UnityEngine;
 using VitalRouter;
 
 namespace Novel.Runtime
@@ -16,21 +18,21 @@ namespace Novel.Runtime
         private readonly IStateStore _state;
         private readonly ITextResolver _text;
         private readonly ICharacterCatalog _catalog;
-        private readonly IPortraitView? _portrait;
+        private readonly IPortraitDirector? _portraitDirector;
         private readonly IBackgroundView? _background;
         private readonly IAudioChannel? _audio;
         private readonly IWorldEffectSink? _worldEffectSink;
         private readonly IBacklog? _backlog;
 
         public NovelCommandHandler(INovelView view, IStateStore state, ITextResolver text, ICharacterCatalog catalog,
-            IPortraitView? portrait = null, IBackgroundView? background = null, IAudioChannel? audio = null,
+            IPortraitDirector? portraitDirector = null, IBackgroundView? background = null, IAudioChannel? audio = null,
             IWorldEffectSink? worldEffectSink = null, IBacklog? backlog = null)
         {
             _view = view;
             _state = state;
             _text = text;
             _catalog = catalog;
-            _portrait = portrait;
+            _portraitDirector = portraitDirector;
             _background = background;
             _audio = audio;
             _worldEffectSink = worldEffectSink;
@@ -40,8 +42,8 @@ namespace Novel.Runtime
         public async UniTask On(SayCommand cmd, CancellationToken ct)
         {
             // PortraitKey が同時指定されていればここで切替（display_as で表示名を変えつつ、同一 speaker_id の立ち絵を 1 行で指定する糖衣）
-            if (!string.IsNullOrEmpty(cmd.PortraitKey) && _portrait != null)
-                await _portrait.ShowAsync(cmd.SpeakerId, cmd.PortraitKey, ct);
+            if (!string.IsNullOrEmpty(cmd.PortraitKey) && _portraitDirector != null)
+                await _portraitDirector.ShowAsync(cmd.SpeakerId, cmd.PortraitKey, ct);
 
             var resolved = _text.Resolve(cmd.Text);
             var displayName = ResolveDisplayName(cmd);
@@ -75,7 +77,52 @@ namespace Novel.Runtime
 
         public async UniTask On(PortraitCommand cmd, CancellationToken ct)
         {
-            if (_portrait != null) await _portrait.ShowAsync(cmd.Character, cmd.PortraitKey, ct);
+            if (_portraitDirector != null) await _portraitDirector.ShowAsync(cmd.Character, cmd.PortraitKey, ct);
+        }
+
+        // stage 宣言: layout と cast (キャラ → slot index) を Director に適用する。
+        // CastPairs は [character0, index0, character1, index1, ...] のフラット配列 (Vocabulary コメント参照)。
+        // DSL ミスを検出しやすくするため、 奇数要素 / 空 character / 負 slot index は警告 + skip する。
+        public async UniTask On(StageCommand cmd, CancellationToken ct)
+        {
+            if (_portraitDirector == null) return;
+            var pairs = cmd.CastPairs ?? Array.Empty<string>();
+            if (pairs.Length % 2 != 0)
+            {
+                Debug.LogWarning($"[Novel] stage の cast_pairs の要素数が奇数 ({pairs.Length}) です。 末尾の半端な要素 '{pairs[pairs.Length - 1]}' は無視します。");
+            }
+            var cast = new Dictionary<string, int>(pairs.Length / 2);
+            for (var i = 0; i + 1 < pairs.Length; i += 2)
+            {
+                var character = pairs[i];
+                if (string.IsNullOrEmpty(character))
+                {
+                    Debug.LogWarning($"[Novel] stage cast に空文字 character は登録できません (index {i})。 スキップします。");
+                    continue;
+                }
+                if (!int.TryParse(pairs[i + 1], out var slotIndex))
+                {
+                    Debug.LogWarning($"[Novel] stage cast の slot index が int に変換できません ({character}={pairs[i + 1]})。 スキップします。");
+                    continue;
+                }
+                if (slotIndex < 0)
+                {
+                    Debug.LogWarning($"[Novel] stage cast の slot index に負値は使えません ({character}={slotIndex})。 スキップします。");
+                    continue;
+                }
+                cast[character] = slotIndex;
+            }
+            await _portraitDirector.StageAsync(new PortraitLayout(cmd.LayoutId), cast, ct);
+        }
+
+        public async UniTask On(ExitCommand cmd, CancellationToken ct)
+        {
+            if (_portraitDirector != null) await _portraitDirector.ExitAsync(cmd.Character, ct);
+        }
+
+        public async UniTask On(ClearStageCommand cmd, CancellationToken ct)
+        {
+            if (_portraitDirector != null) await _portraitDirector.ClearStageAsync(ct);
         }
 
         public async UniTask On(BackgroundCommand cmd, CancellationToken ct)

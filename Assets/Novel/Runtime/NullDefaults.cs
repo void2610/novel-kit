@@ -10,8 +10,18 @@ namespace Novel.Runtime
 
     public sealed class NullPortraitView : IPortraitView
     {
+        public UniTask SwitchLayoutAsync(PortraitLayout layout, CancellationToken ct) => UniTask.CompletedTask;
+        public UniTask ShowAsync(int slotIndex, string character, string portraitKey, CancellationToken ct) => UniTask.CompletedTask;
+        public UniTask HideAsync(int slotIndex, CancellationToken ct) => UniTask.CompletedTask;
+    }
+
+    public sealed class NullPortraitDirector : IPortraitDirector
+    {
+        public UniTask StageAsync(PortraitLayout layout, System.Collections.Generic.IReadOnlyList<string> cast, CancellationToken ct) => UniTask.CompletedTask;
+        public UniTask StageAsync(PortraitLayout layout, System.Collections.Generic.IReadOnlyDictionary<string, int> cast, CancellationToken ct) => UniTask.CompletedTask;
         public UniTask ShowAsync(string character, string portraitKey, CancellationToken ct) => UniTask.CompletedTask;
-        public UniTask HideAsync(CancellationToken ct) => UniTask.CompletedTask;
+        public UniTask ExitAsync(string character, CancellationToken ct) => UniTask.CompletedTask;
+        public UniTask ClearStageAsync(CancellationToken ct) => UniTask.CompletedTask;
     }
 
     public sealed class NullBackgroundView : IBackgroundView

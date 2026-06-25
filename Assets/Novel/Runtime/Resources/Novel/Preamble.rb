@@ -50,6 +50,32 @@ def portrait(character, portrait_key)
   cmd :portrait, character: character.to_s, portrait_key: portrait_key.to_s
 end
 
+# 場面 (stage) の cast を宣言。 layout id (:single / :pair / :trio / :quad / :penta / カスタム) と
+# 「キャラ → slot index」 の対応を渡す。 配列形式 (順番で 0..N-1 を割り当て) と hash 形式 (明示) の両方を許容する。
+# 例: stage :trio, [:taylor, :kii, :protagonist]
+# 例: stage :trio, taylor: 1, kii: 0, protagonist: 2
+# 第 2 引数を省略すると cast 無し (画面クリアに近い: layout だけ切替)。
+def stage(layout_id, cast = nil)
+  pairs = []
+  if cast.is_a?(Hash)
+    cast.each { |k, v| pairs << k.to_s; pairs << v.to_i.to_s }
+  elsif cast.is_a?(Array)
+    cast.each_with_index { |k, i| pairs << k.to_s; pairs << i.to_s }
+  end
+  cmd :stage, layout_id: layout_id.to_s, cast_pairs: pairs
+end
+
+# 指定キャラを場面から退場 (cast から外し、 該当 slot を非表示に)。 退場アニメは View 実装側で。
+# Ruby 本体の Kernel#exit と被るので exit_chara にしている。
+def exit_chara(character)
+  cmd :exit, character: character.to_s
+end
+
+# すべての cast をクリアして場面をリセット (シーン切替時など)。 layout はリセットせず維持される。
+def clear_stage
+  cmd :clear_stage
+end
+
 def bg(background_key)
   cmd :bg, background_key: background_key.to_s
 end

@@ -5,7 +5,8 @@ using UnityEngine;
 
 namespace Novel.View
 {
-    // ICharacterCatalog の ScriptableObject 実装。インスペクタで id→表示名/立ち絵/side を編集する
+    // ICharacterCatalog の ScriptableObject 実装。インスペクタで id→表示名/立ち絵 を編集する
+    // (slot 位置は IPortraitDirector の stage 宣言で決まるため、 旧 side フィールドは撤去)
     [CreateAssetMenu(fileName = "CharacterCatalog", menuName = "Novel/Character Catalog")]
     public sealed class ScriptableCharacterCatalog : ScriptableObject, ICharacterCatalog
     {
@@ -15,7 +16,6 @@ namespace Novel.View
             public string speakerId;
             public string displayName;
             public string defaultPortraitKey;
-            public string side;
         }
 
         [SerializeField] private List<Entry> entries = new();
@@ -36,8 +36,7 @@ namespace Novel.View
                 if (string.IsNullOrEmpty(e.speakerId)) continue;
                 map[e.speakerId] = new CharacterEntry(
                     string.IsNullOrEmpty(e.displayName) ? e.speakerId : e.displayName,
-                    string.IsNullOrEmpty(e.defaultPortraitKey) ? null : e.defaultPortraitKey,
-                    string.IsNullOrEmpty(e.side) ? null : e.side);
+                    string.IsNullOrEmpty(e.defaultPortraitKey) ? null : e.defaultPortraitKey);
             }
             return map;
         }

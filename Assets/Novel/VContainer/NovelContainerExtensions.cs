@@ -21,6 +21,9 @@ namespace Novel.Integration
 
             // 省略可能ファセット/サービスの no-op 既定（silent）。dev 警告版/ログ版は View ヘルパが上書きする
             builder.Register<IPortraitView, NullPortraitView>(Lifetime.Singleton);
+            // IPortraitDirector の既定は IPortraitView を内部で参照する DefaultPortraitDirector。
+            // game 側が IPortraitView を差し替えれば Director も自動的に新 View を使う。
+            builder.Register<IPortraitDirector, DefaultPortraitDirector>(Lifetime.Singleton);
             builder.Register<IBackgroundView, NullBackgroundView>(Lifetime.Singleton);
             builder.Register<IAudioChannel, NullAudioChannel>(Lifetime.Singleton);
             builder.Register<IWorldEffectSink, NullWorldEffectSink>(Lifetime.Singleton);
