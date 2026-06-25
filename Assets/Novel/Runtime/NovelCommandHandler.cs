@@ -39,7 +39,7 @@ namespace Novel.Runtime
 
         public async UniTask On(SayCommand cmd, CancellationToken ct)
         {
-            // この行に立ち絵 key が同時指定されていればここで切替 (話者と独立した立ち絵を 1 行で記述するための糖衣経路)
+            // PortraitKey が同時指定されていればここで切替（display_as で表示名を変えつつ、同一 speaker_id の立ち絵を 1 行で指定する糖衣）
             if (!string.IsNullOrEmpty(cmd.PortraitKey) && _portrait != null)
                 await _portrait.ShowAsync(cmd.SpeakerId, cmd.PortraitKey, ct);
 
