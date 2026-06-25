@@ -7,12 +7,14 @@ using UnityEngine;
 namespace Novel.Runtime
 {
     // <see cref="IPortraitDirector"/> の既定実装。 cast マップ (キャラ id → slot index) と現在の layout を保持し、
-    // PortraitCommand の解決と StageCommand 適用時の差分処理 (退場 / 残留 / 入場) を <see cref="IPortraitView"/> に委ねる。
+    // PortraitCommand の解決と StageCommand 適用時の差分処理 (退場 / 残留 / slot 変更 / 入場) を <see cref="IPortraitView"/> に委ねる。
     // 入退場アニメは View 実装側の責務 (Hide/Show の中でフェード等を行う想定)。
     public sealed class DefaultPortraitDirector : IPortraitDirector
     {
         private readonly IPortraitView _view;
         private readonly Dictionary<string, int> _cast = new();
+        // Show のたびに最後に表示した portraitKey を記録し、 Stage 切替で slot 変更があった残留キャラの再表示に使う
+        private readonly Dictionary<string, string> _lastPortraitKey = new();
         private PortraitLayout _layout;
         private bool _layoutInitialized;
 
@@ -34,13 +36,24 @@ namespace Novel.Runtime
 
         public async UniTask StageAsync(PortraitLayout layout, IReadOnlyDictionary<string, int> cast, CancellationToken ct)
         {
-            // 古い cast にあって新 cast に無いキャラは退場させる (View に Hide を指示)
-            // 旧 layout の slot index を使う必要があるため、 layout を切替える前に Hide を発火する
+            // 旧 cast と新 cast を比較して 3 種類に振り分ける:
+            //   - 退場: 旧 cast にのみあるキャラ → 旧 slot を Hide
+            //   - slot 変更: 両方にあるが index が違う → 旧 slot を Hide + SwitchLayout 後に新 slot で再 Show
+            //   - 位置維持: 両方にあって index 同じ → 何もしない (View が SwitchLayout 内で滑らかに扱う)
+            var toReshow = new List<(string character, int newSlot)>();
             foreach (var oldEntry in _cast)
             {
-                if (!cast.ContainsKey(oldEntry.Key))
+                if (!cast.TryGetValue(oldEntry.Key, out var newSlot))
                 {
+                    // 退場
                     await _view.HideAsync(oldEntry.Value, ct);
+                }
+                else if (newSlot != oldEntry.Value)
+                {
+                    // slot 変更: 旧 slot を Hide してから後で新 slot で再 Show
+                    await _view.HideAsync(oldEntry.Value, ct);
+                    if (_lastPortraitKey.TryGetValue(oldEntry.Key, out _))
+                        toReshow.Add((oldEntry.Key, newSlot));
                 }
             }
 
@@ -49,33 +62,45 @@ namespace Novel.Runtime
             _layout = layout;
             _layoutInitialized = true;
             await _view.SwitchLayoutAsync(layout, ct);
+
+            // SwitchLayout 後に新 slot で再 Show (slot 変更があった残留キャラのみ)
+            foreach (var (character, slot) in toReshow)
+            {
+                if (_lastPortraitKey.TryGetValue(character, out var key))
+                    await _view.ShowAsync(slot, character, key, ct);
+            }
         }
 
-        public UniTask ShowAsync(string character, string portraitKey, CancellationToken ct)
+        public async UniTask ShowAsync(string character, string portraitKey, CancellationToken ct)
         {
             if (!_layoutInitialized)
             {
-                // stage 未宣言で portrait が呼ばれた: single レイアウトを暗黙適用して slot 0 にフォールバック (警告)
+                // stage 未宣言で portrait が呼ばれた: single レイアウトを暗黙適用して View にも切替を通知する
+                // (内部 _layout の更新だけだと View の slot が無いまま ShowAsync が走る不整合になるため、 SwitchLayoutAsync も await する)
                 Debug.LogWarning($"[Novel] portrait '{character}' が stage 宣言なしで呼ばれました。 " +
                                  "暗黙に single レイアウトで slot 0 にフォールバックします。");
                 _layout = PortraitLayout.Single;
                 _layoutInitialized = true;
+                await _view.SwitchLayoutAsync(_layout, ct);
             }
             var slotIndex = ResolveSlot(character);
-            return _view.ShowAsync(slotIndex, character, portraitKey, ct);
+            _lastPortraitKey[character] = portraitKey;
+            await _view.ShowAsync(slotIndex, character, portraitKey, ct);
         }
 
-        public UniTask ExitAsync(string character, CancellationToken ct)
+        public async UniTask ExitAsync(string character, CancellationToken ct)
         {
-            if (!_cast.TryGetValue(character, out var slotIndex)) return UniTask.CompletedTask;
+            if (!_cast.TryGetValue(character, out var slotIndex)) return;
             _cast.Remove(character);
-            return _view.HideAsync(slotIndex, ct);
+            _lastPortraitKey.Remove(character);
+            await _view.HideAsync(slotIndex, ct);
         }
 
         public async UniTask ClearStageAsync(CancellationToken ct)
         {
             foreach (var entry in _cast) await _view.HideAsync(entry.Value, ct);
             _cast.Clear();
+            _lastPortraitKey.Clear();
             // layout はリセットせず、 次の Stage 呼び出しまで現状維持 (画面が突然真っさらにならないように)
         }
 

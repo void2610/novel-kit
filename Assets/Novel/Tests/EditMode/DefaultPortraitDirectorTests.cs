@@ -89,7 +89,7 @@ namespace Novel.Tests
             Assert.Contains("show:0:stranger:neutral", view.Calls);
         });
 
-        // Stage 未宣言で portrait が呼ばれたら暗黙 single レイアウト + slot 0 にフォールバック
+        // Stage 未宣言で portrait が呼ばれたら暗黙 single レイアウト + SwitchLayout を View に通知 + slot 0 で表示
         [UnityTest]
         public IEnumerator Stage未宣言でportraitが呼ばれると暗黙singleにフォールバック() => UniTask.ToCoroutine(async () =>
         {
@@ -100,7 +100,39 @@ namespace Novel.Tests
             LogAssert.Expect(UnityEngine.LogType.Warning, new System.Text.RegularExpressions.Regex("stage cast"));
             await director.ShowAsync("taylor", "smile", CancellationToken.None);
 
-            Assert.Contains("show:0:taylor:smile", view.Calls);
+            // View にも SwitchLayout(single) が伝わってから ShowAsync が走ることを順序込みで担保 (single の slot が未確保のまま Show される不整合を防ぐ)
+            var switchIdx = view.Calls.IndexOf("switch:single");
+            var showIdx = view.Calls.IndexOf("show:0:taylor:smile");
+            Assert.GreaterOrEqual(switchIdx, 0, "SwitchLayout(single) が発火していない");
+            Assert.GreaterOrEqual(showIdx, 0, "ShowAsync が発火していない");
+            Assert.Less(switchIdx, showIdx, "SwitchLayout は ShowAsync より前に呼ばれるべき");
+        });
+
+        // 残留キャラの slot index が Stage 切替で変わった場合: 旧 slot を Hide してから SwitchLayout、 そのあと新 slot で再 Show する
+        // (View 側に重複表示が残らないことの回帰防止)
+        [UnityTest]
+        public IEnumerator Stage切替で残留キャラのslot変更時に旧slotHideと新slot再Showが走る() => UniTask.ToCoroutine(async () =>
+        {
+            var view = new RecordingPortraitView();
+            var director = new DefaultPortraitDirector(view);
+
+            await director.StageAsync(PortraitLayout.Pair, new[] { "taylor", "kii" }, CancellationToken.None);
+            await director.ShowAsync("taylor", "smile", CancellationToken.None);
+            view.Calls.Clear();
+
+            // taylor (0→1) / kii (1→0) を入替える
+            var newCast = new System.Collections.Generic.Dictionary<string, int> { ["taylor"] = 1, ["kii"] = 0 };
+            await director.StageAsync(PortraitLayout.Pair, newCast, CancellationToken.None);
+
+            // taylor は旧 slot 0 を Hide してから SwitchLayout 後に新 slot 1 で smile を再 Show
+            var hideIdx = view.Calls.IndexOf("hide:0");
+            var switchIdx = view.Calls.IndexOf("switch:pair");
+            var reshowIdx = view.Calls.IndexOf("show:1:taylor:smile");
+            Assert.GreaterOrEqual(hideIdx, 0, "旧 slot Hide が発火していない");
+            Assert.GreaterOrEqual(switchIdx, 0, "SwitchLayout が発火していない");
+            Assert.GreaterOrEqual(reshowIdx, 0, "新 slot での再 Show が発火していない");
+            Assert.Less(hideIdx, switchIdx, "Hide は SwitchLayout より前");
+            Assert.Less(switchIdx, reshowIdx, "再 Show は SwitchLayout より後");
         });
 
         // Exit でキャラが cast から外れ、 該当 slot が Hide される
