@@ -22,12 +22,37 @@ namespace Novel.Commands
         public int Value { get; init; }
     }
 
-    // 立ち絵: 単一スロットに 1 枚差し替え
+    // 立ち絵: stage 宣言で割り当てられたスロットに 1 枚差し替える。 slot 位置は IPortraitDirector が解決する。
     [MRubyObject]
     public readonly partial record struct PortraitCommand : ICommand
     {
         public string Character { get; init; }
         public string PortraitKey { get; init; }
+    }
+
+    // 場面 (cast) を宣言。 LayoutId + 配列順の cast で「キャラ → slot index (0..N-1)」を一括設定する。
+    // 配列を渡す形 (stage :trio, [:a, :b, :c]) と hash を渡す形 (stage :trio, a: 0, b: 2, c: 1) は preamble で吸収。
+    // ここではフラット配列で受け取り、 偶数 index に Character、 奇数 index に SlotIndex の文字列を並べる
+    // (MRuby と C# の橋渡しでヘテロ配列より安定するため)。
+    [MRubyObject]
+    public readonly partial record struct StageCommand : ICommand
+    {
+        public string LayoutId { get; init; }
+        // 例: ["taylor", "0", "kii", "1", "protagonist", "2"]
+        public string[] CastPairs { get; init; }
+    }
+
+    // 指定キャラを場面から退場 (cast から外し、 該当 slot を非表示に)
+    [MRubyObject]
+    public readonly partial record struct ExitCommand : ICommand
+    {
+        public string Character { get; init; }
+    }
+
+    // すべての cast をクリアして場面をリセット
+    [MRubyObject]
+    public readonly partial record struct ClearStageCommand : ICommand
+    {
     }
 
     // 背景差し替え

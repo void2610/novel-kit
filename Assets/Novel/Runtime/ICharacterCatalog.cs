@@ -6,17 +6,15 @@ namespace Novel.Runtime
     {
         public string DisplayName { get; }
         public string? DefaultPortraitKey { get; }
-        public string? Side { get; }   // left / center / right 等
 
-        public CharacterEntry(string displayName, string? defaultPortraitKey = null, string? side = null)
+        public CharacterEntry(string displayName, string? defaultPortraitKey = null)
         {
             DisplayName = displayName;
             DefaultPortraitKey = defaultPortraitKey;
-            Side = side;
         }
     }
 
-    // id → 表示名/立ち絵/side（voice は v1 対象外）
+    // id → 表示名 / 立ち絵 (slot 位置は IPortraitDirector の stage 宣言で決まる。 voice は v1 対象外)
     public interface ICharacterCatalog
     {
         bool TryGet(string speakerId, out CharacterEntry entry);

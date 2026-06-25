@@ -4,11 +4,20 @@ using Cysharp.Threading.Tasks;
 
 namespace Novel.Runtime
 {
-    // 立ち絵: 単一スロットに 1 枚スプライトを差し替える（多層合成/複数配置は v1 無し）
+    // 立ち絵: 場面のレイアウト (= 同時表示人数のテンプレ) と slot index で位置を決め、 1 枚スプライトを差し替える。
+    // 「キャラ → slot index」のマップは <see cref="IPortraitDirector"/> 側が管理し、 ここはレイアウト構造のみ知る。
+    // 多層合成や演出 (フェード/移動/ハイライト) は実装側の責務 (本 interface はキャンセル可能な await 経路だけ約束する)。
     public interface IPortraitView
     {
-        UniTask ShowAsync(string character, string portraitKey, CancellationToken ct);
-        UniTask HideAsync(CancellationToken ct);
+        // 場面のレイアウトを切り替える。 既存表示中キャラの移動 / 退場アニメは実装側が差分検出で決める。
+        // 例: pair から trio に切替えた場合、 既存の 2 人は新 layout の対応 index に滑らかに移動する。
+        UniTask SwitchLayoutAsync(PortraitLayout layout, CancellationToken ct);
+
+        // 現在のレイアウトの指定 slot に立ち絵を表示する (キャラ id は ICharacterCatalog 用のヒント)。
+        UniTask ShowAsync(int slotIndex, string character, string portraitKey, CancellationToken ct);
+
+        // 現在のレイアウトの指定 slot を非表示にする (退場アニメは実装側)。
+        UniTask HideAsync(int slotIndex, CancellationToken ct);
     }
 
     // 背景差し替え + イベント CG（一枚絵）

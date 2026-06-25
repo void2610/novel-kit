@@ -12,9 +12,10 @@ namespace Novel.View
     public sealed class WarningPortraitView : IPortraitView
     {
         private bool _warned;
-        public UniTask ShowAsync(string character, string portraitKey, CancellationToken ct) { Warn(); return UniTask.CompletedTask; }
-        public UniTask HideAsync(CancellationToken ct) { Warn(); return UniTask.CompletedTask; }
-        private void Warn() => FacetWarning.Once(ref _warned, "portrait", "IPortraitView");
+        public UniTask SwitchLayoutAsync(PortraitLayout layout, CancellationToken ct) { Warn(); return UniTask.CompletedTask; }
+        public UniTask ShowAsync(int slotIndex, string character, string portraitKey, CancellationToken ct) { Warn(); return UniTask.CompletedTask; }
+        public UniTask HideAsync(int slotIndex, CancellationToken ct) { Warn(); return UniTask.CompletedTask; }
+        private void Warn() => FacetWarning.Once(ref _warned, "portrait/stage", "IPortraitView");
     }
 
     public sealed class WarningBackgroundView : IBackgroundView
