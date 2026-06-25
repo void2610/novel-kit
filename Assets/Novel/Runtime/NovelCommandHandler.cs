@@ -39,6 +39,10 @@ namespace Novel.Runtime
 
         public async UniTask On(SayCommand cmd, CancellationToken ct)
         {
+            // PortraitKey が同時指定されていればここで切替（display_as で表示名を変えつつ、同一 speaker_id の立ち絵を 1 行で指定する糖衣）
+            if (!string.IsNullOrEmpty(cmd.PortraitKey) && _portrait != null)
+                await _portrait.ShowAsync(cmd.SpeakerId, cmd.PortraitKey, ct);
+
             var resolved = _text.Resolve(cmd.Text);
             var displayName = ResolveDisplayName(cmd);
             if (displayName != null) displayName = _text.Resolve(displayName);   // 表示名も多言語 seam を通す（localization）
