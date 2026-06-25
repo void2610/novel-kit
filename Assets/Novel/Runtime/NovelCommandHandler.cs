@@ -81,18 +81,33 @@ namespace Novel.Runtime
         }
 
         // stage 宣言: layout と cast (キャラ → slot index) を Director に適用する。
-        // CastPairs は [character0, index0, character1, index1, ...] のフラット配列 (Vocabulary コメント参照)
+        // CastPairs は [character0, index0, character1, index1, ...] のフラット配列 (Vocabulary コメント参照)。
+        // DSL ミスを検出しやすくするため、 奇数要素 / 空 character / 負 slot index は警告 + skip する。
         public async UniTask On(StageCommand cmd, CancellationToken ct)
         {
             if (_portraitDirector == null) return;
             var pairs = cmd.CastPairs ?? Array.Empty<string>();
+            if (pairs.Length % 2 != 0)
+            {
+                Debug.LogWarning($"[Novel] stage の cast_pairs の要素数が奇数 ({pairs.Length}) です。 末尾の半端な要素 '{pairs[pairs.Length - 1]}' は無視します。");
+            }
             var cast = new Dictionary<string, int>(pairs.Length / 2);
             for (var i = 0; i + 1 < pairs.Length; i += 2)
             {
                 var character = pairs[i];
+                if (string.IsNullOrEmpty(character))
+                {
+                    Debug.LogWarning($"[Novel] stage cast に空文字 character は登録できません (index {i})。 スキップします。");
+                    continue;
+                }
                 if (!int.TryParse(pairs[i + 1], out var slotIndex))
                 {
-                    Debug.LogWarning($"[Novel] stage cast の slot index が int に変換できません ({character}={pairs[i + 1]})。 このキャラはスキップします。");
+                    Debug.LogWarning($"[Novel] stage cast の slot index が int に変換できません ({character}={pairs[i + 1]})。 スキップします。");
+                    continue;
+                }
+                if (slotIndex < 0)
+                {
+                    Debug.LogWarning($"[Novel] stage cast の slot index に負値は使えません ({character}={slotIndex})。 スキップします。");
                     continue;
                 }
                 cast[character] = slotIndex;
