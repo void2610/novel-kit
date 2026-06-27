@@ -11,13 +11,17 @@ namespace Novel.Integration
     // INovelView と ICharacterCatalog は game 固有のため、いずれの場合も別途 game が登録する前提。
     public static class NovelViewContainerExtensions
     {
-        public static void RegisterNovelKit(this IContainerBuilder builder, string scenarioRoot = "Scenarios/")
+        public static void RegisterNovelKit(this IContainerBuilder builder, string scenarioRoot = "Scenarios/",
+            string rubyResourcePath = ResourcesRubyDictionary.DefaultResourcePath)
         {
             builder.RegisterNovelKitCore();
 
             // 参考 Resources ローダ（シナリオ / 同梱 preamble の .mrb を Resources から読む）
             builder.RegisterInstance<IScenarioSource>(new ResourcesScenarioSource(scenarioRoot));
             builder.RegisterInstance<IPreambleSource>(new ResourcesPreambleSource());
+
+            // ルビ辞書 (Resources 配下の rb)。game は IRubyDictionary を差し替えれば独自ロード経路にできる
+            builder.RegisterInstance<IRubyDictionary>(new ResourcesRubyDictionary(rubyResourcePath));
 
             // dev ビルドで未供給コマンドを一度だけ警告する no-op ファセット（コアの silent 既定を上書き）
             builder.Register<IPortraitView, WarningPortraitView>(Lifetime.Singleton);
