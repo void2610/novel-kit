@@ -85,21 +85,6 @@ namespace Novel.Tests
             }
         }
 
-        // インメモリのセーブストア（境界保存→復元の往復検証用）
-        private sealed class MemorySaveStore : ISaveStore
-        {
-            private NovelStateSnapshot _saved = new(new Dictionary<string, int>(), Array.Empty<string>());
-            public NovelStateSnapshot Saved => _saved;
-
-            public UniTask SaveAsync(NovelStateSnapshot snapshot, CancellationToken ct)
-            {
-                _saved = snapshot;
-                return UniTask.CompletedTask;
-            }
-
-            public UniTask<NovelStateSnapshot> LoadAsync(CancellationToken ct) => UniTask.FromResult(_saved);
-        }
-
         private sealed class FakeErrorHandler : INovelErrorHandler
         {
             public bool Called;
@@ -112,10 +97,10 @@ namespace Novel.Tests
             }
         }
 
-        private static NovelScenarioRunner NewRunner(INovelView view, ISaveStore? saveStore = null)
+        private static NovelScenarioRunner NewRunner(INovelView view)
             => new(new ResourcesScenarioSource(), new Router(), view,
                 new IdentityTextResolver(), new EmptyCatalog(),
-                saveStore: saveStore, preambleSources: new IPreambleSource[] { new ResourcesPreambleSource() });
+                preambleSources: new IPreambleSource[] { new ResourcesPreambleSource() });
 
         [UnityTest]
         public IEnumerator シナリオを実行し_say_が_View_へ順に届く() => UniTask.ToCoroutine(async () =>
@@ -158,33 +143,34 @@ namespace Novel.Tests
             Assert.AreEqual("Bを選んだ", view.Lines[0].Text);
         });
 
-        // flag 設定 → セーブ境界で保存 → 別 runner で復元 → Ruby の state[:key] が読めることを検証
+        // flag 設定 → CaptureState で引く → 別 runner へ RestoreState → Ruby の state[:key] が読めることを検証
         [UnityTest]
-        public IEnumerator flag_がセーブ境界で保存され復元後に_Ruby_から読める() => UniTask.ToCoroutine(async () =>
+        public IEnumerator flag_がCaptureStateで引け_RestoreState後に_Ruby_から読める() => UniTask.ToCoroutine(async () =>
         {
-            var save = new MemorySaveStore();
-
-            var setResult = await NewRunner(new FakeView(), save).PlayAsync("test_flag_set", CancellationToken.None);
+            var setRunner = NewRunner(new FakeView());
+            var setResult = await setRunner.PlayAsync("test_flag_set", CancellationToken.None);
             Assert.AreEqual(NovelResult.Completed, setResult);
-            Assert.AreEqual(5, save.Saved.Values["score"]);   // 境界で保存された
+
+            var snapshot = setRunner.CaptureState();
+            Assert.AreEqual(5, snapshot.Values["score"]);   // 引いた snapshot に入っている
 
             var view = new FakeView();
-            var readResult = await NewRunner(view, save).PlayAsync("test_flag_read", CancellationToken.None);
+            var readRunner = NewRunner(view);
+            readRunner.RestoreState(snapshot);              // continue: 次の再生前に復元
+            var readResult = await readRunner.PlayAsync("test_flag_read", CancellationToken.None);
             Assert.AreEqual(NovelResult.Completed, readResult);
-            Assert.AreEqual("5", view.Lines[0].Text);          // 復元後に Ruby が読み戻せた
+            Assert.AreEqual("5", view.Lines[0].Text);       // 復元後に Ruby が読み戻せた
         });
 
         // choose 自動キー(__始まり)はセーブ除外、明示キーと flag は永続（回帰防止）
         [UnityTest]
-        public IEnumerator choose自動キーはセーブ除外され明示キーとflagは永続する() => UniTask.ToCoroutine(async () =>
+        public IEnumerator choose自動キーはCaptureStateで除外され明示キーとflagは残る() => UniTask.ToCoroutine(async () =>
         {
-            var save = new MemorySaveStore();
-
-            var result = await NewRunner(new FakeView { ChoiceResult = 1 }, save)
-                .PlayAsync("test_choose_keys", CancellationToken.None);
-
+            var runner = NewRunner(new FakeView { ChoiceResult = 1 });
+            var result = await runner.PlayAsync("test_choose_keys", CancellationToken.None);
             Assert.AreEqual(NovelResult.Completed, result);
-            var keys = save.Saved.Values.Keys;
+
+            var keys = runner.CaptureState().Values.Keys;
             Assert.IsTrue(keys.Contains("picked"));   // 明示キーは永続
             Assert.IsTrue(keys.Contains("kept"));     // flag は永続
             Assert.IsFalse(keys.Any(k => k.StartsWith("__", StringComparison.Ordinal)));   // 自動採番は除外

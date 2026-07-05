@@ -5,10 +5,10 @@ using UnityEngine;
 namespace Novel.Runtime
 {
     // 永続状態(NovelStateSnapshot)を JSON 文字列として出し入れする。
-    // 主用途: ゲームが自前セーブ機構を持ち「文字列で受け取って自分で保存したい」ケース。ゲームは
-    // ISaveStore を実装し、SaveAsync では Serialize(snapshot) で得た JSON を自分の save に書き、
-    // LoadAsync では TryDeserialize で snapshot に戻す。実際の永続化(ファイル/PlayerPrefs/クラウド)は
-    // ゲーム側の責務。
+    // 主用途: ゲームが自前セーブ機構を持ち「文字列で受け取って自分で保存したい」ケース。
+    //   保存: var json = NovelSaveSerializer.Serialize(runner.CaptureState()); を自分の save に書く。
+    //   復元: NovelSaveSerializer.TryDeserialize(json, out var snap); runner.RestoreState(snap);（PlayAsync 前）。
+    // 実際の永続化(ファイル/PlayerPrefs/クラウド)はゲーム側の責務。
     //
     // 文字列でなくオブジェクトとして自前 serde にネストしたい場合は NovelSaveData(公開クラス)を直接使う。
     // 直列化は Unity 標準の JsonUtility(com.unity.modules.jsonserialize・追加パッケージ不要)。

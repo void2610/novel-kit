@@ -1,11 +1,10 @@
 #nullable enable
 using System.Collections.Generic;
-using System.Threading;
-using Cysharp.Threading.Tasks;
 
 namespace Novel.Runtime
 {
-    // 永続対象は IStateStore の内容のみ。シリアライズ形式は game が決める
+    // 永続対象の状態(フラグ/変数 + 既読)のスナップショット。runner の CaptureState/RestoreState で授受する。
+    // 直列化は NovelSaveData(クラス)/ NovelSaveSerializer(文字列)。実際の保存は game のセーブ機構の責務。
     public readonly struct NovelStateSnapshot
     {
         public IReadOnlyDictionary<string, int> Values { get; }
@@ -16,12 +15,5 @@ namespace Novel.Runtime
             Values = values;
             ReadTextIds = readTextIds;
         }
-    }
-
-    // セーブ境界は PlayAsync の狭間（シナリオ途中保存は v1 対象外）
-    public interface ISaveStore
-    {
-        UniTask SaveAsync(NovelStateSnapshot snapshot, CancellationToken ct);
-        UniTask<NovelStateSnapshot> LoadAsync(CancellationToken ct);
     }
 }

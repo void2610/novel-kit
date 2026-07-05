@@ -27,7 +27,6 @@ namespace Novel.Integration
             builder.Register<IBackgroundView, NullBackgroundView>(Lifetime.Singleton);
             builder.Register<IAudioChannel, NullAudioChannel>(Lifetime.Singleton);
             builder.Register<IWorldEffectSink, NullWorldEffectSink>(Lifetime.Singleton);
-            builder.Register<ISaveStore, NullSaveStore>(Lifetime.Singleton);
             builder.Register<INovelErrorHandler, NullErrorHandler>(Lifetime.Singleton);
             // ルビ辞書の no-op 既定 (本文をそのまま返す)。Resources ベース実装は View ヘルパが上書きする
             builder.Register<IRubyDictionary, NullRubyDictionary>(Lifetime.Singleton);
@@ -36,19 +35,6 @@ namespace Novel.Integration
             builder.RegisterInstance<IBacklog>(new RingBufferBacklog());
 
             builder.Register<INovelScenarioRunner, NovelScenarioRunner>(Lifetime.Singleton);
-        }
-
-        // 【任意】novel-kit 内部完結モード: JsonSaveStore を ISaveStore として登録し、永続まで novel-kit に
-        // 任せる(ゲームは serde に触れない)。永続先の INovelSaveBlobStore だけ型引数で指定する
-        // (Unity 実装例は Novel.View の PlayerPrefsSaveBlobStore)。コアの NullSaveStore 既定を後勝ちで上書き。
-        //   例: builder.RegisterNovelJsonSave<PlayerPrefsSaveBlobStore>();
-        // 自前 JSON セーブ機構を持つプロジェクトはこれを使わず、自前 ISaveStore を Register し、その中で
-        // NovelSaveSerializer(文字列)/ NovelSaveData(クラス)を使ってセーブデータを自分の save に畳み込む。
-        public static void RegisterNovelJsonSave<TBlob>(this IContainerBuilder builder)
-            where TBlob : INovelSaveBlobStore
-        {
-            builder.Register<INovelSaveBlobStore, TBlob>(Lifetime.Singleton);
-            builder.Register<ISaveStore, JsonSaveStore>(Lifetime.Singleton);
         }
 
         // game 独自コマンドモジュール（[Routes] + INovelCommandModule）を登録する。runner が

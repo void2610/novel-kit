@@ -164,7 +164,7 @@ EditMode テスト 18/18 緑（`cmd :custom_echo` が game 側 `On(CustomEchoCom
 - EditMode 25/25 緑（backlog 単体3 + 統合1、ruby lexer/ToPlainText/Build 3 を追加）。
 
 **未対応（低優先）**:
-`NK-READ-GROWTH`（既読プルーン。当面は game が `ISaveStore` 実装側で `ReadTextIds` を間引けるため緊急度低）。
+`NK-READ-GROWTH`（既読プルーン。当面は game が `CaptureState()` で得た `ReadTextIds` を保存前に間引けるため緊急度低）。
 
 > 実装は Unity 未コンパイル状態でのコード変更。`.rb`（Preamble/サンプル）は再 import で `.mrb` 再生成が必要。
 > EditMode テスト（`NovelScenarioRunnerTests` / `TextRevealEngineTests` / `NovelTagLexerTests`）で検証すること。

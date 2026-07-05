@@ -40,7 +40,8 @@ blocking/non-blocking を表現・`IWorldEffectSink` は async・per-call 上書
 シーケンサ/シナリオ間 `goto` は持たない・コア表面は `PlayAsync(key,ct) -> NovelResult` のみ）で確定。
 
 ## セーブのスナップショット粒度（リプレイとの整合）✅ 解決済み
-→ [セーブのスナップショット粒度](/design/decisions/save-snapshot.md)（永続は `IStateStore` のみ・`ISaveStore` 経由・
+→ [セーブのスナップショット粒度](/design/decisions/save-snapshot.md)（永続は `IStateStore` のみ・snapshot 授受は
+runner の `CaptureState`/`RestoreState`・直列化は `NovelSaveData`/`NovelSaveSerializer`・保存は game 所有・
 セーブ境界は `PlayAsync` の間・シナリオ途中保存は v1 対象外・提示状態は非シリアライズ）で確定。
 途中再開（リプレイ式 save-anywhere）とシナリオ内容 versioning は下記バックログへ。
 
@@ -59,7 +60,7 @@ lipsync は対象外）で確定。残るのは `se`/`bgm` コマンドの引数
 - **ハンドラ所有権 ✅**: handler は runner 私有 `MRubyStateStore` に結合するため **runner が構築し注入 Router へ `MapTo`**。
   → [ルーター所有権](/design/decisions/router-ownership.md)「実装で確定」に追認（Router は container 登録のまま）。
 - **IStateStore の所有権 ✅**: Ruby `state[:key]` 同期のため **runtime 内部 `MRubyStateStore` が既定**（game 供給不要）。
-  永続は `ISaveStore` のみ。→ [状態モデル](/design/decisions/state-model.md)「実装で確定」に追認。
+  永続は runner の `CaptureState`/`RestoreState` + 自前 serde（`ISaveStore` は撤去）。→ [状態モデル](/design/decisions/state-model.md)「実装で確定」に追認。
 - **preamble ロード ✅**: Runtime を純 C# に保つため `IPreambleSource` 抽象に留め、Resources 実装（`ResourcesPreambleSource`）は
   `Novel.View` に配置。配布形態は Resources 既定（game は `IPreambleSource` 差し替えで変更可）。
 

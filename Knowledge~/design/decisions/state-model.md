@@ -45,14 +45,16 @@ replay: 記録対象をこのストアに一元化
 - choose() のユニークキー割当により、`state[:last_choice]` 固定スロットの衝突バグを解消する。
 - フラグには unset/clear 経路を追加する（color-recollection の `FlagCommand` に欠けていた）。
 - 永続/一時/既読の境界（どれをセーブに含めるか）は `IStateStore` 内で属性として扱う。
-- 永続化は game 実装の `ISaveStore` 経由（ライブラリはシリアライズ形式を持たない）。
+- 永続化は game 所有。novel-kit は snapshot の出し入れ（runner の `CaptureState`/`RestoreState`）と直列化
+  （`NovelSaveData` / `NovelSaveSerializer`）までを提供し、保存自体は game が行う（[セーブ粒度](/design/decisions/save-snapshot.md)）。
 
 ## 実装で確定（2026-06-14）
 
 `IStateStore` は **runtime 内部実装（`MRubyStateStore`）を既定**とし、MRuby 共有変数テーブルを実体にする
 （Ruby の `state[:key]` 読み書きと C# の flag/choose 書き込みが同一テーブルで自動同期する）。よって
-「game 供給サービス」ではなく runtime が提供する。game が触れる永続化境界は `ISaveStore` のみで、runner が
-`PlayAsync` の狭間で `MRubyStateStore.Capture()/Restore()` のスナップショットを授受する（[セーブ粒度](/design/decisions/save-snapshot.md)）。
+「game 供給サービス」ではなく runtime が提供する。game が触れる永続化境界は runner の `CaptureState()`/
+`RestoreState()`（内部で `MRubyStateStore.Capture()/Restore()`）で、game が `PlayAsync` の外で snapshot を
+出し入れし直列化・保存する（当初の `ISaveStore` 自動授受は撤去。[セーブ粒度](/design/decisions/save-snapshot.md)）。
 
 ## 実装で確定（2026-06-14, 実装レビュー後）
 

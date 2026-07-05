@@ -16,7 +16,6 @@ namespace Novel.Runtime
     {
         private readonly IScenarioSource _source;
         private readonly Router _router;
-        private readonly ISaveStore? _saveStore;
         private readonly INovelErrorHandler? _errorHandler;
         private readonly IReadOnlyList<IPreambleSource> _preambleSources;
         private readonly MRubyState _state;
@@ -34,14 +33,13 @@ namespace Novel.Runtime
             INovelView view, ITextResolver text, ICharacterCatalog catalog,
             IPortraitDirector? portraitDirector = null, IBackgroundView? background = null, IAudioChannel? audio = null,
             IWorldEffectSink? worldEffectSink = null,
-            ISaveStore? saveStore = null, INovelErrorHandler? errorHandler = null,
+            INovelErrorHandler? errorHandler = null,
             IEnumerable<IPreambleSource>? preambleSources = null,
             IEnumerable<INovelCommandModule>? commandModules = null,
             IBacklog? backlog = null)
         {
             _source = source;
             _router = router;
-            _saveStore = saveStore;
             _errorHandler = errorHandler;
             _preambleSources = preambleSources?.ToArray() ?? Array.Empty<IPreambleSource>();
             var modules = commandModules?.ToArray() ?? Array.Empty<INovelCommandModule>();
@@ -88,6 +86,13 @@ namespace Novel.Runtime
             return RunChainedAsync(previousDone, previousCts, scenarioKey, myCts, myDone);
         }
 
+        // 永続状態(フラグ/変数 + 既読)を引く。live state はセッション中 runner が保持しており、
+        // game が保存したいタイミングで呼ぶ。直列化(NovelSaveData / NovelSaveSerializer)と保存は game 所有。
+        public NovelStateSnapshot CaptureState() => _store.Capture();
+
+        // 保存済みスナップショットを live state へ復元する。continue 時など次の PlayAsync より前に呼ぶ。
+        public void RestoreState(NovelStateSnapshot snapshot) => _store.Restore(snapshot);
+
         // 前再生を中断し専用の完了通知(UTCS)を待ってから直列実行する（同一 UniTask の二重 await 回避）
         // 前 cts は中断→待機後にここで破棄する（後継が前任を破棄する規約: 破棄後 Cancel / 二重破棄を避ける）
         private async UniTask<NovelResult> RunChainedAsync(
@@ -119,20 +124,13 @@ namespace Novel.Runtime
             {
                 await EnsurePreambleLoadedAsync(ct);
 
-                if (_saveStore != null)
-                {
-                    var snapshot = await _saveStore.LoadAsync(ct);
-                    _store.Restore(snapshot);
-                }
-
+                // 状態の復元/保存は runner が駆動しない。game が PlayAsync の外で RestoreState/CaptureState を
+                // 呼び、直列化と永続化を自前で行う（進行とセーブは game 所有・save-snapshot ADR）。
                 var bytecode = await _source.LoadBytecodeAsync(scenarioKey, ct);
                 if (bytecode == null || bytecode.Length == 0) return NovelResult.Completed;
 
                 var irep = _state.ParseBytecode(bytecode);
                 await _state.ExecuteAsync(_router, irep, ct);
-
-                // セーブ境界は PlayAsync の狭間（save-snapshot）
-                if (_saveStore != null) await _saveStore.SaveAsync(_store.Capture(), ct);
 
                 return NovelResult.Completed;
             }

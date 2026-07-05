@@ -1,5 +1,4 @@
 #nullable enable
-using System;
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
@@ -40,14 +39,6 @@ namespace Novel.Runtime
     public sealed class NullWorldEffectSink : IWorldEffectSink
     {
         public UniTask DispatchAsync(IWorldEffect effect, CancellationToken ct) => UniTask.CompletedTask;
-    }
-
-    public sealed class NullSaveStore : ISaveStore
-    {
-        public UniTask SaveAsync(NovelStateSnapshot snapshot, CancellationToken ct) => UniTask.CompletedTask;
-
-        public UniTask<NovelStateSnapshot> LoadAsync(CancellationToken ct)
-            => UniTask.FromResult(new NovelStateSnapshot(new Dictionary<string, int>(), Array.Empty<string>()));
     }
 
     // 明示的に無音化したい game 向け（既定は View 層の Debug ログ実装。dsl-vocabulary の no-op とは別物）
