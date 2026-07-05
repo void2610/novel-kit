@@ -46,24 +46,32 @@ status: 確定
 ## 実装で確定（2026-07-05, JSON serde をライブラリ所有へ）
 
 当初の帰結「ライブラリはセーブ形式を持たず `ISaveStore` 経由（game がシリアライズを所有）」を**改め、
-JSON 直列化を novel-kit 側で所有する**。`Novel.Runtime` に `NovelSaveSerializer`（`NovelStateSnapshot` ⇔ JSON
-文字列）を追加した。直列化は Unity 標準の `UnityEngine.JsonUtility`（`com.unity.modules.jsonserialize`・追加
-パッケージ不要）を使う（Runtime は既に UnityEngine を参照しており、新規依存は増えない）。粒度・境界の決定
-（永続は `IStateStore` の `Capture()` 結果のみ・境界は `PlayAsync` の狭間）は不変で、**変わったのは「形式の
-所有者」だけ**。
+JSON 直列化(serde)を novel-kit 側で持つ**。ただし**永続化（ファイルへ書く行為）は引き続き game 所有**で、
+novel-kit が渡すのは「セーブデータの表現（JSON 文字列 or シリアライズ可能クラス）」まで。粒度・境界の決定
+（永続は `IStateStore` の `Capture()` 結果のみ・境界は `PlayAsync` の狭間）は不変。
 
-- 形式（決定的。キー/既読 id を序数ソートし diff/テストを安定化。JsonUtility は Dictionary 非対応のため
-  キー/値ペアの DTO を挟む）:
+**想定する主用途（標準）**: game は自前の JSON セーブ機構を持つ。よって novel-kit はセーブデータを
+**文字列 or クラスとして書き出し、実際の保存は game に任せる**。game は自前 `ISaveStore` を実装し、
+`SaveAsync(snapshot)` で以下のどちらかを使って自分の save に畳み込む:
+
+- **クラス**: `NovelSaveData`（`Novel.Runtime`・公開・`[Serializable]` プレーンフィールド）。`From(snapshot)` /
+  `ToSnapshot()`。JsonUtility/Newtonsoft/System.Text.Json いずれの自前 serde でも**そのままネストできる**
+  形（Dictionary を避けキー/値ペアのリスト）。
+- **文字列**: `NovelSaveSerializer.Serialize(snapshot)` / `TryDeserialize`。内部で `NovelSaveData` + Unity 標準
+  `UnityEngine.JsonUtility`（`com.unity.modules.jsonserialize`・追加パッケージ不要）を使う。
+  出力（決定的。キー/既読 id を序数ソート）:
   `{"version":1,"values":[{"key":"coins","value":30}],"read":["a1b2c3d4e5f60718"]}`。
-  `version` は将来のスキーマ移行フック（現状は読むだけ）。既読 id は `StableId`（64bit FNV-1a の 16 桁 hex）。
-- **IO は持たない**。「JSON をどこへ書くか」は `INovelSaveBlobStore`（`Write/ReadAsync(string)`）として game に委譲。
-  既定実装 `JsonSaveStore : ISaveStore` が serde と blob store を束ね、破損/未作成セーブは空 snapshot へ
-  フォールバック（`LoadAsync` は throw しない＝新規開始）。
-- Unity 実装例 `PlayerPrefsSaveBlobStore`（`Novel.View`）を同梱。DI は `RegisterNovelJsonSave<TBlob>()`
-  1 行でコアの `NullSaveStore` を後勝ち上書き。
+
+**副次用途（任意・非標準）**: novel-kit に永続まで丸ごと任せたい小規模ケース向けに `JsonSaveStore : ISaveStore`
+を用意する。これは **serde を game に見せず内部で完結**し、game は「どこへ書くか」= `INovelSaveBlobStore`
+（`Write/ReadAsync(string)`）だけを供給する。Unity 実装例 `PlayerPrefsSaveBlobStore`（`Novel.View`）+ DI
+`RegisterNovelJsonSave<TBlob>()`。破損/未作成は空 snapshot へフォールバック（`LoadAsync` は throw しない）。
+
+- `version` は将来のスキーマ移行フック（現状は読むだけ）。既読 id は `StableId`（64bit FNV-1a の 16 桁 hex）。
 - **理由**: color-recollection ではフラグ/既読の直列化が game ごとに再実装され不統一だった。novel-kit は状態を単一
-  `IStateStore` に統合済み（[状態モデル](/design/decisions/state-model.md)）なので、その snapshot の JSON 形式を
-  ライブラリが 1 つ持てば全 game で一貫する。Unity 標準の JsonUtility を使い自前パーサや外部依存を避ける。
+  `IStateStore` に統合済み（[状態モデル](/design/decisions/state-model.md)）なので、その snapshot の JSON 表現を
+  ライブラリが 1 つ持てば全 game で一貫する。実際の保存は game の既存セーブ機構に委ね、novel-kit はデータの
+  表現だけを担う。Unity 標準の JsonUtility を使い自前パーサや外部依存を避ける。
 - 既読 id ハッシュが**内部形式**である点（安定版前は予告なく変わりうる・移行機構なし）は従来どおり。`version` 併記で
   将来の一括移行の足場だけ用意した。EditMode テスト `NovelSaveSerializerTests`（往復・決定性・エスケープ・破損耐性）。
 

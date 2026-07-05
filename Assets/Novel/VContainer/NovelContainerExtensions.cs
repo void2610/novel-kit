@@ -38,10 +38,12 @@ namespace Novel.Integration
             builder.Register<INovelScenarioRunner, NovelScenarioRunner>(Lifetime.Singleton);
         }
 
-        // JSON セーブ(NovelSaveSerializer + JsonSaveStore)を ISaveStore として登録する。永続先の
-        // INovelSaveBlobStore は game が型引数で指定する(Unity 実装例は Novel.View の PlayerPrefsSaveBlobStore)。
-        // コアの NullSaveStore 既定を後勝ちで上書きする。
+        // 【任意】novel-kit 内部完結モード: JsonSaveStore を ISaveStore として登録し、永続まで novel-kit に
+        // 任せる(ゲームは serde に触れない)。永続先の INovelSaveBlobStore だけ型引数で指定する
+        // (Unity 実装例は Novel.View の PlayerPrefsSaveBlobStore)。コアの NullSaveStore 既定を後勝ちで上書き。
         //   例: builder.RegisterNovelJsonSave<PlayerPrefsSaveBlobStore>();
+        // 自前 JSON セーブ機構を持つプロジェクトはこれを使わず、自前 ISaveStore を Register し、その中で
+        // NovelSaveSerializer(文字列)/ NovelSaveData(クラス)を使ってセーブデータを自分の save に畳み込む。
         public static void RegisterNovelJsonSave<TBlob>(this IContainerBuilder builder)
             where TBlob : INovelSaveBlobStore
         {

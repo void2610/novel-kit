@@ -94,5 +94,35 @@ namespace Novel.Tests
         {
             Assert.Throws<NovelSaveFormatException>(() => NovelSaveSerializer.Deserialize("[1,2,3]"));
         }
+
+        // 自前 serde 用の公開クラス(NovelSaveData)経由の往復。ゲームは From/ToSnapshot で
+        // snapshot ⇔ クラスを変換し、直列化は自分の serde に任せる。
+        [Test]
+        public void NovelSaveDataでsnapshotを往復できる()
+        {
+            var snap = Snapshot(
+                new Dictionary<string, int> { { "b", 2 }, { "a", 1 } }, "y", "x");
+
+            var data = NovelSaveData.From(snap);
+            // 決定的: values/read が序数ソートされている
+            Assert.AreEqual(new[] { "a", "b" }, new[] { data.values[0].key, data.values[1].key });
+            Assert.AreEqual(new[] { "x", "y" }, data.read.ToArray());
+
+            var back = data.ToSnapshot();
+            Assert.AreEqual(1, back.Values["a"]);
+            Assert.AreEqual(2, back.Values["b"]);
+            CollectionAssert.AreEquivalent(new[] { "x", "y" }, back.ReadTextIds);
+        }
+
+        // NovelSaveData は JsonUtility 互換(プレーンフィールド)なので、ゲームの serde で往復できることを確認。
+        [Test]
+        public void NovelSaveDataはjson互換で往復できる()
+        {
+            var snap = Snapshot(new Dictionary<string, int> { { "coins", 30 } }, "id1");
+            var json = UnityEngine.JsonUtility.ToJson(NovelSaveData.From(snap));
+            var back = UnityEngine.JsonUtility.FromJson<NovelSaveData>(json).ToSnapshot();
+            Assert.AreEqual(30, back.Values["coins"]);
+            CollectionAssert.AreEquivalent(new[] { "id1" }, back.ReadTextIds);
+        }
     }
 }

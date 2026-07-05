@@ -6,8 +6,9 @@ using UnityEngine;
 
 namespace Novel.View
 {
-    // INovelSaveBlobStore の Unity 実装(参考)。セーブ JSON を PlayerPrefs の 1 キーへ保存する。
-    // 小規模タイトル向けの箱出し実装。ファイル/クラウドに保存したい場合は INovelSaveBlobStore を自前実装する。
+    // INovelSaveBlobStore の Unity 実装(参考)。JsonSaveStore(novel-kit 内部完結モード)に組み合わせて使う。
+    // セーブ JSON を PlayerPrefs の 1 キーへ保存する小規模タイトル向けの箱出し実装。
+    // 自前 JSON セーブ機構を持つなら、これではなく自前 ISaveStore + NovelSaveSerializer / NovelSaveData を使う。
     public sealed class PlayerPrefsSaveBlobStore : INovelSaveBlobStore
     {
         public const string DefaultKey = "novel.save";
