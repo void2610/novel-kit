@@ -23,12 +23,19 @@ namespace Novel.Runtime
         {
             var data = new NovelSaveData();
 
-            var keys = new List<string>(snapshot.Values.Keys);
-            keys.Sort(StringComparer.Ordinal);
-            foreach (var k in keys)
-                data.values.Add(new NovelSaveValue { key = k, value = snapshot.Values[k] });
+            // default(NovelStateSnapshot)(未代入フィールド等)では Values/ReadTextIds が null になりうるので
+            // 空として扱う(Serialize(default) が NRE を投げず Empty 相当を出す)。
+            var values = snapshot.Values;
+            if (values != null)
+            {
+                var keys = new List<string>(values.Keys);
+                keys.Sort(StringComparer.Ordinal);
+                foreach (var k in keys)
+                    data.values.Add(new NovelSaveValue { key = k, value = values[k] });
+            }
 
-            data.read = new List<string>(snapshot.ReadTextIds);
+            if (snapshot.ReadTextIds != null)
+                data.read = new List<string>(snapshot.ReadTextIds);
             data.read.Sort(StringComparer.Ordinal);
             return data;
         }

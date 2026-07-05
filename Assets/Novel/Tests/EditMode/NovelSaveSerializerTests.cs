@@ -49,6 +49,15 @@ namespace Novel.Tests
         }
 
         [Test]
+        public void default_snapshotはNRE無しで空として直列化できる()
+        {
+            // default(NovelStateSnapshot) は Values/ReadTextIds が null（未代入フィールド等）。
+            // Serialize が NRE を投げず Empty 相当を出すこと。
+            var json = NovelSaveSerializer.Serialize(default);
+            Assert.AreEqual("{\"version\":1,\"values\":[],\"read\":[]}", json);
+        }
+
+        [Test]
         public void 特殊文字とマイナス値をエスケープして往復する()
         {
             var snap = Snapshot(

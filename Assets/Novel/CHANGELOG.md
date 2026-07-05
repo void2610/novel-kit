@@ -3,6 +3,25 @@
 本パッケージの変更履歴。形式は [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/)、
 バージョンは [Semantic Versioning](https://semver.org/lang/ja/) に従う（安定版 1.0.0 までは破壊的変更があり得る）。
 
+## [Unreleased]
+
+### Added
+- セーブの JSON 直列化(serde)をライブラリ所有に。`Novel.Runtime` に公開型 `NovelSaveData`
+  (`[Serializable]`・プレーンフィールド・`From`/`ToSnapshot`・自前 serde でネスト可)と
+  `NovelSaveSerializer`(`UnityEngine.JsonUtility` ベースの決定的な JSON 文字列・破損耐性のある
+  `TryDeserialize`)を追加。実際の永続化(ファイル/PlayerPrefs 等への保存)は引き続き game 所有。
+- `INovelScenarioRunner` に `CaptureState()` / `RestoreState(NovelStateSnapshot)` を追加。
+  game が `PlayAsync` の外で snapshot を出し入れする。
+
+### Changed
+- `NovelStateSnapshot` を独立ファイル(`NovelStateSnapshot.cs`)へ分離。
+
+### Removed
+- **破壊的変更**: `ISaveStore` / `NullSaveStore` を撤去。従来 runner が `PlayAsync` の狭間で
+  自動 load/save していたが、進行・セーブは game 所有のため runner から IO を排除し、
+  `CaptureState`/`RestoreState` + 自前 serde へ移行。`NovelScenarioRunner` コンストラクタの
+  `saveStore` 引数と `RegisterNovelKitCore()` の `ISaveStore` 既定登録も削除。
+
 ## [0.1.0] - 2026-06-14
 
 ### Added

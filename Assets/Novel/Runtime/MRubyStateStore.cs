@@ -50,8 +50,11 @@ namespace Novel.Runtime
 
         public void Restore(NovelStateSnapshot snapshot)
         {
-            foreach (var kv in snapshot.Values) Set(kv.Key, kv.Value);
-            foreach (var id in snapshot.ReadTextIds) _read.Add(id);
+            // default(NovelStateSnapshot) では Values/ReadTextIds が null になりうる（空復元として扱う）
+            if (snapshot.Values != null)
+                foreach (var kv in snapshot.Values) Set(kv.Key, kv.Value);
+            if (snapshot.ReadTextIds != null)
+                foreach (var id in snapshot.ReadTextIds) _read.Add(id);
         }
     }
 }
