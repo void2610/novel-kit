@@ -95,6 +95,15 @@ namespace Novel.Tests
             Assert.Throws<NovelSaveFormatException>(() => NovelSaveSerializer.Deserialize("[1,2,3]"));
         }
 
+        // read 配列の null/空要素はフィルタされる(破損/手編集セーブで不正 id が既読集合に混ざらない)
+        [Test]
+        public void readのnullや空要素はフィルタされる()
+        {
+            Assert.IsTrue(NovelSaveSerializer.TryDeserialize(
+                "{\"version\":1,\"values\":[],\"read\":[\"\",\"x\",\"\"]}", out var back));
+            CollectionAssert.AreEquivalent(new[] { "x" }, back.ReadTextIds);
+        }
+
         // 自前 serde 用の公開クラス(NovelSaveData)経由の往復。ゲームは From/ToSnapshot で
         // snapshot ⇔ クラスを変換し、直列化は自分の serde に任せる。
         [Test]

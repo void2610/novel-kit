@@ -35,13 +35,20 @@ namespace Novel.Runtime
 
         public NovelStateSnapshot ToSnapshot()
         {
-            var dict = new Dictionary<string, int>();
+            var dict = new Dictionary<string, int>(values?.Count ?? 0);
             if (values != null)
                 foreach (var entry in values)
                     if (!string.IsNullOrEmpty(entry.key))
                         dict[entry.key] = entry.value;
 
-            return new NovelStateSnapshot(dict, read ?? new List<string>());
+            // read も values と同様に null/空をフィルタする(破損/手編集セーブで不正 id が既読集合に混ざらないように)
+            var readIds = new List<string>(read?.Count ?? 0);
+            if (read != null)
+                foreach (var id in read)
+                    if (!string.IsNullOrEmpty(id))
+                        readIds.Add(id);
+
+            return new NovelStateSnapshot(dict, readIds);
         }
     }
 
