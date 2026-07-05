@@ -111,7 +111,7 @@ public interface IAudioChannel   { /* se / bgm。引数詳細は実装時確定 
 |---|---|---|
 | `IScenarioSource` | 論理キー → `.mrb` バイトコード（`byte[]`）。`Irep` パースは MRubyState 依存のため runner 側 | [アーキテクチャ](/design/architecture.md) |
 | `IStateStore` | フラグ / 変数 / 既読を単一統合。**runtime 内部実装（`MRubyStateStore`）が既定**で game 供給不要 | [状態モデル](/design/decisions/state-model.md) |
-| `ISaveStore` | 永続化（ライブラリはシリアライズ形式を持たない。対象は `IStateStore` のみ） | [セーブ粒度](/design/decisions/save-snapshot.md) |
+| `INovelScenarioRunner.CaptureState()` / `RestoreState()` | 状態スナップショットの出し入れ。直列化は `NovelSaveData`（クラス）/ `NovelSaveSerializer`（文字列）、保存は game 所有（`ISaveStore` は撤去） | [セーブ粒度](/design/decisions/save-snapshot.md) |
 | `INovelPlaybackSettings` | auto/skip 速度等の再生設定（Default 提供） | [アーキテクチャ](/design/architecture.md) |
 | `ICharacterCatalog` | id → 表示名/立ち絵/side/既定ボイス。未登録は id を表示名にフォールバック | [コマンド名規約](/design/decisions/command-schema.md) |
 | `IWorldEffectSink` | 世界エフェクトの脱出先（async）。既定はブリッジ無し | [エフェクト await](/design/decisions/effect-await.md) |
