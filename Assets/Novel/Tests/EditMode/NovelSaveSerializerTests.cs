@@ -34,7 +34,7 @@ namespace Novel.Tests
             // 挿入順が違っても同一 JSON(diff/テスト安定)
             Assert.AreEqual(NovelSaveSerializer.Serialize(a), NovelSaveSerializer.Serialize(b));
             Assert.AreEqual(
-                "{\"version\":1,\"values\":{\"a\":1,\"b\":2},\"read\":[\"x\",\"y\"]}",
+                "{\"version\":1,\"values\":[{\"key\":\"a\",\"value\":1},{\"key\":\"b\",\"value\":2}],\"read\":[\"x\",\"y\"]}",
                 NovelSaveSerializer.Serialize(a));
         }
 
@@ -42,7 +42,7 @@ namespace Novel.Tests
         public void 空スナップショットを往復できる()
         {
             var json = NovelSaveSerializer.Serialize(NovelSaveSerializer.Empty);
-            Assert.AreEqual("{\"version\":1,\"values\":{},\"read\":[]}", json);
+            Assert.AreEqual("{\"version\":1,\"values\":[],\"read\":[]}", json);
             Assert.IsTrue(NovelSaveSerializer.TryDeserialize(json, out var back));
             Assert.AreEqual(0, back.Values.Count);
             Assert.AreEqual(0, back.ReadTextIds.Count);
@@ -82,9 +82,9 @@ namespace Novel.Tests
         [Test]
         public void フィールド欠落や未知フィールドを許容する()
         {
-            // values/read が無くても空として復元、未知フィールドは無視
+            // read 欠落は空として復元、未知フィールド(extra)は無視
             Assert.IsTrue(NovelSaveSerializer.TryDeserialize(
-                "{\"version\":1,\"extra\":{\"x\":1},\"values\":{\"a\":7}}", out var back));
+                "{\"version\":1,\"extra\":123,\"values\":[{\"key\":\"a\",\"value\":7}]}", out var back));
             Assert.AreEqual(7, back.Values["a"]);
             Assert.AreEqual(0, back.ReadTextIds.Count);
         }
