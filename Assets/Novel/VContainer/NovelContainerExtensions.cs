@@ -38,6 +38,17 @@ namespace Novel.Integration
             builder.Register<INovelScenarioRunner, NovelScenarioRunner>(Lifetime.Singleton);
         }
 
+        // JSON セーブ(NovelSaveSerializer + JsonSaveStore)を ISaveStore として登録する。永続先の
+        // INovelSaveBlobStore は game が型引数で指定する(Unity 実装例は Novel.View の PlayerPrefsSaveBlobStore)。
+        // コアの NullSaveStore 既定を後勝ちで上書きする。
+        //   例: builder.RegisterNovelJsonSave<PlayerPrefsSaveBlobStore>();
+        public static void RegisterNovelJsonSave<TBlob>(this IContainerBuilder builder)
+            where TBlob : INovelSaveBlobStore
+        {
+            builder.Register<INovelSaveBlobStore, TBlob>(Lifetime.Singleton);
+            builder.Register<ISaveStore, JsonSaveStore>(Lifetime.Singleton);
+        }
+
         // game 独自コマンドモジュール（[Routes] + INovelCommandModule）を登録する。runner が
         // IEnumerable<INovelCommandModule> として集約注入し、語彙束縛とハンドラ写像を行う。
         // 糖衣の .rb は別途 IPreambleSource として追加登録する（RegisterNovelKit() の後勝ち登録）。
