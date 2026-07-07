@@ -123,6 +123,15 @@ def blackout(duration = 0.0)
   world_effect :blackout, duration
 end
 
+# テキストウィンドウを一時的に隠す / 戻す (イベント CG 全画面表示中など)
+def hide_message_window
+  cmd :message_window_visible, visible: false
+end
+
+def show_message_window
+  cmd :message_window_visible, visible: true
+end
+
 # 選択肢提示 → 選んだ index を返す。
 # 既定キーは `__` 始まりのユニーク採番で、一時スクラッチ（セーブに残さない）。
 # 跨シナリオで選択結果を残したいときは key: を渡して `__` 以外の安定キーに書く（改稿耐性・セーブ対象）。

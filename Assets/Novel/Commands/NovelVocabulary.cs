@@ -97,4 +97,11 @@ namespace Novel.Commands
         public string EffectKey { get; init; }
         public float[] Args { get; init; }
     }
+
+    // テキストウィンドウの表示 / 非表示切替 (イベント CG 表示時に一時的に隠す等)
+    [MRubyObject]
+    public readonly partial record struct MessageWindowVisibilityCommand : ICommand
+    {
+        public bool Visible { get; init; }
+    }
 }

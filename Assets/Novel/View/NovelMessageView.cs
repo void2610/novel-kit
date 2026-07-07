@@ -108,6 +108,11 @@ namespace Novel.View
             }
         }
 
+        public void SetMessageWindowVisible(bool visible)
+        {
+            if (window != null) window.SetActive(visible);
+        }
+
         public async UniTask<int> ShowChoicesAsync(IReadOnlyList<string> options, CancellationToken ct)
         {
             var tcs = new UniTaskCompletionSource<int>();

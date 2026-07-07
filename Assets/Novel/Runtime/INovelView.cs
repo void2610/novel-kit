@@ -13,5 +13,8 @@ namespace Novel.Runtime
 
         // 選択された index を返す
         UniTask<int> ShowChoicesAsync(IReadOnlyList<string> options, CancellationToken ct);
+
+        // テキストウィンドウの表示 / 非表示を切り替える（イベント CG 等でウィンドウを一時的に隠す用途）
+        void SetMessageWindowVisible(bool visible);
     }
 }

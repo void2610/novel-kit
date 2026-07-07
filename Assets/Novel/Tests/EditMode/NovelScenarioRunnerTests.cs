@@ -55,6 +55,7 @@ namespace Novel.Tests
         {
             public readonly List<NovelLine> Lines = new();
             public int ChoiceResult;
+            public bool? MessageWindowVisible;
 
             public UniTask ShowMessageAsync(NovelLine line, CancellationToken ct)
             {
@@ -64,6 +65,8 @@ namespace Novel.Tests
 
             public UniTask<int> ShowChoicesAsync(IReadOnlyList<string> options, CancellationToken ct)
                 => UniTask.FromResult(ChoiceResult);
+
+            public void SetMessageWindowVisible(bool visible) => MessageWindowVisible = visible;
         }
 
         // gate 解放までブロックし ct で中断可能な View（switch-latest 検証用）
@@ -74,6 +77,7 @@ namespace Novel.Tests
 
             public UniTask ShowMessageAsync(NovelLine line, CancellationToken ct) => _gate.Task.AttachExternalCancellation(ct);
             public UniTask<int> ShowChoicesAsync(IReadOnlyList<string> options, CancellationToken ct) => UniTask.FromResult(0);
+            public void SetMessageWindowVisible(bool visible) { }
         }
 
         private sealed class EmptyCatalog : ICharacterCatalog
