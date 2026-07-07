@@ -100,7 +100,8 @@ end
 # （即完了タスク=非ブロッキング / 完了時解決タスク=ブロッキングで次行が待つ。effect-await）。
 # 注: テキスト内の <shake> は文字演出で別物。こちらはカメラ等ゲーム本体への作用。
 def world_effect(key, *args)
-  cmd :world_effect, effect_key: key.to_s, args: args.map(&:to_f)
+  # MRubyCS が Symbol#to_proc (&:to_f) を未サポートのため明示ブロックで変換する。
+  cmd :world_effect, effect_key: key.to_s, args: args.map { |a| a.to_f }
 end
 
 def shake(intensity = 1.0)
