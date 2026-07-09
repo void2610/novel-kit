@@ -29,6 +29,12 @@ namespace Novel.Runtime
         public UniTask ShowStillAsync(string stillKey, CancellationToken ct) => UniTask.CompletedTask;
     }
 
+    public sealed class NullCenterImageView : ICenterImageView
+    {
+        public UniTask ShowAsync(string imageKey, CancellationToken ct) => UniTask.CompletedTask;
+        public UniTask HideAsync(CancellationToken ct) => UniTask.CompletedTask;
+    }
+
     public sealed class NullAudioChannel : IAudioChannel
     {
         public UniTask PlaySeAsync(string seKey, CancellationToken ct) => UniTask.CompletedTask;

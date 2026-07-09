@@ -27,6 +27,13 @@ namespace Novel.Runtime
         UniTask ShowStillAsync(string stillKey, CancellationToken ct);
     }
 
+    // 補足画像を画面中央に表示する（立ち絵と同層想定。全画面 CG の IBackgroundView とは別レイヤー）
+    public interface ICenterImageView
+    {
+        UniTask ShowAsync(string imageKey, CancellationToken ct);
+        UniTask HideAsync(CancellationToken ct);
+    }
+
     // se/bgm。音量/フェード/ループ/pitch/停止の引数詳細は実装時に確定する
     public interface IAudioChannel
     {
