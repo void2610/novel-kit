@@ -31,13 +31,13 @@ namespace Novel.Runtime
 
         public NovelScenarioRunner(IScenarioSource source, Router router,
             INovelView view, ITextResolver text, ICharacterCatalog catalog,
-            IPortraitDirector? portraitDirector = null, IBackgroundView? background = null,
-            ICenterImageView? centerImage = null, IAudioChannel? audio = null,
+            IPortraitDirector? portraitDirector = null, IBackgroundView? background = null, IAudioChannel? audio = null,
             IWorldEffectSink? worldEffectSink = null,
             INovelErrorHandler? errorHandler = null,
             IEnumerable<IPreambleSource>? preambleSources = null,
             IEnumerable<INovelCommandModule>? commandModules = null,
-            IBacklog? backlog = null)
+            IBacklog? backlog = null,
+            ICenterImageView? centerImage = null)
         {
             _source = source;
             _router = router;
@@ -69,7 +69,9 @@ namespace Novel.Runtime
                 foreach (var module in modules) module.RegisterVocabulary(config);
             });
 
-            var handler = new NovelCommandHandler(view, _store, text, catalog, portraitDirector, background, centerImage, audio, worldEffectSink, backlog);
+            var handler = new NovelCommandHandler(view, _store, text, catalog,
+                portraitDirector: portraitDirector, background: background, audio: audio,
+                worldEffectSink: worldEffectSink, backlog: backlog, centerImage: centerImage);
             _subscriptions = new List<IDisposable> { handler.MapTo(_router) };
             // 独自コマンドハンドラを同じノベル専用 Router へ写像（購読は Dispose でまとめて解除）
             foreach (var module in modules) _subscriptions.Add(module.MapHandlers(_router));

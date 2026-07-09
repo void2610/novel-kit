@@ -272,6 +272,26 @@ namespace Novel.Tests
             CollectionAssert.AreEqual(new[] { "show:sketch", "hide" }, centerImage.Calls);
         });
 
+        // 空キー image("") は無効 → ShowAsync を呼ばず no-op (消去は hide_image の責務)
+        [UnityTest]
+        public IEnumerator 空キーの_image_は_CenterImageView_を呼ばない() => UniTask.ToCoroutine(async () =>
+        {
+            var centerImage = new FakeCenterImageView();
+            var runner = new NovelScenarioRunner(
+                new ResourcesScenarioSource(),
+                new Router(),
+                new FakeView(),
+                new IdentityTextResolver(),
+                new EmptyCatalog(),
+                centerImage: centerImage,
+                preambleSources: new IPreambleSource[] { new ResourcesPreambleSource() });
+
+            var result = await runner.PlayAsync("test_center_image_empty", CancellationToken.None);
+
+            Assert.AreEqual(NovelResult.Completed, result);
+            CollectionAssert.IsEmpty(centerImage.Calls);
+        });
+
         // float 引数つきの独自コマンドが MRuby cmd 経由でハンドラへ届くかの回帰再現。
         // 既存の int FlagCommand と string CustomEchoCommand は通っているが、float (および float[]) は
         // ゲーム側ランタイムでハンドラまで到達しない症状が出ているため最小ケースを置く。

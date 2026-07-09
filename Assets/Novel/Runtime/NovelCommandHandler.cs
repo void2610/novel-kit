@@ -26,9 +26,9 @@ namespace Novel.Runtime
         private readonly IBacklog? _backlog;
 
         public NovelCommandHandler(INovelView view, IStateStore state, ITextResolver text, ICharacterCatalog catalog,
-            IPortraitDirector? portraitDirector = null, IBackgroundView? background = null,
-            ICenterImageView? centerImage = null, IAudioChannel? audio = null,
-            IWorldEffectSink? worldEffectSink = null, IBacklog? backlog = null)
+            IPortraitDirector? portraitDirector = null, IBackgroundView? background = null, IAudioChannel? audio = null,
+            IWorldEffectSink? worldEffectSink = null, IBacklog? backlog = null,
+            ICenterImageView? centerImage = null)
         {
             _view = view;
             _state = state;
@@ -140,7 +140,9 @@ namespace Novel.Runtime
 
         public async UniTask On(CenterImageCommand cmd, CancellationToken ct)
         {
-            if (_centerImage != null) await _centerImage.ShowAsync(cmd.ImageKey, ct);
+            // 空キー (image(nil) 等) は無効。消去は hide_image の責務なので no-op にする
+            if (_centerImage != null && !string.IsNullOrEmpty(cmd.ImageKey))
+                await _centerImage.ShowAsync(cmd.ImageKey, ct);
         }
 
         public async UniTask On(HideCenterImageCommand cmd, CancellationToken ct)
