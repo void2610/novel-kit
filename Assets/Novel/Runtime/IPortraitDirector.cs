@@ -21,6 +21,9 @@ namespace Novel.Runtime
         // 場面の cast を宣言する (明示 index 指定)。 layout 切替も同時に行う。
         UniTask StageAsync(PortraitLayout layout, IReadOnlyDictionary<string, int> cast, CancellationToken ct);
 
+        // 指定キャラが現在の stage cast に含まれるか。 立ち絵の自動表示可否など、 cast 前提の判定に使う。
+        bool IsStaged(string character);
+
         // 指定キャラを所定の slot に表示する。 cast にいなければ slot 0 にフォールバックして警告。
         UniTask ShowAsync(string character, string portraitKey, CancellationToken ct);
 

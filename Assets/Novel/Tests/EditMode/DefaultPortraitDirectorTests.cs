@@ -59,6 +59,27 @@ namespace Novel.Tests
             Assert.Contains("show:2:taylor:smile", view.Calls);
         });
 
+        // IsStaged は stage 宣言 / exit / clear_stage に追従して cast 在籍を返す
+        [UnityTest]
+        public IEnumerator IsStaged_がcast在籍に追従する() => UniTask.ToCoroutine(async () =>
+        {
+            var view = new RecordingPortraitView();
+            var director = new DefaultPortraitDirector(view);
+
+            Assert.IsFalse(director.IsStaged("taylor"));
+
+            await director.StageAsync(PortraitLayout.Pair, new[] { "taylor", "kii" }, CancellationToken.None);
+            Assert.IsTrue(director.IsStaged("taylor"));
+            Assert.IsTrue(director.IsStaged("kii"));
+            Assert.IsFalse(director.IsStaged("cyan"));
+
+            await director.ExitAsync("kii", CancellationToken.None);
+            Assert.IsFalse(director.IsStaged("kii"));
+
+            await director.ClearStageAsync(CancellationToken.None);
+            Assert.IsFalse(director.IsStaged("taylor"));
+        });
+
         // Stage 切替時: 旧 cast に居て新 cast にいないキャラは Hide (退場)、 layout は SwitchLayout で切替
         [UnityTest]
         public IEnumerator Stage切替で旧castにのみあるキャラがHideされる() => UniTask.ToCoroutine(async () =>

@@ -18,6 +18,7 @@ namespace Novel.Runtime
     {
         public UniTask StageAsync(PortraitLayout layout, System.Collections.Generic.IReadOnlyList<string> cast, CancellationToken ct) => UniTask.CompletedTask;
         public UniTask StageAsync(PortraitLayout layout, System.Collections.Generic.IReadOnlyDictionary<string, int> cast, CancellationToken ct) => UniTask.CompletedTask;
+        public bool IsStaged(string character) => false;
         public UniTask ShowAsync(string character, string portraitKey, CancellationToken ct) => UniTask.CompletedTask;
         public UniTask ExitAsync(string character, CancellationToken ct) => UniTask.CompletedTask;
         public UniTask ClearStageAsync(CancellationToken ct) => UniTask.CompletedTask;
