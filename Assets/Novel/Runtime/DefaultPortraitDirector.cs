@@ -71,6 +71,8 @@ namespace Novel.Runtime
             }
         }
 
+        public bool IsStaged(string character) => _cast.ContainsKey(character);
+
         public async UniTask ShowAsync(string character, string portraitKey, CancellationToken ct)
         {
             if (!_layoutInitialized)
