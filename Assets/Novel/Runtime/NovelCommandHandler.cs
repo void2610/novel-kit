@@ -20,13 +20,15 @@ namespace Novel.Runtime
         private readonly ICharacterCatalog _catalog;
         private readonly IPortraitDirector? _portraitDirector;
         private readonly IBackgroundView? _background;
+        private readonly ICenterImageView? _centerImage;
         private readonly IAudioChannel? _audio;
         private readonly IWorldEffectSink? _worldEffectSink;
         private readonly IBacklog? _backlog;
 
         public NovelCommandHandler(INovelView view, IStateStore state, ITextResolver text, ICharacterCatalog catalog,
             IPortraitDirector? portraitDirector = null, IBackgroundView? background = null, IAudioChannel? audio = null,
-            IWorldEffectSink? worldEffectSink = null, IBacklog? backlog = null)
+            IWorldEffectSink? worldEffectSink = null, IBacklog? backlog = null,
+            ICenterImageView? centerImage = null)
         {
             _view = view;
             _state = state;
@@ -34,6 +36,7 @@ namespace Novel.Runtime
             _catalog = catalog;
             _portraitDirector = portraitDirector;
             _background = background;
+            _centerImage = centerImage;
             _audio = audio;
             _worldEffectSink = worldEffectSink;
             _backlog = backlog;
@@ -133,6 +136,18 @@ namespace Novel.Runtime
         public async UniTask On(StillCommand cmd, CancellationToken ct)
         {
             if (_background != null) await _background.ShowStillAsync(cmd.StillKey, ct);
+        }
+
+        public async UniTask On(CenterImageCommand cmd, CancellationToken ct)
+        {
+            // 空キー (image(nil) 等) は無効。消去は hide_image の責務なので no-op にする
+            if (_centerImage != null && !string.IsNullOrEmpty(cmd.ImageKey))
+                await _centerImage.ShowAsync(cmd.ImageKey, ct);
+        }
+
+        public async UniTask On(HideCenterImageCommand cmd, CancellationToken ct)
+        {
+            if (_centerImage != null) await _centerImage.HideAsync(ct);
         }
 
         public async UniTask On(SeCommand cmd, CancellationToken ct)

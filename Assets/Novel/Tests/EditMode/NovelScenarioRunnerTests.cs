@@ -69,6 +69,22 @@ namespace Novel.Tests
             public void SetMessageWindowVisible(bool visible) => MessageWindowVisible = visible;
         }
 
+        // image / hide_image が ICenterImageView へ届くかを記録する fake
+        private sealed class FakeCenterImageView : ICenterImageView
+        {
+            public readonly List<string> Calls = new();
+            public UniTask ShowAsync(string imageKey, CancellationToken ct)
+            {
+                Calls.Add("show:" + imageKey);
+                return UniTask.CompletedTask;
+            }
+            public UniTask HideAsync(CancellationToken ct)
+            {
+                Calls.Add("hide");
+                return UniTask.CompletedTask;
+            }
+        }
+
         // gate 解放までブロックし ct で中断可能な View（switch-latest 検証用）
         private sealed class GatedView : INovelView
         {
@@ -234,6 +250,46 @@ namespace Novel.Tests
 
             Assert.AreEqual(NovelResult.Completed, result);
             CollectionAssert.AreEqual(new[] { "echoed" }, module.Received);   // 独自 cmd がハンドラへ届いた
+        });
+
+        // image / hide_image が ICenterImageView へ順に届くことを検証（補足画像の中央表示）
+        [UnityTest]
+        public IEnumerator image_と_hide_image_が_CenterImageView_へ届く() => UniTask.ToCoroutine(async () =>
+        {
+            var centerImage = new FakeCenterImageView();
+            var runner = new NovelScenarioRunner(
+                new ResourcesScenarioSource(),
+                new Router(),
+                new FakeView(),
+                new IdentityTextResolver(),
+                new EmptyCatalog(),
+                centerImage: centerImage,
+                preambleSources: new IPreambleSource[] { new ResourcesPreambleSource() });
+
+            var result = await runner.PlayAsync("test_center_image", CancellationToken.None);
+
+            Assert.AreEqual(NovelResult.Completed, result);
+            CollectionAssert.AreEqual(new[] { "show:sketch", "hide" }, centerImage.Calls);
+        });
+
+        // 空キー image("") は無効 → ShowAsync を呼ばず no-op (消去は hide_image の責務)
+        [UnityTest]
+        public IEnumerator 空キーの_image_は_CenterImageView_を呼ばない() => UniTask.ToCoroutine(async () =>
+        {
+            var centerImage = new FakeCenterImageView();
+            var runner = new NovelScenarioRunner(
+                new ResourcesScenarioSource(),
+                new Router(),
+                new FakeView(),
+                new IdentityTextResolver(),
+                new EmptyCatalog(),
+                centerImage: centerImage,
+                preambleSources: new IPreambleSource[] { new ResourcesPreambleSource() });
+
+            var result = await runner.PlayAsync("test_center_image_empty", CancellationToken.None);
+
+            Assert.AreEqual(NovelResult.Completed, result);
+            CollectionAssert.IsEmpty(centerImage.Calls);
         });
 
         // float 引数つきの独自コマンドが MRuby cmd 経由でハンドラへ届くかの回帰再現。

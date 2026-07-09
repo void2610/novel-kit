@@ -69,6 +69,19 @@ namespace Novel.Commands
         public string StillKey { get; init; }
     }
 
+    // 補足画像を画面中央に表示（立ち絵と同層。空キーは無効）
+    [MRubyObject]
+    public readonly partial record struct CenterImageCommand : ICommand
+    {
+        public string ImageKey { get; init; }
+    }
+
+    // 中央の補足画像を消す
+    [MRubyObject]
+    public readonly partial record struct HideCenterImageCommand : ICommand
+    {
+    }
+
     // 効果音
     [MRubyObject]
     public readonly partial record struct SeCommand : ICommand

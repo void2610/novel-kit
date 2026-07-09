@@ -84,6 +84,14 @@ def still(still_key)
   cmd :still, still_key: still_key.to_s
 end
 
+def image(image_key)
+  cmd :center_image, image_key: image_key.to_s
+end
+
+def hide_image
+  cmd :hide_center_image
+end
+
 def se(se_key)
   cmd :se, se_key: se_key.to_s
 end

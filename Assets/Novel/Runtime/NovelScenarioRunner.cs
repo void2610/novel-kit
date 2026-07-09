@@ -36,7 +36,8 @@ namespace Novel.Runtime
             INovelErrorHandler? errorHandler = null,
             IEnumerable<IPreambleSource>? preambleSources = null,
             IEnumerable<INovelCommandModule>? commandModules = null,
-            IBacklog? backlog = null)
+            IBacklog? backlog = null,
+            ICenterImageView? centerImage = null)
         {
             _source = source;
             _router = router;
@@ -57,6 +58,8 @@ namespace Novel.Runtime
                 config.AddCommand<ClearStageCommand>("clear_stage");
                 config.AddCommand<BackgroundCommand>("bg");
                 config.AddCommand<StillCommand>("still");
+                config.AddCommand<CenterImageCommand>("center_image");
+                config.AddCommand<HideCenterImageCommand>("hide_center_image");
                 config.AddCommand<SeCommand>("se");
                 config.AddCommand<BgmCommand>("bgm");
                 config.AddCommand<WaitCommand>("wait");
@@ -66,7 +69,9 @@ namespace Novel.Runtime
                 foreach (var module in modules) module.RegisterVocabulary(config);
             });
 
-            var handler = new NovelCommandHandler(view, _store, text, catalog, portraitDirector, background, audio, worldEffectSink, backlog);
+            var handler = new NovelCommandHandler(view, _store, text, catalog,
+                portraitDirector: portraitDirector, background: background, audio: audio,
+                worldEffectSink: worldEffectSink, backlog: backlog, centerImage: centerImage);
             _subscriptions = new List<IDisposable> { handler.MapTo(_router) };
             // 独自コマンドハンドラを同じノベル専用 Router へ写像（購読は Dispose でまとめて解除）
             foreach (var module in modules) _subscriptions.Add(module.MapHandlers(_router));
