@@ -30,6 +30,7 @@ namespace Novel.View
     {
         private bool _warned;
         public UniTask PlaySeAsync(string seKey, CancellationToken ct) { Warn(); return UniTask.CompletedTask; }
+        public UniTask PlaySeLoopAsync(string seKey, float interval, int count, CancellationToken ct) { Warn(); return UniTask.CompletedTask; }
         public void PlayBgm(string bgmKey) => Warn();
         public void StopBgm() => Warn();
         private void Warn() => FacetWarning.Once(ref _warned, "se/bgm", "IAudioChannel");

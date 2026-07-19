@@ -96,6 +96,10 @@ def se(se_key)
   cmd :se, se_key: se_key.to_s
 end
 
+def se_loop(se_key, interval = 0.5, count = 3)
+  cmd :se_loop, se_key: se_key.to_s, interval: interval.to_f, count: count.to_i
+end
+
 def bgm(bgm_key = '')
   cmd :bgm, bgm_key: bgm_key.to_s
 end

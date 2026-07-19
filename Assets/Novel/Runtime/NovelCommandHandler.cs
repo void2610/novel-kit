@@ -155,6 +155,11 @@ namespace Novel.Runtime
             if (_audio != null) await _audio.PlaySeAsync(cmd.SeKey, ct);
         }
 
+        public async UniTask On(SeLoopCommand cmd, CancellationToken ct)
+        {
+            if (_audio != null) await _audio.PlaySeLoopAsync(cmd.SeKey, cmd.Interval, cmd.Count, ct);
+        }
+
         // bgm は非ブロッキング（即 return）。空文字は停止
         public void On(BgmCommand cmd)
         {

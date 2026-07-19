@@ -38,6 +38,7 @@ namespace Novel.Runtime
     public interface IAudioChannel
     {
         UniTask PlaySeAsync(string seKey, CancellationToken ct);
+        UniTask PlaySeLoopAsync(string seKey, float interval, int count, CancellationToken ct);
         void PlayBgm(string bgmKey);
         void StopBgm();
     }

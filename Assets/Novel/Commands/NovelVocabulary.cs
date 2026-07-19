@@ -89,6 +89,15 @@ namespace Novel.Commands
         public string SeKey { get; init; }
     }
 
+    // 効果音の繰り返し再生（interval 秒間隔で count 回。blocking 性は sink の実装が決める）
+    [MRubyObject]
+    public readonly partial record struct SeLoopCommand : ICommand
+    {
+        public string SeKey { get; init; }
+        public float Interval { get; init; }
+        public int Count { get; init; }
+    }
+
     // BGM（空文字 = 停止）
     [MRubyObject]
     public readonly partial record struct BgmCommand : ICommand

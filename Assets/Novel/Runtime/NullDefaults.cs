@@ -39,6 +39,7 @@ namespace Novel.Runtime
     public sealed class NullAudioChannel : IAudioChannel
     {
         public UniTask PlaySeAsync(string seKey, CancellationToken ct) => UniTask.CompletedTask;
+        public UniTask PlaySeLoopAsync(string seKey, float interval, int count, CancellationToken ct) => UniTask.CompletedTask;
         public void PlayBgm(string bgmKey) { }
         public void StopBgm() { }
     }

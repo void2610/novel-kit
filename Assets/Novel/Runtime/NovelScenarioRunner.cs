@@ -61,6 +61,7 @@ namespace Novel.Runtime
                 config.AddCommand<CenterImageCommand>("center_image");
                 config.AddCommand<HideCenterImageCommand>("hide_center_image");
                 config.AddCommand<SeCommand>("se");
+                config.AddCommand<SeLoopCommand>("se_loop");
                 config.AddCommand<BgmCommand>("bgm");
                 config.AddCommand<WaitCommand>("wait");
                 config.AddCommand<WorldEffectCommand>("world_effect");
