@@ -314,6 +314,58 @@ namespace Novel.Tests
             CollectionAssert.AreEqual(new[] { 0.5f }, module.Received);   // float cmd がハンドラへ届いた
         });
 
+        // 途中復帰: 目標 say より前は表示せず、目標の say から通常表示に戻る（セリフ単位ロード）
+        [UnityTest]
+        public IEnumerator 途中復帰は目標sayより前を表示せず目標から通常表示する() => UniTask.ToCoroutine(async () =>
+        {
+            var view = new FakeView();
+            var backlog = new RingBufferBacklog();
+            var runner = new NovelScenarioRunner(
+                new ResourcesScenarioSource(),
+                new Router(),
+                view,
+                new IdentityTextResolver(),
+                new EmptyCatalog(),
+                preambleSources: new IPreambleSource[] { new ResourcesPreambleSource() },
+                backlog: backlog);
+
+            var result = await runner.PlayAsync("test_hello", new NovelResumePoint(2), CancellationToken.None);
+
+            Assert.AreEqual(NovelResult.Completed, result);
+            Assert.AreEqual(1, view.Lines.Count);                    // 1 行目は早送りで非表示
+            Assert.AreEqual("ナレーション", view.Lines[0].Text);     // 2 行目 (保存地点) から表示再開
+            Assert.AreEqual(2, backlog.Count);                       // バックログは早送り分も再構築される
+            Assert.AreEqual(2, runner.CurrentSayNumber);
+        });
+
+        // NovelResumePoint.End は全 say を早送りする（マルチセグメントの過去セグメント再構築用）
+        [UnityTest]
+        public IEnumerator Endまでの途中復帰は全sayを表示なしで完走する() => UniTask.ToCoroutine(async () =>
+        {
+            var view = new FakeView();
+            var runner = NewRunner(view);
+
+            var result = await runner.PlayAsync("test_hello", NovelResumePoint.End, CancellationToken.None);
+
+            Assert.AreEqual(NovelResult.Completed, result);
+            CollectionAssert.IsEmpty(view.Lines);
+            Assert.AreEqual(2, runner.CurrentSayNumber);
+        });
+
+        // 早送り中の choose は復元済みの明示キーを保ち、未復元の自動採番キーだけ UI に落ちる
+        [UnityTest]
+        public IEnumerator 早送り中のchooseは復元済みキーの選択を保つ() => UniTask.ToCoroutine(async () =>
+        {
+            var runner = NewRunner(new FakeView { ChoiceResult = 0 });   // 再選択が起きたら 0 が書かれてしまう
+            runner.RestoreState(new NovelStateSnapshot(
+                new Dictionary<string, int> { { "picked", 1 } }, Array.Empty<string>()));
+
+            var result = await runner.PlayAsync("test_choose_keys", NovelResumePoint.End, CancellationToken.None);
+
+            Assert.AreEqual(NovelResult.Completed, result);
+            Assert.AreEqual(1, runner.CaptureState().Values["picked"]);   // 復元値が再選択で潰れていない
+        });
+
         // say の表示ごとに IBacklog へ話者・本文（rich）が記録されることを検証
         [UnityTest]
         public IEnumerator say表示ごとにバックログへ話者と本文が積まれる() => UniTask.ToCoroutine(async () =>
