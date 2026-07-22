@@ -20,6 +20,7 @@ namespace Novel.Runtime
         private readonly IReadOnlyList<IPreambleSource> _preambleSources;
         private readonly MRubyState _state;
         private readonly MRubyStateStore _store;
+        private readonly NovelPlaybackProgress _progress = new();
         private readonly List<IDisposable> _subscriptions;
         private bool _preambleLoaded;
         private bool _disposed;
@@ -72,7 +73,8 @@ namespace Novel.Runtime
 
             var handler = new NovelCommandHandler(view, _store, text, catalog,
                 portraitDirector: portraitDirector, background: background, audio: audio,
-                worldEffectSink: worldEffectSink, backlog: backlog, centerImage: centerImage);
+                worldEffectSink: worldEffectSink, backlog: backlog, centerImage: centerImage,
+                progress: _progress);
             _subscriptions = new List<IDisposable> { handler.MapTo(_router) };
             // 独自コマンドハンドラを同じノベル専用 Router へ写像（購読は Dispose でまとめて解除）
             foreach (var module in modules) _subscriptions.Add(module.MapHandlers(_router));
@@ -80,6 +82,9 @@ namespace Novel.Runtime
 
         // 再生中に再度呼ぶと switch-latest: 前再生を cancel し後始末完了を待って差し替える（前呼び出しは Cancelled）
         public UniTask<NovelResult> PlayAsync(string scenarioKey, CancellationToken ct)
+            => PlayAsync(scenarioKey, NovelResumePoint.None, ct);
+
+        public UniTask<NovelResult> PlayAsync(string scenarioKey, NovelResumePoint resume, CancellationToken ct)
         {
             if (_disposed) throw new ObjectDisposedException(nameof(NovelScenarioRunner));
 
@@ -90,8 +95,10 @@ namespace Novel.Runtime
             var myCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             _previousDone = myDone;
             _inFlightCts = myCts;
-            return RunChainedAsync(previousDone, previousCts, scenarioKey, myCts, myDone);
+            return RunChainedAsync(previousDone, previousCts, scenarioKey, resume, myCts, myDone);
         }
+
+        public int CurrentSayNumber => _progress.SayNumber;
 
         // 永続状態(フラグ/変数 + 既読)を引く。live state はセッション中 runner が保持しており、
         // game が保存したいタイミングで呼ぶ。直列化(NovelSaveData / NovelSaveSerializer)と保存は game 所有。
@@ -104,7 +111,7 @@ namespace Novel.Runtime
         // 前 cts は中断→待機後にここで破棄する（後継が前任を破棄する規約: 破棄後 Cancel / 二重破棄を避ける）
         private async UniTask<NovelResult> RunChainedAsync(
             UniTaskCompletionSource? previousDone, CancellationTokenSource? previousCts,
-            string scenarioKey, CancellationTokenSource myCts, UniTaskCompletionSource myDone)
+            string scenarioKey, NovelResumePoint resume, CancellationTokenSource myCts, UniTaskCompletionSource myDone)
         {
             previousCts?.Cancel();
             if (previousDone != null)
@@ -116,7 +123,7 @@ namespace Novel.Runtime
 
             try
             {
-                return await RunOnceAsync(scenarioKey, myCts.Token);
+                return await RunOnceAsync(scenarioKey, resume, myCts.Token);
             }
             finally
             {
@@ -125,10 +132,11 @@ namespace Novel.Runtime
         }
 
         // 1 シナリオの実体。例外は握って NovelResult.Faulted/Cancelled に畳む（フェイルセーフ）。
-        private async UniTask<NovelResult> RunOnceAsync(string scenarioKey, CancellationToken ct)
+        private async UniTask<NovelResult> RunOnceAsync(string scenarioKey, NovelResumePoint resume, CancellationToken ct)
         {
             try
             {
+                _progress.Reset(resume.SayNumber);
                 await EnsurePreambleLoadedAsync(ct);
 
                 // 状態の復元/保存は runner が駆動しない。game が PlayAsync の外で RestoreState/CaptureState を

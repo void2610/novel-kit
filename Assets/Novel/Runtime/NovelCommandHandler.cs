@@ -24,11 +24,12 @@ namespace Novel.Runtime
         private readonly IAudioChannel? _audio;
         private readonly IWorldEffectSink? _worldEffectSink;
         private readonly IBacklog? _backlog;
+        private readonly NovelPlaybackProgress _progress;
 
         public NovelCommandHandler(INovelView view, IStateStore state, ITextResolver text, ICharacterCatalog catalog,
             IPortraitDirector? portraitDirector = null, IBackgroundView? background = null, IAudioChannel? audio = null,
             IWorldEffectSink? worldEffectSink = null, IBacklog? backlog = null,
-            ICenterImageView? centerImage = null)
+            ICenterImageView? centerImage = null, NovelPlaybackProgress? progress = null)
         {
             _view = view;
             _state = state;
@@ -40,10 +41,14 @@ namespace Novel.Runtime
             _audio = audio;
             _worldEffectSink = worldEffectSink;
             _backlog = backlog;
+            _progress = progress ?? new NovelPlaybackProgress();
         }
 
         public async UniTask On(SayCommand cmd, CancellationToken ct)
         {
+            // 早送り中は表示待ちだけ省く。立ち絵/バックログ/既読は実行し、復帰地点の盤面を再構築する
+            var fastForward = _progress.AdvanceSay();
+
             // PortraitKey が同時指定されていればここで切替（display_as で表示名を変えつつ、同一 speaker_id の立ち絵を 1 行で指定する糖衣）
             if (!string.IsNullOrEmpty(cmd.PortraitKey) && _portraitDirector != null)
                 await _portraitDirector.ShowAsync(cmd.SpeakerId, cmd.PortraitKey, ct);
@@ -59,7 +64,7 @@ namespace Novel.Runtime
             _backlog?.Add(displayName ?? "", resolved);
 
             // Text はタグ付き原文を渡し、View 側 typewriter が NovelTagLexer で逐次 Reveal する
-            await _view.ShowMessageAsync(new NovelLine(cmd.SpeakerId, displayName, resolved, alreadyRead), ct);
+            if (!fastForward) await _view.ShowMessageAsync(new NovelLine(cmd.SpeakerId, displayName, resolved, alreadyRead), ct);
 
             _state.MarkRead(textId);
         }
@@ -67,6 +72,9 @@ namespace Novel.Runtime
         // 選択 → index を共有テーブル経由で StateKey に書く（Ruby の state[:key] が読む）
         public async UniTask On(ChooseCommand cmd, CancellationToken ct)
         {
+            // 早送り中で選択結果が復元済みならUIを出さず前回の選択を保つ（未復元の自動採番キー等は通常表示に落とす）
+            if (_progress.IsFastForwarding && _state.Has(cmd.StateKey)) return;
+
             // 選択肢も say と同じく ITextResolver を通す（多言語化の seam を say と揃える）
             var options = cmd.Options;
             var resolved = new string[options.Length];
@@ -152,11 +160,13 @@ namespace Novel.Runtime
 
         public async UniTask On(SeCommand cmd, CancellationToken ct)
         {
+            if (_progress.IsFastForwarding) return; // 早送り中の効果音は復帰後に意味を持たないため鳴らさない
             if (_audio != null) await _audio.PlaySeAsync(cmd.SeKey, ct);
         }
 
         public async UniTask On(SeLoopCommand cmd, CancellationToken ct)
         {
+            if (_progress.IsFastForwarding) return;
             if (_audio != null) await _audio.PlaySeLoopAsync(cmd.SeKey, cmd.Interval, cmd.Count, ct);
         }
 
@@ -170,6 +180,7 @@ namespace Novel.Runtime
 
         public async UniTask On(WaitCommand cmd, CancellationToken ct)
         {
+            if (_progress.IsFastForwarding) return; // 早送りは実時間を消費しない
             await UniTask.Delay(TimeSpan.FromSeconds(cmd.Seconds), cancellationToken: ct);
         }
 
@@ -177,6 +188,7 @@ namespace Novel.Runtime
         // （非ブロッキング=即完了タスク / ブロッキング=完了時解決タスク。effect-await ADR）。未供給なら no-op
         public async UniTask On(WorldEffectCommand cmd, CancellationToken ct)
         {
+            if (_progress.IsFastForwarding) return; // 演出 (shake/flash 等) は瞬間表現なので早送りでは再現しない
             if (_worldEffectSink == null) return;
             await _worldEffectSink.DispatchAsync(new WorldEffect(cmd.EffectKey, cmd.Args ?? Array.Empty<float>()), ct);
         }

@@ -10,6 +10,12 @@ namespace Novel.Runtime
         // 再生中の再呼び出しは switch-latest: 前再生を cancel し後始末を待って差し替える（前呼び出しは Cancelled）
         UniTask<NovelResult> PlayAsync(string scenarioKey, CancellationToken ct);
 
+        // 途中復帰つき再生。RestoreState 済みフラグ下でのみ分岐リプレイが決定的になる (呼び出し前提)
+        UniTask<NovelResult> PlayAsync(string scenarioKey, NovelResumePoint resume, CancellationToken ct);
+
+        // 現在の再生で処理を開始した say の通し番号（1 始まり・0 = 未開始）。セリフ単位セーブのカーソルとして保存する
+        int CurrentSayNumber { get; }
+
         // 永続状態(フラグ/変数 + 既読)のスナップショットを引く。game が保存したいタイミングで呼び、
         // 直列化(NovelSaveData / NovelSaveSerializer)と保存は game 側で行う（進行とセーブは game 所有）。
         NovelStateSnapshot CaptureState();
