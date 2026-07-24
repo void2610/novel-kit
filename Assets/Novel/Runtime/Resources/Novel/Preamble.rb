@@ -145,6 +145,11 @@ def show_message_window
   cmd :message_window_visible, visible: true
 end
 
+# 表示中のセリフ・話者名を消す (ウィンドウは出したまま。場面転換で直前のセリフを残さない)
+def clear_message
+  cmd :clear_message
+end
+
 # 選択肢提示 → 選んだ index を返す。
 # 既定キーは `__` 始まりのユニーク採番で、一時スクラッチ（セーブに残さない）。
 # 跨シナリオで選択結果を残したいときは key: を渡して `__` 以外の安定キーに書く（改稿耐性・セーブ対象）。

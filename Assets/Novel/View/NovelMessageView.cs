@@ -113,6 +113,12 @@ namespace Novel.View
             if (window != null) window.SetActive(visible);
         }
 
+        public void ClearMessage()
+        {
+            nameLabel.text = "";
+            messageLabel.text = "";
+        }
+
         public async UniTask<int> ShowChoicesAsync(IReadOnlyList<string> options, CancellationToken ct)
         {
             var tcs = new UniTaskCompletionSource<int>();

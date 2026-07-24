@@ -68,6 +68,8 @@ namespace Novel.Tests
                 => UniTask.FromResult(ChoiceResult);
 
             public void SetMessageWindowVisible(bool visible) => MessageWindowVisible = visible;
+
+            public void ClearMessage() { }
         }
 
         // image / hide_image が ICenterImageView へ届くかを記録する fake
@@ -95,6 +97,7 @@ namespace Novel.Tests
             public UniTask ShowMessageAsync(NovelLine line, CancellationToken ct) => _gate.Task.AttachExternalCancellation(ct);
             public UniTask<int> ShowChoicesAsync(IReadOnlyList<string> options, CancellationToken ct) => UniTask.FromResult(0);
             public void SetMessageWindowVisible(bool visible) { }
+            public void ClearMessage() { }
         }
 
         private sealed class EmptyCatalog : ICharacterCatalog

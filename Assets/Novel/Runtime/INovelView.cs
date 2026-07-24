@@ -16,5 +16,8 @@ namespace Novel.Runtime
 
         // テキストウィンドウの表示 / 非表示を切り替える（イベント CG 等でウィンドウを一時的に隠す用途）
         void SetMessageWindowVisible(bool visible);
+
+        // 表示中のセリフ・話者名を消す（ウィンドウは出したまま。場面転換で直前のセリフを残さない用途）
+        void ClearMessage();
     }
 }

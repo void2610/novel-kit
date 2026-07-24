@@ -16,6 +16,7 @@ namespace Novel.Tests
             public UniTask ShowMessageAsync(NovelLine line, CancellationToken ct) => UniTask.CompletedTask;
             public UniTask<int> ShowChoicesAsync(IReadOnlyList<string> options, CancellationToken ct) => UniTask.FromResult(0);
             public void SetMessageWindowVisible(bool visible) { }
+            public void ClearMessage() { }
         }
 
         private sealed class StubCatalog : ICharacterCatalog

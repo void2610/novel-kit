@@ -126,4 +126,8 @@ namespace Novel.Commands
     {
         public bool Visible { get; init; }
     }
+
+    // 表示中のセリフ・話者名の消去 (ウィンドウは出したまま。場面転換で直前のセリフを残さない用途)
+    [MRubyObject]
+    public readonly partial record struct ClearMessageCommand : ICommand;
 }

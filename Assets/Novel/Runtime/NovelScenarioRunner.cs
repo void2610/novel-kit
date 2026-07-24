@@ -67,6 +67,7 @@ namespace Novel.Runtime
                 config.AddCommand<WaitCommand>("wait");
                 config.AddCommand<WorldEffectCommand>("world_effect");
                 config.AddCommand<MessageWindowVisibilityCommand>("message_window_visible");
+                config.AddCommand<ClearMessageCommand>("clear_message");
                 // game 独自コマンドの語彙束縛（組込語彙の後・名前衝突は game 責任）
                 foreach (var module in modules) module.RegisterVocabulary(config);
             });

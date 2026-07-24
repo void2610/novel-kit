@@ -195,6 +195,8 @@ namespace Novel.Runtime
 
         public void On(MessageWindowVisibilityCommand cmd) => _view.SetMessageWindowVisible(cmd.Visible);
 
+        public void On(ClearMessageCommand cmd) => _view.ClearMessage();
+
         // command-schema の解決 3 規則: 空=ナレーション / カタログ有=表示名（DisplayAs で上書き）/ 未登録=id をそのまま
         private string? ResolveDisplayName(SayCommand cmd)
         {
