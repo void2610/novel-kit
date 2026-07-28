@@ -12,15 +12,25 @@ namespace Novel.View
         {
             var sb = new StringBuilder();
             string? pendingRuby = null;   // <ruby=よみ> 受領後、直後の Text（親文字）に重ねるためのよみ
+
+            // 親文字なしで ruby 区間が終わっても、engine は RubyPush 時点でよみを可視数に算入済みのため素テキストとして出力する
+            void FlushPendingRuby()
+            {
+                if (string.IsNullOrEmpty(pendingRuby)) return;
+                sb.Append("<noparse>").Append(pendingRuby).Append("</noparse>");
+                pendingRuby = null;
+            }
+
             foreach (var t in tokens)
             {
                 switch (t.Kind)
                 {
                     case NovelTokenKind.RubyPush:
+                        FlushPendingRuby();
                         pendingRuby = t.Payload;
                         break;
                     case NovelTokenKind.RubyPop:
-                        pendingRuby = null;
+                        FlushPendingRuby();
                         break;
                     case NovelTokenKind.Text when pendingRuby != null:
                         sb.Append(RubyMarkup.BuildOverlay(t.Payload, pendingRuby));   // よみを親文字の上に重ねる
@@ -34,6 +44,7 @@ namespace Novel.View
                         break;
                 }
             }
+            FlushPendingRuby();
             return sb.ToString();
         }
     }

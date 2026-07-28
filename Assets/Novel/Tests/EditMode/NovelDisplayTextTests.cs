@@ -39,6 +39,23 @@ namespace Novel.Tests
         }
 
         [Test]
+        public void Build_RubyWithoutBaseText_EmitsReadingAsPlainText()
+        {
+            // engine は RubyPush 時点でよみを可視数に算入するため、親文字がなくてもよみを落とさない
+            var tokens = NovelTagLexer.Parse("<ruby=にわ></ruby>先");
+            Assert.That(NovelDisplayText.Build(tokens),
+                Is.EqualTo("<noparse>にわ</noparse><noparse>先</noparse>"));
+        }
+
+        [Test]
+        public void Build_UnclosedRubyAtEnd_EmitsReadingAsPlainText()
+        {
+            var tokens = NovelTagLexer.Parse("末尾<ruby=にわ>");
+            Assert.That(NovelDisplayText.Build(tokens),
+                Is.EqualTo("<noparse>末尾</noparse><noparse>にわ</noparse>"));
+        }
+
+        [Test]
         public void Build_LiteralAngleBracket_IsNoparsed()
         {
             var tokens = NovelTagLexer.Parse("1 < 2");
