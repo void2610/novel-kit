@@ -9,7 +9,8 @@
         "Novel.View",
         "Novel.VContainer",
         "VContainer",
-        "UniTask"
+        "UniTask",
+        "Novel.Addressables"
     ],
     "includePlatforms": [
         "Editor"
@@ -22,6 +23,12 @@
     "defineConstraints": [
         "UNITY_INCLUDE_TESTS"
     ],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.addressables",
+            "expression": "",
+            "define": "NOVEL_ADDRESSABLES"
+        }
+    ],
     "noEngineReferences": false
 }

@@ -17,6 +17,7 @@ namespace Novel.Addressables
     {
         public async UniTask<byte[]?> LoadBytesAsync(string key, string subAssetSuffix, CancellationToken ct)
         {
+            ct.ThrowIfCancellationRequested();
             // IList<T> 指定でメイン + サブアセットをまとめて取得する (Addressables のサブオブジェクトロード)
             var handle = UnityEngine.AddressableAssets.Addressables.LoadAssetAsync<IList<TextAsset>>(key);
             try
@@ -31,7 +32,8 @@ namespace Novel.Addressables
             {
                 throw;
             }
-            catch
+            // ロード失敗 (未登録キー等) は Resources の「見つからない」と同じ null に落とすが、致命的例外は握りつぶさない
+            catch (System.Exception e) when (e is not System.OutOfMemoryException)
             {
                 return null;
             }
@@ -43,6 +45,7 @@ namespace Novel.Addressables
 
         public async UniTask<string?> LoadTextAsync(string key, CancellationToken ct)
         {
+            ct.ThrowIfCancellationRequested();
             var handle = UnityEngine.AddressableAssets.Addressables.LoadAssetAsync<TextAsset>(key);
             try
             {
@@ -53,7 +56,8 @@ namespace Novel.Addressables
             {
                 throw;
             }
-            catch
+            // ロード失敗 (未登録キー等) は Resources の「見つからない」と同じ null に落とすが、致命的例外は握りつぶさない
+            catch (System.Exception e) when (e is not System.OutOfMemoryException)
             {
                 return null;
             }
