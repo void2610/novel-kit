@@ -47,9 +47,14 @@ namespace Novel.Addressables
             }
             catch (System.Exception e) when (e is not System.OutOfMemoryException)
             {
-                // 失敗したハンドルはキャッシュから外し、次回の再試行を妨げない
-                if (_handles.Remove(key, out var failed))
-                    UnityEngine.AddressableAssets.Addressables.Release(failed);
+                // 失敗したハンドルはキャッシュから外し、次回の再試行を妨げない。
+                // キー一致だけで除去すると、同じ失敗を待っていた別の呼び出しが、その後に第三者が張り直した
+                // 新しい in-flight ハンドルを巻き添えで解放しうるため、自分が await した実体と一致する場合に限る
+                if (_handles.TryGetValue(key, out var current) && current.Equals(handle))
+                {
+                    _handles.Remove(key);
+                    UnityEngine.AddressableAssets.Addressables.Release(handle);
+                }
                 Debug.LogWarning($"[novel-kit] Addressables スプライトのロード失敗 key='{_root}{key}': {e.GetType().Name}: {e.Message}");
                 return null;
             }
