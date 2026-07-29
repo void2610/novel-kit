@@ -64,33 +64,7 @@ namespace Novel.View
             var tokens = NovelTagLexer.Parse(line.Text);
             Engine.Build(tokens);   // 制御列・shake/wave 区間・総可視文字数を構築
 
-            // TMP 表示文字列を構築（素テキストは noparse で包み、リテラル '<' 等が TMP タグと誤認されないようにする）
-            var sb = new System.Text.StringBuilder();
-            string? pendingRuby = null;   // <ruby=よみ> 受領後、直後の Text（親文字）に重ねるためのよみ
-            foreach (var t in tokens)
-            {
-                switch (t.Kind)
-                {
-                    case NovelTokenKind.RubyPush:
-                        pendingRuby = t.Payload;
-                        break;
-                    case NovelTokenKind.RubyPop:
-                        pendingRuby = null;
-                        break;
-                    case NovelTokenKind.Text when pendingRuby != null:
-                        sb.Append(RubyMarkup.BuildOverlay(t.Payload, pendingRuby));   // よみを親文字の上に重ねる
-                        pendingRuby = null;
-                        break;
-                    case NovelTokenKind.Text:
-                        sb.Append("<noparse>").Append(t.Payload).Append("</noparse>");
-                        break;
-                    case NovelTokenKind.TmpTag:
-                        sb.Append(t.Payload);
-                        break;
-                }
-            }
-
-            messageLabel.text = sb.ToString();
+            messageLabel.text = NovelDisplayText.Build(tokens);
             messageLabel.ForceMeshUpdate();
             int tmpTotal = messageLabel.textInfo.characterCount;
             messageLabel.maxVisibleCharacters = 0;
