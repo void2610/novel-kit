@@ -22,8 +22,18 @@ namespace Novel.View
         public UniTask<string?> LoadTextAsync(string key, CancellationToken ct)
         {
             if (ct.IsCancellationRequested) return UniTask.FromCanceled<string?>(ct);
+            return UniTask.FromResult(LoadText(key));
+        }
+
+        /// <summary>
+        /// テキストを同期で読む (無ければ null)。
+        /// PlayerLoop が回っていない Awake / DI の Configure 中は <c>async UniTask</c> の完了を待てないため、
+        /// そうした場面ではこちらを使う (UniTask を挟まないので状態機械の再開待ちが発生しない)。
+        /// </summary>
+        public string? LoadText(string key)
+        {
             var asset = Resources.Load<TextAsset>(key);
-            return UniTask.FromResult(asset != null ? asset.text : null);
+            return asset != null ? asset.text : null;
         }
     }
 }

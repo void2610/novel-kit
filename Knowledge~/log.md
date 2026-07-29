@@ -2,6 +2,9 @@
 
 更新履歴を新しい順に記録する。日付は `YYYY-MM-DD`。
 
+## 2026-07-30
+* **Fix**: `RegisterNovelKit` のルビ辞書読み込みでデッドロックしていた問題を修正。`async UniTask` メソッド (`RubyDictionary.LoadFromAsync`) を `GetAwaiter().GetResult()` で同期待ちしていたが、PlayerLoop が停止している `Configure`/`Awake` では状態機械の再開契機が来ず永久に待つ（Resources ローダー自体が同期完了することは根拠にならない: 待つのはローダーではなく async メソッドの完了通知）。`ResourcesTextAssetLoader` に同期 API `LoadText` を追加し、DI ヘルパーはそれを使って `RubyDictionary.Load` へ直接流す形に変更。`LoadFromAsync` の doc に PlayerLoop 停止中の同期待ち禁止を明記。実測: 修正前は Play Mode で `Time.frameCount` が 1 のまま固定しエディタが応答停止、修正後は frameCount が正常進行 (30666) し Configure も frame 0 で完走。
+
 ## 2026-07-29
 * **Update**: スプライトのロード手段を `ISpriteLoader` として抽象化し新 asmdef `Novel.Assets` に配置。`Novel.Runtime` は `Debug`/`JsonUtility` 以外の UnityEngine 型（特に `Sprite` 等のアセット型）を持たず View 抽象もキー文字列止まりという既存方針を守るため、アセット型を扱う層を分離した。テキストと違いスプライトは表示中に参照が生き続けるので「中身抽出して即解放」ができず、ハンドル保持 + `ReleaseAll()` 契約とした（Resources 実装は no-op）。`AddressablesSpriteLoader` は await 前にハンドルを辞書登録する single-flight とし (await 後登録だと同一キーの並行要求で先着ハンドルが辞書から追い出され解放漏れになる)、失敗ハンドルは除去して再試行可能にした (除去はキー一致ではなく await した実体との同一性で判定し、第三者が張り直した in-flight ハンドルを巻き添え解放しないようにする)。dev プロジェクトで実ロード・キャッシュヒット・未登録キー null・ReleaseAll を実測。立ち絵/背景/CG の View 実装自体は引き続き game 所有（ライブラリはキーを渡すだけ）という境界は不変。
 * **Update**: ローダーのキャンセル契約を「await 時に OperationCanceledException」へ統一（Resources 版の同期 throw を canceled UniTask 返却へ変更・対称性テストで固定）。`ResourcesRubyDictionary` を削除しルビ辞書も `RubyDictionary.LoadFromAsync` + ローダー抽象に一本化（`RegisterNovelKit` は Resources ローダーが同期完了する性質を利用して同期文脈で構築）。既定キー定数は `RubyDictionary.DefaultKey` へ移設。
