@@ -27,23 +27,29 @@ namespace Novel.Addressables
         {
             ct.ThrowIfCancellationRequested();
             if (string.IsNullOrEmpty(key)) return null;
-            if (_handles.TryGetValue(key, out var cached)) return cached.Result;
 
-            var handle = UnityEngine.AddressableAssets.Addressables.LoadAssetAsync<Sprite>(_root + key);
+            // 同一キーの並行呼び出しでハンドルが二重生成・上書きされて解放漏れになるため、
+            // ロード開始時点で辞書へ登録し、以降の呼び出しは同じハンドルを await する
+            if (!_handles.TryGetValue(key, out var handle))
+            {
+                handle = UnityEngine.AddressableAssets.Addressables.LoadAssetAsync<Sprite>(_root + key);
+                _handles[key] = handle;
+            }
+
             try
             {
-                var sprite = await handle.ToUniTask(cancellationToken: ct);
-                _handles[key] = handle;
-                return sprite;
+                return await handle.ToUniTask(cancellationToken: ct);
             }
             catch (System.OperationCanceledException)
             {
-                UnityEngine.AddressableAssets.Addressables.Release(handle);
+                // キャンセルはロード自体の失敗ではないため、ハンドルは残して後続の呼び出しに再利用させる
                 throw;
             }
             catch (System.Exception e) when (e is not System.OutOfMemoryException)
             {
-                UnityEngine.AddressableAssets.Addressables.Release(handle);
+                // 失敗したハンドルはキャッシュから外し、次回の再試行を妨げない
+                if (_handles.Remove(key, out var failed))
+                    UnityEngine.AddressableAssets.Addressables.Release(failed);
                 Debug.LogWarning($"[novel-kit] Addressables スプライトのロード失敗 key='{_root}{key}': {e.GetType().Name}: {e.Message}");
                 return null;
             }

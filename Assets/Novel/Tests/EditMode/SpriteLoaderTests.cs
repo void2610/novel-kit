@@ -41,6 +41,8 @@ namespace Novel.Tests
             Assert.DoesNotThrow(() => loader.ReleaseAll());
         }
 
+// 実ロードを伴う系 (キャッシュ / 失敗時除去 / 並行 single-flight) は Addressables ランタイム設定が要り
+// EditMode では同期完了しないため、Play Mode 実測で担保する
 #if NOVEL_ADDRESSABLES
         [Test]
         public void Addressables_キャンセル済みトークンはロード開始前にOperationCanceledExceptionを投げる()
