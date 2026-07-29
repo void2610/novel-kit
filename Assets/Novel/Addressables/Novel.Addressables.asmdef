@@ -1,27 +1,21 @@
 {
-    "name": "Novel.Tests.EditMode",
-    "rootNamespace": "Novel.Tests",
+    "name": "Novel.Addressables",
+    "rootNamespace": "Novel.Addressables",
     "references": [
-        "UnityEngine.TestRunner",
-        "UnityEditor.TestRunner",
         "Novel.Runtime",
-        "Novel.Commands",
-        "Novel.View",
-        "Novel.VContainer",
-        "VContainer",
         "UniTask",
-        "Novel.Addressables"
+        "UniTask.Addressables",
+        "Unity.Addressables",
+        "Unity.ResourceManager"
     ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,
     "precompiledReferences": [],
-    "autoReferenced": false,
+    "autoReferenced": true,
     "defineConstraints": [
-        "UNITY_INCLUDE_TESTS"
+        "NOVEL_ADDRESSABLES"
     ],
     "versionDefines": [
         {

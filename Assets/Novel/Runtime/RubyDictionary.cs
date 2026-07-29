@@ -1,23 +1,21 @@
 #nullable enable
 using System.Collections.Generic;
-using Novel.Runtime;
-using UnityEngine;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 
-namespace Novel.View
+namespace Novel.Runtime
 {
     /// <summary>
-    /// <see cref="IRubyDictionary"/> の Resources ベース既定実装。
-    ///
-    /// 定義ファイルは <see cref="DefaultResourcePath"/> (Resources 配下、拡張子なし) に置き、
-    /// <c>ruby '漢字', 'かんじ'</c> 形式で記述する。第 3 引数で <c>:first</c> / <c>:once</c> を指定すれば
-    /// 「初出のみ」表示になる。エントリは親文字長の降順に保持し、長い語を優先してマッチさせる。
-    ///
-    /// game 側で独自パスを使いたい場合はコンストラクタ引数で渡すか、<see cref="Load"/> で文字列を直接流し込む。
+    /// <see cref="IRubyDictionary"/> のロード手段非依存の実装。
+    /// 定義テキストは <see cref="Load"/> で直接流し込むか、<see cref="LoadFromAsync"/> で
+    /// <see cref="ITextAssetLoader"/> (Resources / Addressables 等) から読み込む。
+    /// 書式は <c>ruby '漢字', 'かんじ'</c> (第 3 引数 <c>:first</c> / <c>:once</c> で初出のみ表示)。
+    /// エントリは親文字長の降順に保持し、長い語を優先してマッチさせる。
     /// </summary>
-    public sealed class ResourcesRubyDictionary : IRubyDictionary
+    public class RubyDictionary : IRubyDictionary
     {
-        /// <summary>ルビ定義ファイルの Resources 既定パス (拡張子なし)。</summary>
-        public const string DefaultResourcePath = "Novel/ruby";
+        /// <summary>ルビ定義ファイルの既定キー (Resources 相対パス / アドレス、拡張子なし)。</summary>
+        public const string DefaultKey = "Novel/ruby";
 
         public IReadOnlyList<RubyEntry> Entries => _entries;
 
@@ -25,14 +23,6 @@ namespace Novel.View
 
         // 「初出のみ」の親文字列で既に一度ルビ表示したもの (周回開始時に ResetShown でクリア)
         private readonly HashSet<string> _shownFirstOnly = new();
-
-        public ResourcesRubyDictionary() : this(DefaultResourcePath) { }
-
-        public ResourcesRubyDictionary(string resourcePath)
-        {
-            var asset = Resources.Load<TextAsset>(resourcePath);
-            if (asset != null) Load(asset.text);
-        }
 
         /// <summary>本文にルビを付与した TMP リッチテキストを返す (辞書が空ならそのまま)。</summary>
         public string ApplyTo(string text) => RubyMarkup.ToRichText(text, _entries, ShouldRender);
@@ -48,6 +38,13 @@ namespace Novel.View
             // 長い親文字列を優先 (短い語が長い語の一部を先取りしないように)
             _entries.Sort((a, b) => b.Base.Length - a.Base.Length);
             _shownFirstOnly.Clear();
+        }
+
+        /// <summary>ローダー経由でルビ定義テキストを読み込む (キーが見つからなければ空辞書のまま)。</summary>
+        public async UniTask LoadFromAsync(ITextAssetLoader loader, string key, CancellationToken ct)
+        {
+            var text = await loader.LoadTextAsync(key, ct);
+            if (text != null) Load(text);
         }
 
         // 出現ごとの付与可否: 常時表示は常に true。 初出のみは未表示の初回だけ true (以降は親文字のみ)

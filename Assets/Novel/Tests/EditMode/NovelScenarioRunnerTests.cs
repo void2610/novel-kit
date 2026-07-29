@@ -122,21 +122,21 @@ namespace Novel.Tests
         }
 
         private static NovelScenarioRunner NewRunner(INovelView view)
-            => new(new ResourcesScenarioSource(), new Router(), view,
+            => new(new ScenarioSource(new ResourcesTextAssetLoader()), new Router(), view,
                 new IdentityTextResolver(), new EmptyCatalog(),
-                preambleSources: new IPreambleSource[] { new ResourcesPreambleSource() });
+                preambleSources: new IPreambleSource[] { new PreambleSource(new ResourcesTextAssetLoader()) });
 
         [UnityTest]
         public IEnumerator シナリオを実行し_say_が_View_へ順に届く() => UniTask.ToCoroutine(async () =>
         {
             var view = new FakeView();
             var runner = new NovelScenarioRunner(
-                new ResourcesScenarioSource(),
+                new ScenarioSource(new ResourcesTextAssetLoader()),
                 new Router(),
                 view,
                 new IdentityTextResolver(),
                 new EmptyCatalog(),
-                preambleSources: new IPreambleSource[] { new ResourcesPreambleSource() });
+                preambleSources: new IPreambleSource[] { new PreambleSource(new ResourcesTextAssetLoader()) });
 
             var result = await runner.PlayAsync("test_hello", CancellationToken.None);
 
@@ -153,12 +153,12 @@ namespace Novel.Tests
         {
             var view = new FakeView { ChoiceResult = 1 };   // B を選択
             var runner = new NovelScenarioRunner(
-                new ResourcesScenarioSource(),
+                new ScenarioSource(new ResourcesTextAssetLoader()),
                 new Router(),
                 view,
                 new IdentityTextResolver(),
                 new EmptyCatalog(),
-                preambleSources: new IPreambleSource[] { new ResourcesPreambleSource() });
+                preambleSources: new IPreambleSource[] { new PreambleSource(new ResourcesTextAssetLoader()) });
 
             var result = await runner.PlayAsync("test_choose", CancellationToken.None);
 
@@ -221,13 +221,13 @@ namespace Novel.Tests
         {
             var handler = new FakeErrorHandler();
             var runner = new NovelScenarioRunner(
-                new ResourcesScenarioSource(),
+                new ScenarioSource(new ResourcesTextAssetLoader()),
                 new Router(),
                 new FakeView(),
                 new IdentityTextResolver(),
                 new EmptyCatalog(),
                 errorHandler: handler,
-                preambleSources: new IPreambleSource[] { new ResourcesPreambleSource() });
+                preambleSources: new IPreambleSource[] { new PreambleSource(new ResourcesTextAssetLoader()) });
 
             var result = await runner.PlayAsync("test_error", CancellationToken.None);
 
@@ -242,12 +242,12 @@ namespace Novel.Tests
         {
             var module = new CustomEchoModule();
             var runner = new NovelScenarioRunner(
-                new ResourcesScenarioSource(),
+                new ScenarioSource(new ResourcesTextAssetLoader()),
                 new Router(),
                 new FakeView(),
                 new IdentityTextResolver(),
                 new EmptyCatalog(),
-                preambleSources: new IPreambleSource[] { new ResourcesPreambleSource() },
+                preambleSources: new IPreambleSource[] { new PreambleSource(new ResourcesTextAssetLoader()) },
                 commandModules: new INovelCommandModule[] { module });
 
             var result = await runner.PlayAsync("test_custom_command", CancellationToken.None);
@@ -262,13 +262,13 @@ namespace Novel.Tests
         {
             var centerImage = new FakeCenterImageView();
             var runner = new NovelScenarioRunner(
-                new ResourcesScenarioSource(),
+                new ScenarioSource(new ResourcesTextAssetLoader()),
                 new Router(),
                 new FakeView(),
                 new IdentityTextResolver(),
                 new EmptyCatalog(),
                 centerImage: centerImage,
-                preambleSources: new IPreambleSource[] { new ResourcesPreambleSource() });
+                preambleSources: new IPreambleSource[] { new PreambleSource(new ResourcesTextAssetLoader()) });
 
             var result = await runner.PlayAsync("test_center_image", CancellationToken.None);
 
@@ -282,13 +282,13 @@ namespace Novel.Tests
         {
             var centerImage = new FakeCenterImageView();
             var runner = new NovelScenarioRunner(
-                new ResourcesScenarioSource(),
+                new ScenarioSource(new ResourcesTextAssetLoader()),
                 new Router(),
                 new FakeView(),
                 new IdentityTextResolver(),
                 new EmptyCatalog(),
                 centerImage: centerImage,
-                preambleSources: new IPreambleSource[] { new ResourcesPreambleSource() });
+                preambleSources: new IPreambleSource[] { new PreambleSource(new ResourcesTextAssetLoader()) });
 
             var result = await runner.PlayAsync("test_center_image_empty", CancellationToken.None);
 
@@ -304,12 +304,12 @@ namespace Novel.Tests
         {
             var module = new CustomNumberModule();
             var runner = new NovelScenarioRunner(
-                new ResourcesScenarioSource(),
+                new ScenarioSource(new ResourcesTextAssetLoader()),
                 new Router(),
                 new FakeView(),
                 new IdentityTextResolver(),
                 new EmptyCatalog(),
-                preambleSources: new IPreambleSource[] { new ResourcesPreambleSource() },
+                preambleSources: new IPreambleSource[] { new PreambleSource(new ResourcesTextAssetLoader()) },
                 commandModules: new INovelCommandModule[] { module });
 
             var result = await runner.PlayAsync("test_custom_number", CancellationToken.None);
@@ -325,12 +325,12 @@ namespace Novel.Tests
             var view = new FakeView();
             var backlog = new RingBufferBacklog();
             var runner = new NovelScenarioRunner(
-                new ResourcesScenarioSource(),
+                new ScenarioSource(new ResourcesTextAssetLoader()),
                 new Router(),
                 view,
                 new IdentityTextResolver(),
                 new EmptyCatalog(),
-                preambleSources: new IPreambleSource[] { new ResourcesPreambleSource() },
+                preambleSources: new IPreambleSource[] { new PreambleSource(new ResourcesTextAssetLoader()) },
                 backlog: backlog);
 
             var result = await runner.PlayAsync("test_hello", new NovelResumePoint(2), CancellationToken.None);
@@ -376,12 +376,12 @@ namespace Novel.Tests
         {
             var backlog = new RingBufferBacklog();
             var runner = new NovelScenarioRunner(
-                new ResourcesScenarioSource(),
+                new ScenarioSource(new ResourcesTextAssetLoader()),
                 new Router(),
                 new FakeView(),
                 new IdentityTextResolver(),
                 new EmptyCatalog(),
-                preambleSources: new IPreambleSource[] { new ResourcesPreambleSource() },
+                preambleSources: new IPreambleSource[] { new PreambleSource(new ResourcesTextAssetLoader()) },
                 backlog: backlog);
 
             var result = await runner.PlayAsync("test_hello", CancellationToken.None);

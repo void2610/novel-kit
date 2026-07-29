@@ -42,10 +42,11 @@ https://github.com/void2610/novel-kit.git?path=Assets/Novel
 | asmdef | 役割 |
 | --- | --- |
 | `Novel.Commands` | `[MRubyObject]` コマンド record struct（say/choose/flag/portrait/bg/still/se/bgm/wait/world_effect） |
-| `Novel.Runtime` | 純 C# コア。`NovelScenarioRunner` / `NovelCommandHandler` / 抽象群 / インラインタグ lexer / 状態ブリッジ |
+| `Novel.Runtime` | 純 C# コア。`NovelScenarioRunner` / `NovelCommandHandler` / 抽象群 / インラインタグ lexer / 状態ブリッジ / 供給源 (`ScenarioSource` 等) とルビ展開 |
 | `Novel.View` | TMP 参考 View・Resources ローダ・ScriptableObject カタログ（game は差し替え可） |
 | `Novel.VContainer` | コア DI 統合（`RegisterNovelKitCore`）。純 `Novel.Runtime` のみ依存・View/Resources 非依存 |
 | `Novel.View.VContainer` | 参考 View 込みの DI 統合（`RegisterNovelKit` = Core + Resources ローダ + 警告ファセット + ログ） |
+| `Novel.Addressables` | `ITextAssetLoader` の Addressables 実装。`com.unity.addressables` 導入時のみコンパイルされる（versionDefines ゲート） |
 | `Novel.Editor` | シナリオ検証メニュー `Novel/Validate Scenarios`（`ScenarioValidator`・全 `.rb` の `.mrb` 生成有無を検査）。`.rb`→`.mrb` のコンパイル自体は mrubycs-compiler パッケージが担当 |
 
 ## 使い方（VContainer）
@@ -71,7 +72,31 @@ var result = await runner.PlayAsync("intro", ct);   // NovelResult.Completed/Can
 ## シナリオ (.rb)
 
 `Resources/Scenarios/` 配下に `.rb` を置くと mrubycs-compiler が `.mrb` を生成し、
-`ResourcesScenarioSource` がロードする。糖衣は同梱 `Resources/Novel/Preamble.rb`。
+`ScenarioSource` がロードする。糖衣は同梱 `Resources/Novel/Preamble.rb`。
+
+## アセットのロード手段（Resources / Addressables）
+
+シナリオ・preamble・ルビ辞書のロード手段は `ITextAssetLoader` で明示する。
+Resources なら `ResourcesTextAssetLoader`、Addressables なら `com.unity.addressables` を導入すると
+`Novel.Addressables` asmdef が有効になり `AddressablesTextAssetLoader` を使える:
+
+```csharp
+// Resources
+var loader = new ResourcesTextAssetLoader();      // キーは Resources 相対パス
+// Addressables
+// var loader = new AddressablesTextAssetLoader();   // キーはアドレス
+
+builder.RegisterInstance<IScenarioSource>(new ScenarioSource(loader, "Scenarios/"));
+builder.RegisterInstance<IPreambleSource>(new PreambleSource(loader));
+
+// ルビ辞書はロードが非同期になるため、起動時に読み込んでからインスタンス登録する
+var ruby = new RubyDictionary();
+await ruby.LoadFromAsync(loader, "Novel/ruby", ct);
+builder.RegisterInstance<IRubyDictionary>(ruby);
+```
+
+シナリオの `.mrb` は `.rb` アセットのサブアセットなので、`.rb` 本体をアドレス登録すればよい
+（ローダーがサブアセットから `.mrb` を取り出す）。
 
 ```ruby
 bg "room"

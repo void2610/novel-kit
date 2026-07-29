@@ -12,16 +12,19 @@ namespace Novel.Integration
     public static class NovelViewContainerExtensions
     {
         public static void RegisterNovelKit(this IContainerBuilder builder, string scenarioRoot = "Scenarios/",
-            string rubyResourcePath = ResourcesRubyDictionary.DefaultResourcePath)
+            string rubyResourcePath = RubyDictionary.DefaultKey)
         {
             builder.RegisterNovelKitCore();
 
             // 参考 Resources ローダ（シナリオ / 同梱 preamble の .mrb を Resources から読む）
-            builder.RegisterInstance<IScenarioSource>(new ResourcesScenarioSource(scenarioRoot));
-            builder.RegisterInstance<IPreambleSource>(new ResourcesPreambleSource());
+            var loader = new ResourcesTextAssetLoader();
+            builder.RegisterInstance<IScenarioSource>(new ScenarioSource(loader, scenarioRoot));
+            builder.RegisterInstance<IPreambleSource>(new PreambleSource(loader));
 
-            // ルビ辞書 (Resources 配下の rb)。game は IRubyDictionary を差し替えれば独自ロード経路にできる
-            builder.RegisterInstance<IRubyDictionary>(new ResourcesRubyDictionary(rubyResourcePath));
+            // ルビ辞書もローダー抽象を通す (Resources ローダーは同期完了するため GetResult で安全に取り出せる)
+            var ruby = new RubyDictionary();
+            ruby.LoadFromAsync(loader, rubyResourcePath, System.Threading.CancellationToken.None).GetAwaiter().GetResult();
+            builder.RegisterInstance<IRubyDictionary>(ruby);
 
             // dev ビルドで未供給コマンドを一度だけ警告する no-op ファセット（コアの silent 既定を上書き）
             builder.Register<IPortraitView, WarningPortraitView>(Lifetime.Singleton);
