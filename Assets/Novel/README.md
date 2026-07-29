@@ -76,13 +76,16 @@ var result = await runner.PlayAsync("intro", ct);   // NovelResult.Completed/Can
 
 ## アセットのロード手段（Resources / Addressables）
 
-シナリオ・preamble・ルビ辞書のロード手段は `ITextAssetLoader` で抽象化されている。
-既定コンストラクタ (`new ScenarioSource()`) は Resources から読む。Addressables を使う場合は
-`com.unity.addressables` を導入すると `Novel.Addressables` asmdef が有効になるので、
-ローダーを差し替えて登録する:
+シナリオ・preamble・ルビ辞書のロード手段は `ITextAssetLoader` で明示する。
+Resources なら `ResourcesTextAssetLoader`、Addressables なら `com.unity.addressables` を導入すると
+`Novel.Addressables` asmdef が有効になり `AddressablesTextAssetLoader` を使える:
 
 ```csharp
-var loader = new AddressablesTextAssetLoader();   // キーはアドレス
+// Resources
+var loader = new ResourcesTextAssetLoader();      // キーは Resources 相対パス
+// Addressables
+// var loader = new AddressablesTextAssetLoader();   // キーはアドレス
+
 builder.RegisterInstance<IScenarioSource>(new ScenarioSource(loader, "Scenarios/"));
 builder.RegisterInstance<IPreambleSource>(new PreambleSource(loader));
 

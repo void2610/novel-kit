@@ -7,14 +7,12 @@ namespace Novel.View
 {
     /// <summary>
     /// RubyScriptedImporter 生成の .mrb バイトコード (サブアセット) を読む <see cref="IScenarioSource"/>。
-    /// ロード手段は <see cref="ITextAssetLoader"/> の差し替えで Resources (既定) / Addressables 等を選べる。
+    /// ロード手段は <see cref="ITextAssetLoader"/> で明示する (Resources なら <c>ResourcesTextAssetLoader</c>)。
     /// </summary>
     public sealed class ScenarioSource : IScenarioSource
     {
         private readonly ITextAssetLoader _loader;
         private readonly string _root;
-
-        public ScenarioSource(string root = "Scenarios/") : this(new ResourcesTextAssetLoader(), root) { }
 
         public ScenarioSource(ITextAssetLoader loader, string root = "Scenarios/")
         {
