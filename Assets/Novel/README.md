@@ -75,6 +75,75 @@ var result = await runner.PlayAsync("intro", ct);   // NovelResult.Completed/Can
 `Resources/Scenarios/` 配下に `.rb` を置くと mrubycs-compiler が `.mrb` を生成し、
 `ScenarioSource` がロードする。糖衣は同梱 `Resources/Novel/Preamble.rb`。
 
+### デモシナリオ（現行コマンドひと通り）
+
+```ruby
+# ===== 登場人物と初期セットアップ =====
+chara :alice                    # 以降 alice "…" が say "alice", "…" の糖衣になる
+chara :bob
+
+bgm "town"                      # BGM 再生（引数なしの bgm で停止）
+bg "classroom"                  # 背景切替
+stage :pair, [:alice, :bob]     # レイアウトと立ち位置。配列は先頭から slot 0,1,…
+                                # 明示するなら stage :pair, alice: 1, bob: 0
+
+# ===== セリフと行内タグ =====
+alice "やあ、<color=#8cf>novel-kit</color> のデモへようこそ。"   # TMP タグはそのまま素通し
+alice "文字は<w=0.4>少しずつ<w=0.4>出る。<p>ここでクリック待ち。"  # <w>=秒待ち / <p>=クリック待ち
+bob "<speed=2x>早口で喋る。</speed><fast>ここからは一気に表示。"
+bob "<shake>揺らす</shake>のも <wave>波打たせる</wave>のも行内タグ。"
+narration "<ruby=ふりがな>振り仮名</ruby>も行内で振れる。"
+
+say :alice, "…実はね。", "alice/serious", display_as: "？？？"   # 立ち絵と表示名を同時指定
+bob "（声だけ聞こえる）", as: "少年の声"                          # 表示名だけ上書き
+
+# ===== 演出コマンド =====
+portrait :alice, "alice/smile"  # 立ち絵だけ差し替え
+se "door"                       # 単発 SE
+se_loop "step", 0.3, 3          # SE を 0.3 秒間隔で 3 回
+wait 0.5                        # 明示ウェイト
+shake 1.5                       # 世界エフェクト（カメラ等ゲーム本体への作用）
+flash 0.2                       # world_effect :flash の糖衣。独自キーは world_effect :zoom, 2.0
+
+# ===== イベント CG =====
+hide_message_window             # 全画面で見せるためウィンドウを隠す
+still "cg/first_meeting"        # 一枚絵
+wait 1.0
+show_message_window
+image "memo"                    # 中央画像（回想メモ等）
+hide_image
+
+# ===== 選択肢とフラグ =====
+alice "信じてくれる？"
+n = choose(["信じる", "疑う"], key: :trust)   # key: を渡すと安定キー＝セーブ対象になる
+                                              # 省略時は一時キー（__ 始まりでセーブ除外）
+if n == 0                                     # 戻り値は直後に使う（後述）
+  flag :trusted, 1                            # フラグ書き込み
+  alice "ありがとう。", as: "アリス（笑顔）"
+else
+  alice "…そう。", "alice/sad"
+end
+
+# cmd を跨ぐとローカル変数は失われる（mruby Fiber の resume 挙動）。
+# 後から読むときはローカルではなく state を読む
+narration "選択=#{val(:trust)} / 信頼済み=#{flag?(:trusted)}"
+
+# ===== 場面転換と終幕 =====
+clear_message                   # 直前のセリフを残さずに場面を切る
+exit_chara :bob                 # 一人だけ退場
+fade_out 1.0
+clear_stage                     # cast を全消し（layout は維持）
+bg "night_street"
+fade_in 1.0
+alice "——また明日。"
+bgm                             # 引数なしで BGM 停止
+blackout
+narration "（おわり）"
+```
+
+背景・立ち絵・CG のキー（`"classroom"` や `"alice/smile"`）が何を指すかは game 側の View 実装が決める。
+ライブラリはキー文字列を渡すだけで、解決は `ISpriteLoader` 等に任せる（後述）。
+
 ## アセットのロード手段（Resources / Addressables）
 
 シナリオ・preamble・ルビ辞書のロード手段は `ITextAssetLoader` で明示する。
@@ -116,17 +185,6 @@ var sprite = await loader.LoadAsync(portraitKey, ct);
 
 `spriteMode=Multiple` のアセットは扱いが実装で非対称（Resources 実装は `LoadAll` の先頭スライスを返すが順序は保証されず、
 Addressables 実装はスライス単位のアドレス指定が要る場合がある）。単一スプライトでの利用を推奨する。
-
-```ruby
-bg "room"
-portrait :alice, "smile"
-alice = "alice"
-say alice, "やあ、<color=#f88>本気</color>なの？<w=0.5> 嘘でしょ"
-narration "——沈黙が流れた"
-n = choose(["はい", "いいえ"])
-flag "answered", 1
-say "", "（#{n == 0 ? '頷いた' : '首を振った'}）"
-```
 
 ## 既知の fix-later
 
