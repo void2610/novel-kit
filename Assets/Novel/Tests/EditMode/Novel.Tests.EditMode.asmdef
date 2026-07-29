@@ -10,7 +10,8 @@
         "Novel.VContainer",
         "VContainer",
         "UniTask",
-        "Novel.Addressables"
+        "Novel.Addressables",
+        "Novel.Assets"
     ],
     "includePlatforms": [
         "Editor"
