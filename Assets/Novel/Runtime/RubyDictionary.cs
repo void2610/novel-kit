@@ -40,7 +40,11 @@ namespace Novel.Runtime
             _shownFirstOnly.Clear();
         }
 
-        /// <summary>ローダー経由でルビ定義テキストを読み込む (キーが見つからなければ空辞書のまま)。</summary>
+        /// <summary>
+        /// ローダー経由でルビ定義テキストを読み込む (キーが見つからなければ空辞書のまま)。
+        /// PlayerLoop が回っていない Awake / DI の Configure 中に <c>GetAwaiter().GetResult()</c> で
+        /// 同期待ちするとデッドロックする。そうした場面ではローダーの同期 API で読んで <see cref="Load"/> を使う。
+        /// </summary>
         public async UniTask LoadFromAsync(ITextAssetLoader loader, string key, CancellationToken ct)
         {
             var text = await loader.LoadTextAsync(key, ct);

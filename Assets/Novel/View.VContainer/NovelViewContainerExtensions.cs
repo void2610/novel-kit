@@ -21,9 +21,11 @@ namespace Novel.Integration
             builder.RegisterInstance<IScenarioSource>(new ScenarioSource(loader, scenarioRoot));
             builder.RegisterInstance<IPreambleSource>(new PreambleSource(loader));
 
-            // ルビ辞書もローダー抽象を通す (Resources ローダーは同期完了するため GetResult で安全に取り出せる)
+            // Configure は PlayerLoop 停止中に走るため、async UniTask (LoadFromAsync) の完了は待てない。
+            // Resources ローダーの同期 API から直接読み込む
             var ruby = new RubyDictionary();
-            ruby.LoadFromAsync(loader, rubyResourcePath, System.Threading.CancellationToken.None).GetAwaiter().GetResult();
+            var rubyText = loader.LoadText(rubyResourcePath);
+            if (rubyText != null) ruby.Load(rubyText);
             builder.RegisterInstance<IRubyDictionary>(ruby);
 
             // dev ビルドで未供給コマンドを一度だけ警告する no-op ファセット（コアの silent 既定を上書き）
