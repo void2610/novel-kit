@@ -46,6 +46,7 @@ https://github.com/void2610/novel-kit.git?path=Assets/Novel
 | `Novel.View` | TMP 参考 View・Resources ローダ・ScriptableObject カタログ（game は差し替え可） |
 | `Novel.VContainer` | コア DI 統合（`RegisterNovelKitCore`）。純 `Novel.Runtime` のみ依存・View/Resources 非依存 |
 | `Novel.View.VContainer` | 参考 View 込みの DI 統合（`RegisterNovelKit` = Core + Resources ローダ + 警告ファセット + ログ） |
+| `Novel.Addressables` | `ITextAssetLoader` の Addressables 実装。`com.unity.addressables` 導入時のみコンパイルされる（versionDefines ゲート） |
 | `Novel.Editor` | シナリオ検証メニュー `Novel/Validate Scenarios`（`ScenarioValidator`・全 `.rb` の `.mrb` 生成有無を検査）。`.rb`→`.mrb` のコンパイル自体は mrubycs-compiler パッケージが担当 |
 
 ## 使い方（VContainer）
@@ -72,6 +73,27 @@ var result = await runner.PlayAsync("intro", ct);   // NovelResult.Completed/Can
 
 `Resources/Scenarios/` 配下に `.rb` を置くと mrubycs-compiler が `.mrb` を生成し、
 `ResourcesScenarioSource` がロードする。糖衣は同梱 `Resources/Novel/Preamble.rb`。
+
+## アセットのロード手段（Resources / Addressables）
+
+シナリオ・preamble・ルビ辞書のロード手段は `ITextAssetLoader` で抽象化されている。
+既定は Resources（`ResourcesScenarioSource` 等はそのままの挙動）。Addressables を使う場合は
+`com.unity.addressables` を導入すると `Novel.Addressables` asmdef が有効になるので、
+ローダーを差し替えて登録する:
+
+```csharp
+var loader = new AddressablesTextAssetLoader();   // キーはアドレス
+builder.RegisterInstance<IScenarioSource>(new TextAssetScenarioSource(loader, "Scenarios/"));
+builder.RegisterInstance<IPreambleSource>(new TextAssetPreambleSource(loader));
+
+// ルビ辞書はロードが非同期になるため、起動時に読み込んでからインスタンス登録する
+var ruby = new RubyDictionary();
+await ruby.LoadFromAsync(loader, "Novel/ruby", ct);
+builder.RegisterInstance<IRubyDictionary>(ruby);
+```
+
+シナリオの `.mrb` は `.rb` アセットのサブアセットなので、`.rb` 本体をアドレス登録すればよい
+（ローダーがサブアセットから `.mrb` を取り出す）。
 
 ```ruby
 bg "room"
