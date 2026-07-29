@@ -2,9 +2,8 @@
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
-using Novel.Runtime;
 
-namespace Novel.View
+namespace Novel.Runtime
 {
     /// <summary>
     /// <see cref="IRubyDictionary"/> のロード手段非依存の実装。

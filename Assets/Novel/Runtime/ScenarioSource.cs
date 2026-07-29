@@ -1,9 +1,8 @@
 #nullable enable
 using System.Threading;
 using Cysharp.Threading.Tasks;
-using Novel.Runtime;
 
-namespace Novel.View
+namespace Novel.Runtime
 {
     /// <summary>
     /// RubyScriptedImporter 生成の .mrb バイトコード (サブアセット) を読む <see cref="IScenarioSource"/>。

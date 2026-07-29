@@ -4,9 +4,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
-using Novel.Runtime;
 
-namespace Novel.View
+namespace Novel.Runtime
 {
     // <ruby=よみ>親</ruby> を TMP リッチテキストの座標トリックで「よみを親文字の上に重ねる」文字列へ展開する。
     // 親文字より先によみを描き、退避量だけ x を戻して親文字を描く（よみ・親とも文字なので Reveal の可視数に算入される）。

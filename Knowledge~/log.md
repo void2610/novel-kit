@@ -2,6 +2,9 @@
 
 更新履歴を新しい順に記録する。日付は `YYYY-MM-DD`。
 
+## 2026-07-29
+* **Update**: アセットロード手段を `ITextAssetLoader`（bytes はサブアセットサフィックス指定 / text は単体・抽出済みの中身を返しハンドル即解放可の契約）として `Novel.Runtime` に抽象化。供給源は `ScenarioSource`/`PreambleSource`/`RubyDictionary` に一本化しローダーはコンストラクタで明示指定（暗黙の Resources 既定を廃止）。`ResourcesScenarioSource`/`ResourcesPreambleSource` は削除（破壊的変更）。`Novel.Addressables` asmdef（versionDefines ゲート・必須依存に非昇格）に `AddressablesTextAssetLoader` を追加し、`IList<TextAsset>` サブオブジェクトロードで ScriptedImporter 生成 `.mrb` が取れる正系を dev プロジェクト実測で確認（bytes=110）。失敗は Resources 同様 null 正規化しつつ警告ログで診断可能に。純 C# 化した `ScenarioSource`/`PreambleSource`/`RubyDictionary`/`RubyMarkup` を `Novel.View` から `Novel.Runtime` へ移設（独自ローダー + 純 Runtime 構成で View 非依存に）。[アーキテクチャ](/design/architecture.md)・[API 表面](/design/api-surface.md) は未追随（マージ時に更新）。
+
 ## 2026-06-13
 * **Creation**: 知識ベースを OKF v0.1 で初期化。okf-conventions を submodule 導入。
 * **Creation**: [概要](/design/overview.md) - ライブラリの目的・前提スタック・調査対象・スコープ。

@@ -1,4 +1,5 @@
 #nullable enable
+using Novel.Runtime;
 using UnityEngine;
 
 namespace Novel.View

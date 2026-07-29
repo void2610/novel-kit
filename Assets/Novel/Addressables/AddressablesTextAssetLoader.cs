@@ -11,7 +11,8 @@ namespace Novel.Addressables
     /// <summary>
     /// <see cref="ITextAssetLoader"/> の Addressables 実装。キーはアドレス。
     /// 中身 (bytes/text) を抽出して返す契約のため、ロード完了後に即ハンドルを解放する。
-    /// キー未登録・ロード失敗は Resources 実装の「見つからない」と同じ null に落とす。
+    /// キー未登録・ロード失敗は Resources 実装の「見つからない」と同じ null に落とすが、
+    /// タイポ・カタログ未初期化・ビルド漏れを診断できるよう警告ログに原因を残す。
     /// </summary>
     public sealed class AddressablesTextAssetLoader : ITextAssetLoader
     {
@@ -32,9 +33,9 @@ namespace Novel.Addressables
             {
                 throw;
             }
-            // ロード失敗 (未登録キー等) は Resources の「見つからない」と同じ null に落とすが、致命的例外は握りつぶさない
             catch (System.Exception e) when (e is not System.OutOfMemoryException)
             {
+                Debug.LogWarning($"[novel-kit] Addressables ロード失敗 key='{key}': {e.GetType().Name}: {e.Message}");
                 return null;
             }
             finally
@@ -56,9 +57,9 @@ namespace Novel.Addressables
             {
                 throw;
             }
-            // ロード失敗 (未登録キー等) は Resources の「見つからない」と同じ null に落とすが、致命的例外は握りつぶさない
             catch (System.Exception e) when (e is not System.OutOfMemoryException)
             {
+                Debug.LogWarning($"[novel-kit] Addressables ロード失敗 key='{key}': {e.GetType().Name}: {e.Message}");
                 return null;
             }
             finally
