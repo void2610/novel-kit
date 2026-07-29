@@ -14,6 +14,9 @@ namespace Novel.Runtime
     /// </summary>
     public class RubyDictionary : IRubyDictionary
     {
+        /// <summary>ルビ定義ファイルの既定キー (Resources 相対パス / アドレス、拡張子なし)。</summary>
+        public const string DefaultKey = "Novel/ruby";
+
         public IReadOnlyList<RubyEntry> Entries => _entries;
 
         private readonly List<RubyEntry> _entries = new();

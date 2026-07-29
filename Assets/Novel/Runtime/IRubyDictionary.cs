@@ -8,7 +8,7 @@ namespace Novel.Runtime
     /// 「初出のみ」のような出現回数に依存する表示モードを持つ場合があるため、純粋関数ではなく
     /// インスタンスメソッドにしている。新規開始 / 周回時の状態リセットは <see cref="ResetShown"/> で行う。
     ///
-    /// 既定実装は <c>Novel.View.ResourcesRubyDictionary</c> (Resources 配下の rb から読み込む)。
+    /// 既定実装は <c>RubyDictionary</c> (<c>ITextAssetLoader</c> 経由で rb 定義を読み込む)。
     /// game が独自のロード経路 (JSON / Addressables / hot-reload など) を使う場合は本 interface を実装する。
     /// </summary>
     public interface IRubyDictionary

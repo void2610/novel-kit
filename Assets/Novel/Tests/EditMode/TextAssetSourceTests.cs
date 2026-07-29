@@ -80,6 +80,19 @@ namespace Novel.Tests
         }
 
         [Test]
+        public void ResourcesLoader_キャンセル済みトークンはcanceledなUniTaskを返す()
+        {
+            // Addressables 版と同じく「await で OperationCanceledException」に統一されている契約の固定
+            var loader = new Novel.View.ResourcesTextAssetLoader();
+            using var cts = new CancellationTokenSource();
+            cts.Cancel();
+            Assert.Throws<System.OperationCanceledException>(() =>
+                loader.LoadBytesAsync("any", ".mrb", cts.Token).GetAwaiter().GetResult());
+            Assert.Throws<System.OperationCanceledException>(() =>
+                loader.LoadTextAsync("any", cts.Token).GetAwaiter().GetResult());
+        }
+
+        [Test]
         public void RubyDictionary_キーが見つからなければ空辞書のままになる()
         {
             var loader = new FakeTextAssetLoader { TextResult = null };

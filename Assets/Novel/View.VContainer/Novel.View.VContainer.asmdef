@@ -5,7 +5,8 @@
         "Novel.Runtime",
         "Novel.View",
         "Novel.VContainer",
-        "VContainer"
+        "VContainer",
+        "UniTask"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

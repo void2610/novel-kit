@@ -11,7 +11,8 @@ namespace Novel.View
     {
         public UniTask<byte[]?> LoadBytesAsync(string key, string subAssetSuffix, CancellationToken ct)
         {
-            ct.ThrowIfCancellationRequested();
+            // Addressables 版 (async メソッド) と対称にするため、同期 throw ではなく canceled UniTask で返す
+            if (ct.IsCancellationRequested) return UniTask.FromCanceled<byte[]?>(ct);
             foreach (var a in Resources.LoadAll<TextAsset>(key))
                 if (a.name.EndsWith(subAssetSuffix, System.StringComparison.Ordinal))
                     return UniTask.FromResult<byte[]?>(a.bytes);
@@ -20,7 +21,7 @@ namespace Novel.View
 
         public UniTask<string?> LoadTextAsync(string key, CancellationToken ct)
         {
-            ct.ThrowIfCancellationRequested();
+            if (ct.IsCancellationRequested) return UniTask.FromCanceled<string?>(ct);
             var asset = Resources.Load<TextAsset>(key);
             return UniTask.FromResult(asset != null ? asset.text : null);
         }

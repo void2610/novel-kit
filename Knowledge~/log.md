@@ -3,6 +3,7 @@
 更新履歴を新しい順に記録する。日付は `YYYY-MM-DD`。
 
 ## 2026-07-29
+* **Update**: ローダーのキャンセル契約を「await 時に OperationCanceledException」へ統一（Resources 版の同期 throw を canceled UniTask 返却へ変更・対称性テストで固定）。`ResourcesRubyDictionary` を削除しルビ辞書も `RubyDictionary.LoadFromAsync` + ローダー抽象に一本化（`RegisterNovelKit` は Resources ローダーが同期完了する性質を利用して同期文脈で構築）。既定キー定数は `RubyDictionary.DefaultKey` へ移設。
 * **Update**: アセットロード手段を `ITextAssetLoader`（bytes はサブアセットサフィックス指定 / text は単体・抽出済みの中身を返しハンドル即解放可の契約）として `Novel.Runtime` に抽象化。供給源は `ScenarioSource`/`PreambleSource`/`RubyDictionary` に一本化しローダーはコンストラクタで明示指定（暗黙の Resources 既定を廃止）。`ResourcesScenarioSource`/`ResourcesPreambleSource` は削除（破壊的変更）。`Novel.Addressables` asmdef（versionDefines ゲート・必須依存に非昇格）に `AddressablesTextAssetLoader` を追加し、`IList<TextAsset>` サブオブジェクトロードで ScriptedImporter 生成 `.mrb` が取れる正系を dev プロジェクト実測で確認（bytes=110）。失敗は Resources 同様 null 正規化しつつ警告ログで診断可能に。純 C# 化した `ScenarioSource`/`PreambleSource`/`RubyDictionary`/`RubyMarkup` を `Novel.View` から `Novel.Runtime` へ移設（独自ローダー + 純 Runtime 構成で View 非依存に）。[アーキテクチャ](/design/architecture.md)・[API 表面](/design/api-surface.md) は未追随（マージ時に更新）。
 
 ## 2026-06-13
