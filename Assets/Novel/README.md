@@ -72,19 +72,19 @@ var result = await runner.PlayAsync("intro", ct);   // NovelResult.Completed/Can
 ## シナリオ (.rb)
 
 `Resources/Scenarios/` 配下に `.rb` を置くと mrubycs-compiler が `.mrb` を生成し、
-`ResourcesScenarioSource` がロードする。糖衣は同梱 `Resources/Novel/Preamble.rb`。
+`ScenarioSource` がロードする。糖衣は同梱 `Resources/Novel/Preamble.rb`。
 
 ## アセットのロード手段（Resources / Addressables）
 
 シナリオ・preamble・ルビ辞書のロード手段は `ITextAssetLoader` で抽象化されている。
-既定は Resources（`ResourcesScenarioSource` 等はそのままの挙動）。Addressables を使う場合は
+既定コンストラクタ (`new ScenarioSource()`) は Resources から読む。Addressables を使う場合は
 `com.unity.addressables` を導入すると `Novel.Addressables` asmdef が有効になるので、
 ローダーを差し替えて登録する:
 
 ```csharp
 var loader = new AddressablesTextAssetLoader();   // キーはアドレス
-builder.RegisterInstance<IScenarioSource>(new TextAssetScenarioSource(loader, "Scenarios/"));
-builder.RegisterInstance<IPreambleSource>(new TextAssetPreambleSource(loader));
+builder.RegisterInstance<IScenarioSource>(new ScenarioSource(loader, "Scenarios/"));
+builder.RegisterInstance<IPreambleSource>(new PreambleSource(loader));
 
 // ルビ辞書はロードが非同期になるため、起動時に読み込んでからインスタンス登録する
 var ruby = new RubyDictionary();

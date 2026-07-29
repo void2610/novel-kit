@@ -6,16 +6,17 @@ using Novel.Runtime;
 namespace Novel.View
 {
     /// <summary>
-    /// <see cref="ITextAssetLoader"/> 経由で RubyScriptedImporter 生成の .mrb バイトコード
-    /// (サブアセット) を読む <see cref="IScenarioSource"/>。ロード手段はローダー差し替えで
-    /// Resources / Addressables 等を選べる。
+    /// RubyScriptedImporter 生成の .mrb バイトコード (サブアセット) を読む <see cref="IScenarioSource"/>。
+    /// ロード手段は <see cref="ITextAssetLoader"/> の差し替えで Resources (既定) / Addressables 等を選べる。
     /// </summary>
-    public sealed class TextAssetScenarioSource : IScenarioSource
+    public sealed class ScenarioSource : IScenarioSource
     {
         private readonly ITextAssetLoader _loader;
         private readonly string _root;
 
-        public TextAssetScenarioSource(ITextAssetLoader loader, string root = "Scenarios/")
+        public ScenarioSource(string root = "Scenarios/") : this(new ResourcesTextAssetLoader(), root) { }
+
+        public ScenarioSource(ITextAssetLoader loader, string root = "Scenarios/")
         {
             _loader = loader;
             _root = root;

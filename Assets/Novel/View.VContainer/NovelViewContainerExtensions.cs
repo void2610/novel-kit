@@ -17,8 +17,8 @@ namespace Novel.Integration
             builder.RegisterNovelKitCore();
 
             // 参考 Resources ローダ（シナリオ / 同梱 preamble の .mrb を Resources から読む）
-            builder.RegisterInstance<IScenarioSource>(new ResourcesScenarioSource(scenarioRoot));
-            builder.RegisterInstance<IPreambleSource>(new ResourcesPreambleSource());
+            builder.RegisterInstance<IScenarioSource>(new ScenarioSource(scenarioRoot));
+            builder.RegisterInstance<IPreambleSource>(new PreambleSource());
 
             // ルビ辞書 (Resources 配下の rb)。game は IRubyDictionary を差し替えれば独自ロード経路にできる
             builder.RegisterInstance<IRubyDictionary>(new ResourcesRubyDictionary(rubyResourcePath));

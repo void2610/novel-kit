@@ -34,7 +34,7 @@ namespace Novel.Tests
         public void ScenarioSource_Rootとキーとmrbサフィックスでローダーへ委譲する()
         {
             var loader = new FakeTextAssetLoader { BytesResult = new byte[] { 1, 2 } };
-            var source = new TextAssetScenarioSource(loader, "Scenarios/");
+            var source = new ScenarioSource(loader, "Scenarios/");
 
             var result = source.LoadBytecodeAsync("BossDefeated", CancellationToken.None).GetAwaiter().GetResult();
 
@@ -46,7 +46,7 @@ namespace Novel.Tests
         public void ScenarioSource_空キーはローダーを呼ばずnullを返す()
         {
             var loader = new FakeTextAssetLoader { BytesResult = new byte[] { 1 } };
-            var source = new TextAssetScenarioSource(loader);
+            var source = new ScenarioSource(loader);
 
             var result = source.LoadBytecodeAsync("", CancellationToken.None).GetAwaiter().GetResult();
 
@@ -58,7 +58,7 @@ namespace Novel.Tests
         public void PreambleSource_既定パスとmrbサフィックスでローダーへ委譲する()
         {
             var loader = new FakeTextAssetLoader { BytesResult = new byte[] { 3 } };
-            var source = new TextAssetPreambleSource(loader);
+            var source = new PreambleSource(loader);
 
             var result = source.LoadPreambleAsync(CancellationToken.None).GetAwaiter().GetResult();
 
