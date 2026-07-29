@@ -1,9 +1,8 @@
 #nullable enable
 using System.Collections.Generic;
 using System.Text;
-using Novel.Runtime;
 
-namespace Novel.View
+namespace Novel.Runtime
 {
     // TextRevealEngine.Build の可視文字数と TMP の characterCount が一致する表示文字列構築規則をここで一元化する
     public static class NovelDisplayText
