@@ -3,6 +3,7 @@
     "rootNamespace": "Novel.Addressables",
     "references": [
         "Novel.Runtime",
+        "Novel.Assets",
         "UniTask",
         "UniTask.Addressables",
         "Unity.Addressables",
