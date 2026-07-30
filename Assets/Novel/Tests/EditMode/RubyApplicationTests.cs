@@ -70,6 +70,20 @@ namespace Novel.Tests
         }
 
         [Test]
+        public void 平文にはルビが混入しない()
+        {
+            var view = new RecordingView();
+            var handler = new NovelCommandHandler(view, new StubStateStore(), new IdentityTextResolver(), new StubCatalog(),
+                ruby: MakeDictionary());
+
+            handler.On(Say("庭に出る"), CancellationToken.None).GetAwaiter().GetResult();
+
+            // View が Text から平文を再計算するとよみが親文字と連なって残るため、runtime が算出済みの平文を渡す
+            Assert.That(view.Lines[0].PlainText, Is.EqualTo("庭に出る"));
+            Assert.That(view.Lines[0].PlainText, Does.Not.Contain("にわ"));
+        }
+
+        [Test]
         public void 既読IDにはルビが混入しない()
         {
             var store = new StubStateStore();

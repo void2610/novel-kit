@@ -63,7 +63,8 @@ namespace Novel.Runtime
             var displayName = ResolveDisplayName(cmd);
             if (displayName != null) displayName = _text.Resolve(displayName);   // 表示名も多言語 seam を通す（localization）
             // 既読 ID はタグを除いた素テキストで算出（タグ有無で既読が割れないように）
-            var textId = StableId.Of(cmd.SpeakerId, NovelTagLexer.ToPlainText(resolved));
+            var plain = NovelTagLexer.ToPlainText(resolved);
+            var textId = StableId.Of(cmd.SpeakerId, plain);
             var alreadyRead = _state.IsRead(textId);
 
             // バックログは rich のまま記録（link/color を残し再表示・キーワード収集できるように。Clear 契機は game 所有）
@@ -74,7 +75,7 @@ namespace Novel.Runtime
             var display = _ruby != null ? _ruby.ApplyTo(resolved) : resolved;
 
             // Text はタグ付き原文を渡し、View 側 typewriter が NovelTagLexer で逐次 Reveal する
-            if (!fastForward) await _view.ShowMessageAsync(new NovelLine(cmd.SpeakerId, displayName, display, alreadyRead), ct);
+            if (!fastForward) await _view.ShowMessageAsync(new NovelLine(cmd.SpeakerId, displayName, display, plain, alreadyRead), ct);
 
             _state.MarkRead(textId);
         }
