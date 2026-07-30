@@ -21,10 +21,13 @@ namespace Novel.Assets
         public string Key => _key ?? "";
 
         /// <summary>解決済みスプライト (ロード失敗またはローダー未供給なら null)。</summary>
-        public readonly Sprite? Sprite;
+        public Sprite? Sprite { get; }
 
-        /// <summary>キーが実際にスプライトへ解決できたか。</summary>
+        /// <summary>キーが実際にスプライトへ解決できたか (消去とロード失敗はどちらも false)。</summary>
         public bool IsLoaded => Sprite != null;
+
+        /// <summary>キーが空 = 消去指示か。<see cref="IsLoaded"/> が false のときロード失敗と区別するのに使う。</summary>
+        public bool IsCleared => Key.Length == 0;
 
         public ResolvedSprite(string key, Sprite? sprite)
         {

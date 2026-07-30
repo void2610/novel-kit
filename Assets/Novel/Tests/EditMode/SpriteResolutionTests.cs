@@ -173,6 +173,15 @@ namespace Novel.Tests
         }
 
         [Test]
+        public void 消去とロード失敗はIsClearedで区別できる()
+        {
+            // どちらも IsLoaded は false なので、View が両者を同一視しないための述語
+            Assert.That(ResolvedSprite.None.IsCleared, Is.True);
+            Assert.That(new ResolvedSprite("missing", null).IsCleared, Is.False);
+            Assert.That(new ResolvedSprite("missing", null).IsLoaded, Is.False);
+        }
+
+        [Test]
         public void ローダー未供給でもキーは渡る()
         {
             var view = new RecordingBackgroundView();

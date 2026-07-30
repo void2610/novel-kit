@@ -192,7 +192,8 @@ public UniTask ShowAsync(ResolvedSprite background, CancellationToken ct)
 
 キーを併せて渡すのは、表示以外にキーを要する用途があるため。未解決と消去の区別、同一キー再表示の
 no-op 判定、セーブからの背景復元やイベント CG の解放といった game 側の状態記録は、いずれも `Sprite`
-参照だけでは書けない。`IPortraitView` が `character` を表示側のヒントとして受けているのと同じ位置づけで、
+参照だけでは書けない。消去 (空キー) とロード失敗はどちらも `IsLoaded == false` なので、両者を分けたい
+View は `IsCleared` を見る。`IPortraitView` が `character` を表示側のヒントとして受けているのと同じ位置づけで、
 **ロードの裁量は View に戻さない**（キー→スプライトの解決は runtime に閉じたまま）。
 
 テキストと違いスプライトは表示中ずっと参照が生きている必要があるため、ハンドルはローダーが保持する。

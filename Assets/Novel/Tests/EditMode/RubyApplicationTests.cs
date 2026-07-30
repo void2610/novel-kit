@@ -84,6 +84,14 @@ namespace Novel.Tests
         }
 
         [Test]
+        public void 既定値の表示行は空文字を返す()
+        {
+            // struct なので default や配列要素はコンストラクタを通らない
+            Assert.That(default(NovelLine).Text, Is.Empty);
+            Assert.That(default(NovelLine).PlainText, Is.Empty);
+        }
+
+        [Test]
         public void 既読IDにはルビが混入しない()
         {
             var store = new StubStateStore();
