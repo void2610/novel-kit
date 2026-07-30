@@ -95,6 +95,7 @@ bob "<shake>揺らす</shake>のも <wave>波打たせる</wave>のも行内タ�
 narration "<ruby=ふりがな>振り仮名</ruby>も行内で振れる。"
 
 say :alice, "…実はね。", "alice/serious", display_as: "？？？"   # 立ち絵と表示名を同時指定
+                                                        # 省略時は catalog の既定立ち絵が出る (stage cast 在籍時)
 bob "（声だけ聞こえる）", as: "少年の声"                          # 表示名だけ上書き
 
 # ===== 演出コマンド =====

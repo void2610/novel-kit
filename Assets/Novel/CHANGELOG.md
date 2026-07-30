@@ -6,6 +6,11 @@
 ## [Unreleased]
 
 ### Changed
+- `ICharacterCatalog` の `DefaultPortraitKey` を runtime が使うようになった。say で `portrait` を明示しなければ、
+  stage cast 在籍の話者の既定立ち絵が自動で出る (cast 外・カタログ未登録・ナレーションでは出ない)。
+  これまで宣言できるだけで適用は game 任せだったため、各 game が `INovelView` 実装から `IPortraitDirector` を
+  駆動する必要があり、スプライト解決も runtime を迂回していた。
+  移行: game 側の自動表示ロジックを削除する (残すと二重に出る)。明示 `portrait` の優先順は変わらない。
 - **破壊的**: `NovelLine` に `PlainText` (タグと辞書ルビを除いた平文 = 既読 ID の算出基準) を追加。
   辞書ルビは lexer タグではなく TMP markup として重なるため、View が `Text` から平文を再計算するとよみが
   親文字と連なって残る。ルビ適用前に算出した平文を runtime が渡すことで、View 側の平文検査を成立させる。

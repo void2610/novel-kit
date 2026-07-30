@@ -55,9 +55,11 @@ namespace Novel.Runtime
             // 早送り中は表示待ちだけ省く。立ち絵/バックログ/既読は実行し、復帰地点の盤面を再構築する
             var fastForward = _progress.AdvanceSay();
 
-            // PortraitKey が同時指定されていればここで切替（display_as で表示名を変えつつ、同一 speaker_id の立ち絵を 1 行で指定する糖衣）
-            if (!string.IsNullOrEmpty(cmd.PortraitKey) && _portraitDirector != null)
-                await _portraitDirector.ShowAsync(cmd.SpeakerId, await LoadSpriteAsync(cmd.PortraitKey, ct), ct);
+            // PortraitKey が同時指定されていればここで切替（display_as で表示名を変えつつ、同一 speaker_id の立ち絵を 1 行で指定する糖衣）。
+            // 未指定なら catalog の既定立ち絵へフォールバックし、話者が喋るたびにその人の絵が出る
+            var portraitKey = ResolvePortraitKey(cmd);
+            if (!string.IsNullOrEmpty(portraitKey) && _portraitDirector != null)
+                await _portraitDirector.ShowAsync(cmd.SpeakerId, await LoadSpriteAsync(portraitKey, ct), ct);
 
             var resolved = _text.Resolve(cmd.Text);
             var displayName = ResolveDisplayName(cmd);
@@ -212,6 +214,16 @@ namespace Novel.Runtime
         public void On(MessageWindowVisibilityCommand cmd) => _view.SetMessageWindowVisible(cmd.Visible);
 
         public void On(ClearMessageCommand cmd) => _view.ClearMessage();
+
+        // 既定立ち絵の適用は stage cast 在籍の話者に限る。
+        // cast 外 (clear_stage 後の回想・夢シーン等) で出すと、居ないはずのキャラが喋るたびに現れてしまう
+        private string? ResolvePortraitKey(SayCommand cmd)
+        {
+            if (!string.IsNullOrEmpty(cmd.PortraitKey)) return cmd.PortraitKey;
+            if (string.IsNullOrEmpty(cmd.SpeakerId) || _portraitDirector == null) return null;
+            if (!_portraitDirector.IsStaged(cmd.SpeakerId)) return null;
+            return _catalog.TryGet(cmd.SpeakerId, out var entry) ? entry.DefaultPortraitKey : null;
+        }
 
         // command-schema の解決 3 規則: 空=ナレーション / カタログ有=表示名（DisplayAs で上書き）/ 未登録=id をそのまま
         // 空キー (bg nil 等の消去) はロード対象でないためローダーへ渡さない。ローダー未供給なら null のまま返す
