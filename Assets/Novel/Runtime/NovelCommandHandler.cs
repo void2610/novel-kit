@@ -213,9 +213,9 @@ namespace Novel.Runtime
         public void On(ClearMessageCommand cmd) => _view.ClearMessage();
 
         // command-schema の解決 3 規則: 空=ナレーション / カタログ有=表示名（DisplayAs で上書き）/ 未登録=id をそのまま
-        // ローダー未供給なら null 渡しで View 側の「ロード失敗」経路に合流させる (キー解決はここに閉じる)
-        private UniTask<UnityEngine.Sprite?> LoadSpriteAsync(string key, CancellationToken ct)
-            => _sprites != null ? _sprites.LoadAsync(key, ct) : UniTask.FromResult<UnityEngine.Sprite?>(null);
+        // ローダー未供給ならスプライト null のまま返し、View 側の「未解決」経路に合流させる (キー解決はここに閉じる)
+        private async UniTask<ResolvedSprite> LoadSpriteAsync(string key, CancellationToken ct)
+            => new(key, _sprites != null ? await _sprites.LoadAsync(key, ct) : null);
 
         private string? ResolveDisplayName(SayCommand cmd)
         {
