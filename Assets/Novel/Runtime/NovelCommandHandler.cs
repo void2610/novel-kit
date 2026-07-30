@@ -26,13 +26,14 @@ namespace Novel.Runtime
         private readonly IWorldEffectSink? _worldEffectSink;
         private readonly IBacklog? _backlog;
         private readonly ISpriteLoader? _sprites;
+        private readonly IRubyDictionary? _ruby;
         private readonly NovelPlaybackProgress _progress;
 
         public NovelCommandHandler(INovelView view, IStateStore state, ITextResolver text, ICharacterCatalog catalog,
             IPortraitDirector? portraitDirector = null, IBackgroundView? background = null, IAudioChannel? audio = null,
             IWorldEffectSink? worldEffectSink = null, IBacklog? backlog = null,
             ICenterImageView? centerImage = null, NovelPlaybackProgress? progress = null,
-            ISpriteLoader? sprites = null)
+            ISpriteLoader? sprites = null, IRubyDictionary? ruby = null)
         {
             _view = view;
             _state = state;
@@ -45,6 +46,7 @@ namespace Novel.Runtime
             _worldEffectSink = worldEffectSink;
             _backlog = backlog;
             _sprites = sprites;
+            _ruby = ruby;
             _progress = progress ?? new NovelPlaybackProgress();
         }
 
@@ -67,8 +69,12 @@ namespace Novel.Runtime
             // バックログは rich のまま記録（link/color を残し再表示・キーワード収集できるように。Clear 契機は game 所有）
             _backlog?.Add(displayName ?? "", resolved);
 
+            // 辞書ルビは表示専用: 既読 ID とバックログの確定後に付けることで、ふりがなが平文/既読 ID に混入しない。
+            // 早送り中も適用する (初出ルビを消費させ、途中復帰後の初回プレイで既出の初出ルビが再表示されるのを防ぐ)
+            var display = _ruby != null ? _ruby.ApplyTo(resolved) : resolved;
+
             // Text はタグ付き原文を渡し、View 側 typewriter が NovelTagLexer で逐次 Reveal する
-            if (!fastForward) await _view.ShowMessageAsync(new NovelLine(cmd.SpeakerId, displayName, resolved, alreadyRead), ct);
+            if (!fastForward) await _view.ShowMessageAsync(new NovelLine(cmd.SpeakerId, displayName, display, alreadyRead), ct);
 
             _state.MarkRead(textId);
         }
@@ -82,7 +88,12 @@ namespace Novel.Runtime
             // 選択肢も say と同じく ITextResolver を通す（多言語化の seam を say と揃える）
             var options = cmd.Options;
             var resolved = new string[options.Length];
-            for (int i = 0; i < options.Length; i++) resolved[i] = _text.Resolve(options[i]);
+            for (int i = 0; i < options.Length; i++)
+            {
+                resolved[i] = _text.Resolve(options[i]);
+                // 選択肢も say と同じく表示専用の辞書ルビを付ける (適用位置の裁量を View に残さない)
+                if (_ruby != null) resolved[i] = _ruby.ApplyTo(resolved[i]);
+            }
 
             var selected = await _view.ShowChoicesAsync(resolved, ct);
             _state.Set(cmd.StateKey, selected);
