@@ -29,7 +29,8 @@ namespace Novel.Integration
             if (rubyText != null) ruby.Load(rubyText);
             builder.RegisterInstance<IRubyDictionary>(ruby);
 
-            // スプライトも Resources から (game が ISpriteLoader を差し替えれば Addressables 等になる)
+            // スプライトも Resources から。root なしなのでキーは Resources 相対パスそのもの
+            // (プレフィックスを付けたい / Addressables にしたい game は ISpriteLoader を後勝ち登録する)
             builder.RegisterInstance<ISpriteLoader>(new ResourcesSpriteLoader());
 
             // dev ビルドで未供給コマンドを一度だけ警告する no-op ファセット（コアの silent 既定を上書き）

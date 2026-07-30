@@ -33,12 +33,24 @@ namespace Novel.Tests
             }
         }
 
-        // Director は sprite をそのまま View へ流すため、記録・検証用に name 付きスプライトを作る
-        private static UnityEngine.Sprite NamedSprite(string name)
+        private readonly List<UnityEngine.Object> _created = new();
+
+        // EditMode では生成した Sprite/Texture が leaked objects として警告されるため明示的に破棄する
+        [TearDown]
+        public void TearDown()
         {
-            var sprite = UnityEngine.Sprite.Create(new UnityEngine.Texture2D(1, 1),
-                new UnityEngine.Rect(0, 0, 1, 1), UnityEngine.Vector2.zero);
+            foreach (var o in _created) UnityEngine.Object.DestroyImmediate(o);
+            _created.Clear();
+        }
+
+        // Director は sprite をそのまま View へ流すため、記録・検証用に name 付きスプライトを作る
+        private UnityEngine.Sprite NamedSprite(string name)
+        {
+            var texture = new UnityEngine.Texture2D(1, 1);
+            var sprite = UnityEngine.Sprite.Create(texture, new UnityEngine.Rect(0, 0, 1, 1), UnityEngine.Vector2.zero);
             sprite.name = name;
+            _created.Add(texture);
+            _created.Add(sprite);
             return sprite;
         }
 

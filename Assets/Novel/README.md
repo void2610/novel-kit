@@ -46,7 +46,7 @@ https://github.com/void2610/novel-kit.git?path=Assets/Novel
 | `Novel.View` | TMP 参考 View・Resources ローダ・ScriptableObject カタログ（game は差し替え可） |
 | `Novel.VContainer` | コア DI 統合（`RegisterNovelKitCore`）。純 `Novel.Runtime` のみ依存・View/Resources 非依存 |
 | `Novel.View.VContainer` | 参考 View 込みの DI 統合（`RegisterNovelKit` = Core + Resources ローダ + 警告ファセット + ログ） |
-| `Novel.Assets` | Unity アセットのロード抽象と表示ファセット（`Assets/Novel/AssetLoaders/`）。`ISpriteLoader` / Resources 実装 / `IPortraitView`・`IBackgroundView`・`ICenterImageView`・`PortraitLayout`。Runtime から一方向に参照される末端 |
+| `Novel.Assets` | スプライトのロード抽象と表示ファセット（実体は `Assets/Novel/Presentation/`）。`ISpriteLoader` / Resources 実装 / `IPortraitView`・`IBackgroundView`・`ICenterImageView`・`PortraitLayout`。Runtime から一方向に参照される末端で、game の View は VitalRouter/MRuby を引かずにこれだけ参照できる |
 | `Novel.Addressables` | `ITextAssetLoader` / `ISpriteLoader` の Addressables 実装。`com.unity.addressables` 導入時のみコンパイルされる（versionDefines ゲート） |
 | `Novel.Editor` | シナリオ検証メニュー `Novel/Validate Scenarios`（`ScenarioValidator`・全 `.rb` の `.mrb` 生成有無を検査）。`.rb`→`.mrb` のコンパイル自体は mrubycs-compiler パッケージが担当 |
 
@@ -186,7 +186,11 @@ public UniTask ShowAsync(Sprite? sprite, CancellationToken ct) { ... }
 ```
 
 テキストと違いスプライトは表示中ずっと参照が生きている必要があるため、ハンドルはローダーが保持する。
-シナリオ終了などの区切りで `ReleaseAll()` を呼んで解放する（Resources 実装では no-op。ロード中のものは対象外で完了後に次回の解放対象になる）。
+解放は `NovelScenarioRunner.Dispose()` が `ReleaseAll()` を呼ぶので、game は放置してもセッション終了時に解放される。
+シナリオ単位で解放したい場合だけ game が `ISpriteLoader.ReleaseAll()` を直接呼ぶ（Resources 実装では no-op。ロード中のものは対象外で完了後に次回の解放対象になる）。
+
+`RegisterNovelKit` の既定は `new ResourcesSpriteLoader()`（root なし = キーが Resources 相対パスそのもの）。
+上の例のように `"Novel/"` などのプレフィックスを付けたい場合は、`ISpriteLoader` を後勝ちで登録する。
 
 `spriteMode=Multiple` のアセットは扱いが実装で非対称（Resources 実装は `LoadAll` の先頭スライスを返すが順序は保証されず、
 Addressables 実装はスライス単位のアドレス指定が要る場合がある）。単一スプライトでの利用を推奨する。

@@ -96,6 +96,7 @@ public interface INovelView {
 }
 
 // 任意ファセット（game が必要に応じて実装・別途解決）
+// 実装で確定: 引数は論理キーではなく解決済み Sprite? (キー解決は runtime が ISpriteLoader で行う)。名前空間は Novel.Assets
 public interface IPortraitView   { /* 単一スロット 1 枚差し替え。多層合成/複数配置は v1 無し */ }  // character-model
 public interface IBackgroundView { /* 背景差し替え */ }
 public interface IAudioChannel   { /* se / bgm。引数詳細は実装時確定 */ }                          // audio-scope
@@ -109,7 +110,8 @@ public interface IAudioChannel   { /* se / bgm。引数詳細は実装時確定 
 
 | サービス | 役割 | 根拠 ADR |
 |---|---|---|
-| `IScenarioSource` | 論理キー → `.mrb` バイトコード（`byte[]`）。`Irep` パースは MRubyState 依存のため runner 側 | [アーキテクチャ](/design/architecture.md) |
+| `IScenarioSource` | 論理キー → `.mrb` バイトコード（`byte[]`）。`Irep` パースは MRubyState 依存のため runner 側。実装で確定: ロード手段は `ITextAssetLoader` 差し替え（Resources / Addressables） | [アーキテクチャ](/design/architecture.md) |
+| `ISpriteLoader` | 論理キー → `Sprite?`。実装で確定: runtime が呼びキー解決を担う。ハンドル寿命は実装が持ち `NovelScenarioRunner.Dispose()` が `ReleaseAll()` する | [アーキテクチャ](/design/architecture.md) |
 | `IStateStore` | フラグ / 変数 / 既読を単一統合。**runtime 内部実装（`MRubyStateStore`）が既定**で game 供給不要 | [状態モデル](/design/decisions/state-model.md) |
 | `INovelScenarioRunner.CaptureState()` / `RestoreState()` | 状態スナップショットの出し入れ。直列化は `NovelSaveData`（クラス）/ `NovelSaveSerializer`（文字列）、保存は game 所有（`ISaveStore` は撤去） | [セーブ粒度](/design/decisions/save-snapshot.md) |
 | `INovelPlaybackSettings` | auto/skip 速度等の再生設定（Default 提供） | [アーキテクチャ](/design/architecture.md) |

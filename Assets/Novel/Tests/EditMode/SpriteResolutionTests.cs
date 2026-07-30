@@ -46,8 +46,24 @@ namespace Novel.Tests
             }
         }
 
-        private static Sprite MakeSprite() =>
-            Sprite.Create(new Texture2D(1, 1), new Rect(0, 0, 1, 1), Vector2.zero);
+        private readonly List<Object> _created = new();
+
+        // EditMode では生成した Sprite/Texture が leaked objects として警告されるため明示的に破棄する
+        [TearDown]
+        public void TearDown()
+        {
+            foreach (var o in _created) Object.DestroyImmediate(o);
+            _created.Clear();
+        }
+
+        private Sprite MakeSprite()
+        {
+            var texture = new Texture2D(1, 1);
+            var sprite = Sprite.Create(texture, new Rect(0, 0, 1, 1), Vector2.zero);
+            _created.Add(texture);
+            _created.Add(sprite);
+            return sprite;
+        }
 
         private sealed class StubView : INovelView
         {
