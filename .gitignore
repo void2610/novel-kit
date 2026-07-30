@@ -54,3 +54,6 @@ Assets/Packages/
 
 # uloop CLI のローカルキャッシュ / 出力
 /.uloop/
+
+# pr-review-fix の作業ファイル
+outputs/

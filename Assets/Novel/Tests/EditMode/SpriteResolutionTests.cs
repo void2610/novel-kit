@@ -10,7 +10,7 @@ using UnityEngine;
 
 namespace Novel.Tests
 {
-    // キー→Sprite の解決が runtime 側で行われ、View にはスプライトだけが渡ることを固定する
+    // キー→Sprite の解決が runtime 側で行われ、View には解決済みスプライトとキーの対が渡ることを固定する
     public class SpriteResolutionTests
     {
         private sealed class RecordingSpriteLoader : ISpriteLoader
@@ -30,18 +30,18 @@ namespace Novel.Tests
 
         private sealed class RecordingBackgroundView : IBackgroundView
         {
-            public readonly List<Sprite?> Backgrounds = new();
-            public readonly List<Sprite?> Stills = new();
+            public readonly List<ResolvedSprite> Backgrounds = new();
+            public readonly List<ResolvedSprite> Stills = new();
 
-            public UniTask ShowAsync(Sprite? sprite, CancellationToken ct)
+            public UniTask ShowAsync(ResolvedSprite background, CancellationToken ct)
             {
-                Backgrounds.Add(sprite);
+                Backgrounds.Add(background);
                 return UniTask.CompletedTask;
             }
 
-            public UniTask ShowStillAsync(Sprite? sprite, CancellationToken ct)
+            public UniTask ShowStillAsync(ResolvedSprite still, CancellationToken ct)
             {
-                Stills.Add(sprite);
+                Stills.Add(still);
                 return UniTask.CompletedTask;
             }
         }
@@ -110,7 +110,9 @@ namespace Novel.Tests
                 .GetAwaiter().GetResult();
 
             Assert.That(loader.Requested, Is.EqualTo(new[] { "room" }));
-            Assert.That(view.Backgrounds, Is.EqualTo(new[] { sprite }));
+            Assert.That(view.Backgrounds, Has.Count.EqualTo(1));
+            Assert.That(view.Backgrounds[0].Sprite, Is.EqualTo(sprite));
+            Assert.That(view.Backgrounds[0].Key, Is.EqualTo("room"), "View は表示以外の用途で論理キーを要する");
         }
 
         [Test]
@@ -124,11 +126,13 @@ namespace Novel.Tests
                 .GetAwaiter().GetResult();
 
             Assert.That(loader.Requested, Is.EqualTo(new[] { "cg01" }));
-            Assert.That(view.Stills, Is.EqualTo(new[] { sprite }));
+            Assert.That(view.Stills, Has.Count.EqualTo(1));
+            Assert.That(view.Stills[0].Sprite, Is.EqualTo(sprite));
+            Assert.That(view.Stills[0].Key, Is.EqualTo("cg01"));
         }
 
         [Test]
-        public void ロード失敗時はnullがViewへ渡る()
+        public void ロード失敗時もキーは渡りスプライトだけがnullになる()
         {
             var loader = new RecordingSpriteLoader { Result = null };
             var view = new RecordingBackgroundView();
@@ -137,11 +141,48 @@ namespace Novel.Tests
                 .GetAwaiter().GetResult();
 
             Assert.That(view.Backgrounds, Has.Count.EqualTo(1));
-            Assert.That(view.Backgrounds[0], Is.Null);
+            Assert.That(view.Backgrounds[0].Sprite, Is.Null);
+            Assert.That(view.Backgrounds[0].IsLoaded, Is.False);
+            // 未解決でもキーは渡す (View が「消去」と「ロード失敗」を区別できるように)
+            Assert.That(view.Backgrounds[0].Key, Is.EqualTo("missing"));
         }
 
         [Test]
-        public void ローダー未供給ならnullがViewへ渡る()
+        public void 空キーはローダーを呼ばない()
+        {
+            var loader = new RecordingSpriteLoader { Result = MakeSprite() };
+            var view = new RecordingBackgroundView();
+
+            MakeHandler(loader, view).On(new BackgroundCommand { BackgroundKey = "" }, CancellationToken.None)
+                .GetAwaiter().GetResult();
+
+            // 空キーは消去でロード対象ではない (実装側に空キーガードを強いない)
+            Assert.That(loader.Requested, Is.Empty);
+            Assert.That(view.Backgrounds, Has.Count.EqualTo(1));
+            Assert.That(view.Backgrounds[0].IsLoaded, Is.False);
+            Assert.That(view.Backgrounds[0].Key, Is.Empty);
+        }
+
+        [Test]
+        public void 既定値のキーは空文字になる()
+        {
+            // struct なので default や配列要素はコンストラクタを通らない
+            Assert.That(default(ResolvedSprite).Key, Is.Empty);
+            Assert.That(ResolvedSprite.None.Key, Is.Empty);
+            Assert.That(new ResolvedSprite(null!, null).Key, Is.Empty);
+        }
+
+        [Test]
+        public void 消去とロード失敗はIsClearedで区別できる()
+        {
+            // どちらも IsLoaded は false なので、View が両者を同一視しないための述語
+            Assert.That(ResolvedSprite.None.IsCleared, Is.True);
+            Assert.That(new ResolvedSprite("missing", null).IsCleared, Is.False);
+            Assert.That(new ResolvedSprite("missing", null).IsLoaded, Is.False);
+        }
+
+        [Test]
+        public void ローダー未供給でもキーは渡る()
         {
             var view = new RecordingBackgroundView();
             var handler = new NovelCommandHandler(new StubView(), new StubStateStore(),
@@ -149,7 +190,9 @@ namespace Novel.Tests
 
             handler.On(new BackgroundCommand { BackgroundKey = "room" }, CancellationToken.None).GetAwaiter().GetResult();
 
-            Assert.That(view.Backgrounds, Is.EqualTo(new Sprite?[] { null }));
+            Assert.That(view.Backgrounds, Has.Count.EqualTo(1));
+            Assert.That(view.Backgrounds[0].Sprite, Is.Null);
+            Assert.That(view.Backgrounds[0].Key, Is.EqualTo("room"));
         }
     }
 }

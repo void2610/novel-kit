@@ -6,6 +6,17 @@
 ## [Unreleased]
 
 ### Changed
+- **破壊的**: `NovelLine` に `PlainText` (タグと辞書ルビを除いた平文 = 既読 ID の算出基準) を追加。
+  辞書ルビは lexer タグではなく TMP markup として重なるため、View が `Text` から平文を再計算するとよみが
+  親文字と連なって残る。ルビ適用前に算出した平文を runtime が渡すことで、View 側の平文検査を成立させる。
+  移行: View が `NovelTagLexer.ToPlainText(line.Text)` していた箇所を `line.PlainText` に置き換える。
+- **破壊的**: スプライトを扱うファセットの引数を `Sprite?` から `ResolvedSprite` (論理キー + 解決済みスプライト) へ変更。
+  `IPortraitView` / `IBackgroundView` / `ICenterImageView` / `IPortraitDirector` が対象。ロードは引き続き runtime が行い
+  View に解決の裁量はないが、未解決と消去の区別・同一キー再表示の no-op 判定・game 側の状態記録 (セーブからの背景復元、
+  イベント CG の解放) はキーを要するため、キーを併せて渡す。
+  移行: `ShowAsync(Sprite? sprite, ct)` を `ShowAsync(ResolvedSprite x, ct)` にして `x.Sprite` / `x.Key` を使う。
+  消去 (空キー) とロード失敗はどちらも `IsLoaded == false` のため、分けたい View は `IsCleared` を見る。
+  空キーはロード対象でないため runtime が `ISpriteLoader` を呼ばない (実装側に空キーガードを強いない)。
 - **破壊的**: アセットのロード手段を抽象化。`IScenarioSource` / `IPreambleSource` / ルビ辞書の実装を
   `ScenarioSource` / `PreambleSource` / `RubyDictionary` に一本化し、ロード戦略は `ITextAssetLoader` を
   コンストラクタで明示指定する。`ResourcesScenarioSource` / `ResourcesPreambleSource` / `ResourcesRubyDictionary` は削除。

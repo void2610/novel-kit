@@ -70,6 +70,28 @@ namespace Novel.Tests
         }
 
         [Test]
+        public void 平文にはルビが混入しない()
+        {
+            var view = new RecordingView();
+            var handler = new NovelCommandHandler(view, new StubStateStore(), new IdentityTextResolver(), new StubCatalog(),
+                ruby: MakeDictionary());
+
+            handler.On(Say("庭に出る"), CancellationToken.None).GetAwaiter().GetResult();
+
+            // View が Text から平文を再計算するとよみが親文字と連なって残るため、runtime が算出済みの平文を渡す
+            Assert.That(view.Lines[0].PlainText, Is.EqualTo("庭に出る"));
+            Assert.That(view.Lines[0].PlainText, Does.Not.Contain("にわ"));
+        }
+
+        [Test]
+        public void 既定値の表示行は空文字を返す()
+        {
+            // struct なので default や配列要素はコンストラクタを通らない
+            Assert.That(default(NovelLine).Text, Is.Empty);
+            Assert.That(default(NovelLine).PlainText, Is.Empty);
+        }
+
+        [Test]
         public void 既読IDにはルビが混入しない()
         {
             var store = new StubStateStore();

@@ -171,7 +171,7 @@ builder.RegisterInstance<IRubyDictionary>(ruby);
 ### スプライト（立ち絵 / 背景 / CG）
 
 立ち絵・背景・CG の表示 View は game 所有だが、**キーからスプライトを引くのは novel-kit の責務**。
-`ISpriteLoader` を登録すれば runtime がキーを解決し、View には解決済み `Sprite` が渡る（null ならロード失敗）:
+`ISpriteLoader` を登録すれば runtime がキーを解決し、View には論理キーと解決済みスプライトの対 (`ResolvedSprite`) が渡る:
 
 ```csharp
 // Resources なら
@@ -181,9 +181,20 @@ builder.RegisterInstance<ISpriteLoader>(new ResourcesSpriteLoader("Novel/"));
 ```
 
 ```csharp
-// game 側 View は表示だけを実装する
-public UniTask ShowAsync(Sprite? sprite, CancellationToken ct) { ... }
+// game 側 View は表示だけを実装する（ロードはしない）
+public UniTask ShowAsync(ResolvedSprite background, CancellationToken ct)
+{
+    image.sprite = background.Sprite;   // 解決済み。null なら未解決
+    image.enabled = background.IsLoaded;
+    _currentKey = background.Key;       // 成否に関わらず保持すれば未解決と消去を区別できる
+}
 ```
+
+キーを併せて渡すのは、表示以外にキーを要する用途があるため。未解決と消去の区別、同一キー再表示の
+no-op 判定、セーブからの背景復元やイベント CG の解放といった game 側の状態記録は、いずれも `Sprite`
+参照だけでは書けない。消去 (空キー) とロード失敗はどちらも `IsLoaded == false` なので、両者を分けたい
+View は `IsCleared` を見る。`IPortraitView` が `character` を表示側のヒントとして受けているのと同じ位置づけで、
+**ロードの裁量は View に戻さない**（キー→スプライトの解決は runtime に閉じたまま）。
 
 テキストと違いスプライトは表示中ずっと参照が生きている必要があるため、ハンドルはローダーが保持する。
 解放は `NovelScenarioRunner.Dispose()` が `ReleaseAll()` を呼ぶので、game は放置してもセッション終了時に解放される。

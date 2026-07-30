@@ -90,9 +90,9 @@ namespace Novel.Tests
         private sealed class FakeCenterImageView : ICenterImageView
         {
             public readonly List<string> Calls = new();
-            public UniTask ShowAsync(UnityEngine.Sprite? sprite, CancellationToken ct)
+            public UniTask ShowAsync(ResolvedSprite image, CancellationToken ct)
             {
-                Calls.Add("show:" + sprite?.name);
+                Calls.Add("show:" + image.Sprite?.name);
                 return UniTask.CompletedTask;
             }
             public UniTask HideAsync(CancellationToken ct)

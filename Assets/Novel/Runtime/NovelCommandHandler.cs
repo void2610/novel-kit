@@ -63,7 +63,8 @@ namespace Novel.Runtime
             var displayName = ResolveDisplayName(cmd);
             if (displayName != null) displayName = _text.Resolve(displayName);   // 表示名も多言語 seam を通す（localization）
             // 既読 ID はタグを除いた素テキストで算出（タグ有無で既読が割れないように）
-            var textId = StableId.Of(cmd.SpeakerId, NovelTagLexer.ToPlainText(resolved));
+            var plain = NovelTagLexer.ToPlainText(resolved);
+            var textId = StableId.Of(cmd.SpeakerId, plain);
             var alreadyRead = _state.IsRead(textId);
 
             // バックログは rich のまま記録（link/color を残し再表示・キーワード収集できるように。Clear 契機は game 所有）
@@ -74,7 +75,7 @@ namespace Novel.Runtime
             var display = _ruby != null ? _ruby.ApplyTo(resolved) : resolved;
 
             // Text はタグ付き原文を渡し、View 側 typewriter が NovelTagLexer で逐次 Reveal する
-            if (!fastForward) await _view.ShowMessageAsync(new NovelLine(cmd.SpeakerId, displayName, display, alreadyRead), ct);
+            if (!fastForward) await _view.ShowMessageAsync(new NovelLine(cmd.SpeakerId, displayName, display, plain, alreadyRead), ct);
 
             _state.MarkRead(textId);
         }
@@ -213,9 +214,12 @@ namespace Novel.Runtime
         public void On(ClearMessageCommand cmd) => _view.ClearMessage();
 
         // command-schema の解決 3 規則: 空=ナレーション / カタログ有=表示名（DisplayAs で上書き）/ 未登録=id をそのまま
-        // ローダー未供給なら null 渡しで View 側の「ロード失敗」経路に合流させる (キー解決はここに閉じる)
-        private UniTask<UnityEngine.Sprite?> LoadSpriteAsync(string key, CancellationToken ct)
-            => _sprites != null ? _sprites.LoadAsync(key, ct) : UniTask.FromResult<UnityEngine.Sprite?>(null);
+        // 空キー (bg nil 等の消去) はロード対象でないためローダーへ渡さない。ローダー未供給なら null のまま返す
+        private async UniTask<ResolvedSprite> LoadSpriteAsync(string key, CancellationToken ct)
+        {
+            if (string.IsNullOrEmpty(key) || _sprites == null) return new ResolvedSprite(key, null);
+            return new ResolvedSprite(key, await _sprites.LoadAsync(key, ct));
+        }
 
         private string? ResolveDisplayName(SayCommand cmd)
         {

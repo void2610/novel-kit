@@ -11,7 +11,7 @@ namespace Novel.Runtime
     public sealed class NullPortraitView : IPortraitView
     {
         public UniTask SwitchLayoutAsync(PortraitLayout layout, CancellationToken ct) => UniTask.CompletedTask;
-        public UniTask ShowAsync(int slotIndex, string character, UnityEngine.Sprite? sprite, CancellationToken ct) => UniTask.CompletedTask;
+        public UniTask ShowAsync(int slotIndex, string character, ResolvedSprite portrait, CancellationToken ct) => UniTask.CompletedTask;
         public UniTask HideAsync(int slotIndex, CancellationToken ct) => UniTask.CompletedTask;
     }
 
@@ -20,20 +20,20 @@ namespace Novel.Runtime
         public UniTask StageAsync(PortraitLayout layout, System.Collections.Generic.IReadOnlyList<string> cast, CancellationToken ct) => UniTask.CompletedTask;
         public UniTask StageAsync(PortraitLayout layout, System.Collections.Generic.IReadOnlyDictionary<string, int> cast, CancellationToken ct) => UniTask.CompletedTask;
         public bool IsStaged(string character) => false;
-        public UniTask ShowAsync(string character, UnityEngine.Sprite? sprite, CancellationToken ct) => UniTask.CompletedTask;
+        public UniTask ShowAsync(string character, ResolvedSprite portrait, CancellationToken ct) => UniTask.CompletedTask;
         public UniTask ExitAsync(string character, CancellationToken ct) => UniTask.CompletedTask;
         public UniTask ClearStageAsync(CancellationToken ct) => UniTask.CompletedTask;
     }
 
     public sealed class NullBackgroundView : IBackgroundView
     {
-        public UniTask ShowAsync(UnityEngine.Sprite? sprite, CancellationToken ct) => UniTask.CompletedTask;
-        public UniTask ShowStillAsync(UnityEngine.Sprite? sprite, CancellationToken ct) => UniTask.CompletedTask;
+        public UniTask ShowAsync(ResolvedSprite background, CancellationToken ct) => UniTask.CompletedTask;
+        public UniTask ShowStillAsync(ResolvedSprite still, CancellationToken ct) => UniTask.CompletedTask;
     }
 
     public sealed class NullCenterImageView : ICenterImageView
     {
-        public UniTask ShowAsync(UnityEngine.Sprite? sprite, CancellationToken ct) => UniTask.CompletedTask;
+        public UniTask ShowAsync(ResolvedSprite image, CancellationToken ct) => UniTask.CompletedTask;
         public UniTask HideAsync(CancellationToken ct) => UniTask.CompletedTask;
     }
 

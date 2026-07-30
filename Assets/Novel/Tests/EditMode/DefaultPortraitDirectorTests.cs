@@ -21,9 +21,9 @@ namespace Novel.Tests
                 Calls.Add($"switch:{layout.Id}");
                 return UniTask.CompletedTask;
             }
-            public UniTask ShowAsync(int slotIndex, string character, UnityEngine.Sprite? sprite, CancellationToken ct)
+            public UniTask ShowAsync(int slotIndex, string character, ResolvedSprite portrait, CancellationToken ct)
             {
-                Calls.Add($"show:{slotIndex}:{character}:{sprite?.name}");
+                Calls.Add($"show:{slotIndex}:{character}:{portrait.Sprite?.name}");
                 return UniTask.CompletedTask;
             }
             public UniTask HideAsync(int slotIndex, CancellationToken ct)
@@ -43,15 +43,15 @@ namespace Novel.Tests
             _created.Clear();
         }
 
-        // Director は sprite をそのまま View へ流すため、記録・検証用に name 付きスプライトを作る
-        private UnityEngine.Sprite NamedSprite(string name)
+        // Director は受けた立ち絵をそのまま View へ流すため、記録・検証用に name 付きスプライトを作る
+        private ResolvedSprite NamedSprite(string name)
         {
             var texture = new UnityEngine.Texture2D(1, 1);
             var sprite = UnityEngine.Sprite.Create(texture, new UnityEngine.Rect(0, 0, 1, 1), UnityEngine.Vector2.zero);
             sprite.name = name;
             _created.Add(texture);
             _created.Add(sprite);
-            return sprite;
+            return new ResolvedSprite(name, sprite);
         }
 
         // 配列形式 (cast を順番で 0..N-1 に割り当て) で stage 宣言したあと、 portrait 呼び出しが該当 slot に解決される
