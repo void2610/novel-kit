@@ -98,6 +98,56 @@ namespace Novel.Tests
         }
 
         [Test]
+        public void 早送りした行でも初出ルビは消費される()
+        {
+            // 途中復帰の早送りで初出ルビを消費させ、復帰後の初回プレイで既出の初出ルビが再表示されるのを防ぐ契約
+            var dictionary = new RubyDictionary();
+            dictionary.Load("ruby '庭', 'にわ', :first");
+            var view = new RecordingView();
+            var progress = new NovelPlaybackProgress();
+            progress.Reset(fastForwardTarget: 2);
+            var handler = new NovelCommandHandler(view, new StubStateStore(), new IdentityTextResolver(), new StubCatalog(),
+                progress: progress, ruby: dictionary);
+
+            handler.On(Say("庭に出る"), CancellationToken.None).GetAwaiter().GetResult();
+            handler.On(Say("庭に戻る"), CancellationToken.None).GetAwaiter().GetResult();
+
+            // 1 行目 (早送りで非表示) が初出を消費済みのため、2 行目 (通常表示) にはルビが付かない
+            Assert.That(view.Lines, Has.Count.EqualTo(1));
+            Assert.That(view.Lines[0].Text, Does.Not.Contain("にわ"));
+        }
+
+        [Test]
+        public void 選択肢にも辞書ルビが付く()
+        {
+            var view = new RecordingChoiceView();
+            var handler = new NovelCommandHandler(view, new StubStateStore(), new IdentityTextResolver(), new StubCatalog(),
+                ruby: MakeDictionary());
+
+            handler.On(new ChooseCommand { Options = new[] { "庭に出る", "家にいる" }, StateKey = "k" }, CancellationToken.None)
+                .GetAwaiter().GetResult();
+
+            Assert.That(view.Options[0], Does.Contain("にわ"));
+            Assert.That(view.Options[1], Is.EqualTo("家にいる"));
+        }
+
+        private sealed class RecordingChoiceView : INovelView
+        {
+            public IReadOnlyList<string> Options = System.Array.Empty<string>();
+
+            public UniTask ShowMessageAsync(NovelLine line, CancellationToken ct) => UniTask.CompletedTask;
+
+            public UniTask<int> ShowChoicesAsync(IReadOnlyList<string> options, CancellationToken ct)
+            {
+                Options = options;
+                return UniTask.FromResult(0);
+            }
+
+            public void SetMessageWindowVisible(bool visible) { }
+            public void ClearMessage() { }
+        }
+
+        [Test]
         public void 辞書未供給なら本文はそのまま表示される()
         {
             var view = new RecordingView();
