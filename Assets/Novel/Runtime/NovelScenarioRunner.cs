@@ -48,7 +48,7 @@ namespace Novel.Runtime
             _preambleSources = preambleSources?.ToArray() ?? Array.Empty<IPreambleSource>();
             var modules = commandModules?.ToArray() ?? Array.Empty<INovelCommandModule>();
             _state = MRubyState.Create();
-            _store = new MRubyStateStore(_state.GetSharedVariables());
+            _store = new MRubyStateStore(_state);
 
             _state.DefineVitalRouter(config =>
             {

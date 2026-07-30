@@ -181,6 +181,19 @@ namespace Novel.Tests
             Assert.AreEqual("Bを選んだ", view.Lines[0].Text);
         });
 
+        // 同一再生中に C# 側 (flag コマンド) が書いた値を Ruby がその場で読み戻せることを検証 (回帰防止)
+        [UnityTest]
+        public IEnumerator 同一再生中にflagで書いた値を_Ruby_がその場で読み戻せる() => UniTask.ToCoroutine(async () =>
+        {
+            var view = new FakeView();
+            var runner = NewRunner(view);
+
+            var result = await runner.PlayAsync("test_flag_readback", CancellationToken.None);
+
+            Assert.AreEqual(NovelResult.Completed, result);
+            Assert.AreEqual("5", view.Lines[0].Text);
+        });
+
         // flag 設定 → CaptureState で引く → 別 runner へ RestoreState → Ruby の state[:key] が読めることを検証
         [UnityTest]
         public IEnumerator flag_がCaptureStateで引け_RestoreState後に_Ruby_から読める() => UniTask.ToCoroutine(async () =>
