@@ -144,6 +144,19 @@ narration "（おわり）"
 背景・立ち絵・CG のキー（`"classroom"` や `"alice/smile"`）が何を指すかは game 側の View 実装が決める。
 ライブラリはキー文字列を渡すだけで、解決は `ISpriteLoader` 等に任せる（後述）。
 
+## 状態 (フラグ / 変数)
+
+フラグ・変数の実体は Ruby の定数 `NOVEL_STATE` (Hash) で、`state` はこれを返す Preamble 定義のメソッド。
+C# 側 (`IStateStore`) と Ruby 側が同じ器を見るための構成で、拡張時は以下に注意する:
+
+- **`state` と `NOVEL_STATE` は novel-kit の予約名**。game の追加 preamble で同名を定義すると壊れる
+- **VitalRouter の共有変数テーブル (`MRubySharedVariableTable`) は使わない**。あれは `state` を呼んだ self ごとに
+  別インスタンスを作るため、C# と Fiber で実体が分かれる。game 独自の `INovelCommandModule` から
+  `GetSharedVariables()` に書いても novel-kit の状態には反映されない
+- **書き込みは `flag` コマンド経由で行う**。Ruby から `state[:x] = 1` と直接書くこともできてしまうが、
+  `CaptureState()` は C# 側で `Set` したキーだけを拾うため、直接書いた値はセーブに乗らない
+- 値は int 契約。整数以外を入れた場合、読み出しは無言で `0` になる
+
 ## アセットのロード手段（Resources / Addressables）
 
 シナリオ・preamble・ルビ辞書のロード手段は `ITextAssetLoader` で明示する。

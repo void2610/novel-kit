@@ -5,6 +5,11 @@
 # 制約: cmd（特に入力待ちを挟む choose）を跨ぐとローカル変数が失われる（mruby Fiber の resume 挙動）。
 # よって choose のキーはグローバルカウンタで採番し、cmd 直後にその場で読む。
 
+# VitalRouter の state は self ごとに別テーブルになり C# 側と実体が分かれるため、self 非依存な定数を使う。
+def state
+  NOVEL_STATE
+end
+
 # 第3引数 portrait_key を渡すと、この行と同時に立ち絵を切り替えられる（表示名 display_as と立ち絵を独立制御）。
 # 例: say 'kii', '正体は伏せたまま', 'kii/default', display_as: '？？？'
 def say(speaker, text = nil, portrait_key = nil, display_as: nil)

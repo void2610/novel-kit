@@ -181,6 +181,33 @@ namespace Novel.Tests
             Assert.AreEqual("Bを選んだ", view.Lines[0].Text);
         });
 
+        // index0 を選ぶケース。else 側に落ちても通る index1 と違い、戻り値が壊れると必ず落ちる (回帰防止)
+        [UnityTest]
+        public IEnumerator choose_のindex0選択が_Ruby_側の分岐へ反映される() => UniTask.ToCoroutine(async () =>
+        {
+            var view = new FakeView { ChoiceResult = 0 };   // A を選択
+            var runner = NewRunner(view);
+
+            var result = await runner.PlayAsync("test_choose", CancellationToken.None);
+
+            Assert.AreEqual(NovelResult.Completed, result);
+            Assert.AreEqual(1, view.Lines.Count);
+            Assert.AreEqual("Aを選んだ", view.Lines[0].Text);
+        });
+
+        // 同一再生中に C# 側 (flag コマンド) が書いた値を Ruby がその場で読み戻せることを検証 (回帰防止)
+        [UnityTest]
+        public IEnumerator 同一再生中にflagで書いた値を_Ruby_がその場で読み戻せる() => UniTask.ToCoroutine(async () =>
+        {
+            var view = new FakeView();
+            var runner = NewRunner(view);
+
+            var result = await runner.PlayAsync("test_flag_readback", CancellationToken.None);
+
+            Assert.AreEqual(NovelResult.Completed, result);
+            Assert.AreEqual("5", view.Lines[0].Text);
+        });
+
         // flag 設定 → CaptureState で引く → 別 runner へ RestoreState → Ruby の state[:key] が読めることを検証
         [UnityTest]
         public IEnumerator flag_がCaptureStateで引け_RestoreState後に_Ruby_から読める() => UniTask.ToCoroutine(async () =>
