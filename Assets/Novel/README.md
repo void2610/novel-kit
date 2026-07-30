@@ -46,7 +46,7 @@ https://github.com/void2610/novel-kit.git?path=Assets/Novel
 | `Novel.View` | TMP 参考 View・Resources ローダ・ScriptableObject カタログ（game は差し替え可） |
 | `Novel.VContainer` | コア DI 統合（`RegisterNovelKitCore`）。純 `Novel.Runtime` のみ依存・View/Resources 非依存 |
 | `Novel.View.VContainer` | 参考 View 込みの DI 統合（`RegisterNovelKit` = Core + Resources ローダ + 警告ファセット + ログ） |
-| `Novel.Assets` | Unity アセットのロード抽象（`Assets/Novel/AssetLoaders/`）。`ISpriteLoader` と Resources 実装（立ち絵/背景/CG を表示する game 側 View 向け） |
+| `Novel.Assets` | Unity アセットのロード抽象と表示ファセット（`Assets/Novel/AssetLoaders/`）。`ISpriteLoader` / Resources 実装 / `IPortraitView`・`IBackgroundView`・`ICenterImageView`・`PortraitLayout`。Runtime から一方向に参照される末端 |
 | `Novel.Addressables` | `ITextAssetLoader` / `ISpriteLoader` の Addressables 実装。`com.unity.addressables` 導入時のみコンパイルされる（versionDefines ゲート） |
 | `Novel.Editor` | シナリオ検証メニュー `Novel/Validate Scenarios`（`ScenarioValidator`・全 `.rb` の `.mrb` 生成有無を検査）。`.rb`→`.mrb` のコンパイル自体は mrubycs-compiler パッケージが担当 |
 
@@ -170,14 +170,19 @@ builder.RegisterInstance<IRubyDictionary>(ruby);
 
 ### スプライト（立ち絵 / 背景 / CG）
 
-立ち絵・背景・CG の表示 View は game 所有で、novel-kit はキー文字列を渡すだけ。
-そのキーからスプライトを引く部分は `ISpriteLoader` を使うと Resources / Addressables を差し替えられる:
+立ち絵・背景・CG の表示 View は game 所有だが、**キーからスプライトを引くのは novel-kit の責務**。
+`ISpriteLoader` を登録すれば runtime がキーを解決し、View には解決済み `Sprite` が渡る（null ならロード失敗）:
 
 ```csharp
-ISpriteLoader loader = new ResourcesSpriteLoader("Novel/");      // Resources/Novel/<key>
-// ISpriteLoader loader = new AddressablesSpriteLoader("Novel/"); // アドレス "Novel/<key>"
+// Resources なら
+builder.RegisterInstance<ISpriteLoader>(new ResourcesSpriteLoader("Novel/"));
+// Addressables なら (com.unity.addressables 導入時)
+// builder.RegisterInstance<ISpriteLoader>(new AddressablesSpriteLoader("Novel/"));
+```
 
-var sprite = await loader.LoadAsync(portraitKey, ct);
+```csharp
+// game 側 View は表示だけを実装する
+public UniTask ShowAsync(Sprite? sprite, CancellationToken ct) { ... }
 ```
 
 テキストと違いスプライトは表示中ずっと参照が生きている必要があるため、ハンドルはローダーが保持する。

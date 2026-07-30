@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using Novel.Assets;
 using UnityEngine;
 
 namespace Novel.Runtime
@@ -13,8 +14,8 @@ namespace Novel.Runtime
     {
         private readonly IPortraitView _view;
         private readonly Dictionary<string, int> _cast = new();
-        // Show のたびに最後に表示した portraitKey を記録し、 Stage 切替で slot 変更があった残留キャラの再表示に使う
-        private readonly Dictionary<string, string> _lastPortraitKey = new();
+        // Show のたびに最後に表示した sprite を記録し、 Stage 切替で slot 変更があった残留キャラの再表示に使う
+        private readonly Dictionary<string, Sprite?> _lastSprite = new();
         private PortraitLayout _layout;
         private bool _layoutInitialized;
 
@@ -52,7 +53,7 @@ namespace Novel.Runtime
                 {
                     // slot 変更: 旧 slot を Hide してから後で新 slot で再 Show
                     await _view.HideAsync(oldEntry.Value, ct);
-                    if (_lastPortraitKey.TryGetValue(oldEntry.Key, out _))
+                    if (_lastSprite.TryGetValue(oldEntry.Key, out _))
                         toReshow.Add((oldEntry.Key, newSlot));
                 }
             }
@@ -66,14 +67,14 @@ namespace Novel.Runtime
             // SwitchLayout 後に新 slot で再 Show (slot 変更があった残留キャラのみ)
             foreach (var (character, slot) in toReshow)
             {
-                if (_lastPortraitKey.TryGetValue(character, out var key))
-                    await _view.ShowAsync(slot, character, key, ct);
+                if (_lastSprite.TryGetValue(character, out var lastSprite))
+                    await _view.ShowAsync(slot, character, lastSprite, ct);
             }
         }
 
         public bool IsStaged(string character) => _cast.ContainsKey(character);
 
-        public async UniTask ShowAsync(string character, string portraitKey, CancellationToken ct)
+        public async UniTask ShowAsync(string character, Sprite? sprite, CancellationToken ct)
         {
             if (!_layoutInitialized)
             {
@@ -86,15 +87,15 @@ namespace Novel.Runtime
                 await _view.SwitchLayoutAsync(_layout, ct);
             }
             var slotIndex = ResolveSlot(character);
-            _lastPortraitKey[character] = portraitKey;
-            await _view.ShowAsync(slotIndex, character, portraitKey, ct);
+            _lastSprite[character] = sprite;
+            await _view.ShowAsync(slotIndex, character, sprite, ct);
         }
 
         public async UniTask ExitAsync(string character, CancellationToken ct)
         {
             if (!_cast.TryGetValue(character, out var slotIndex)) return;
             _cast.Remove(character);
-            _lastPortraitKey.Remove(character);
+            _lastSprite.Remove(character);
             await _view.HideAsync(slotIndex, ct);
         }
 
@@ -102,7 +103,7 @@ namespace Novel.Runtime
         {
             foreach (var entry in _cast) await _view.HideAsync(entry.Value, ct);
             _cast.Clear();
-            _lastPortraitKey.Clear();
+            _lastSprite.Clear();
             // layout はリセットせず、 次の Stage 呼び出しまで現状維持 (画面が突然真っさらにならないように)
         }
 

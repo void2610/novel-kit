@@ -3,6 +3,7 @@
     "rootNamespace": "Novel.Integration",
     "references": [
         "Novel.Runtime",
+        "Novel.Assets",
         "Novel.View",
         "Novel.VContainer",
         "VContainer",

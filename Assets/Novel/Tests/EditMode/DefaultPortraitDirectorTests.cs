@@ -1,7 +1,9 @@
+#nullable enable
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using Novel.Assets;
 using Novel.Runtime;
 using NUnit.Framework;
 using UnityEngine.TestTools;
@@ -19,9 +21,9 @@ namespace Novel.Tests
                 Calls.Add($"switch:{layout.Id}");
                 return UniTask.CompletedTask;
             }
-            public UniTask ShowAsync(int slotIndex, string character, string portraitKey, CancellationToken ct)
+            public UniTask ShowAsync(int slotIndex, string character, UnityEngine.Sprite? sprite, CancellationToken ct)
             {
-                Calls.Add($"show:{slotIndex}:{character}:{portraitKey}");
+                Calls.Add($"show:{slotIndex}:{character}:{sprite?.name}");
                 return UniTask.CompletedTask;
             }
             public UniTask HideAsync(int slotIndex, CancellationToken ct)
@@ -29,6 +31,15 @@ namespace Novel.Tests
                 Calls.Add($"hide:{slotIndex}");
                 return UniTask.CompletedTask;
             }
+        }
+
+        // Director は sprite をそのまま View へ流すため、記録・検証用に name 付きスプライトを作る
+        private static UnityEngine.Sprite NamedSprite(string name)
+        {
+            var sprite = UnityEngine.Sprite.Create(new UnityEngine.Texture2D(1, 1),
+                new UnityEngine.Rect(0, 0, 1, 1), UnityEngine.Vector2.zero);
+            sprite.name = name;
+            return sprite;
         }
 
         // 配列形式 (cast を順番で 0..N-1 に割り当て) で stage 宣言したあと、 portrait 呼び出しが該当 slot に解決される
@@ -39,7 +50,7 @@ namespace Novel.Tests
             var director = new DefaultPortraitDirector(view);
 
             await director.StageAsync(PortraitLayout.Trio, new[] { "taylor", "kii", "protagonist" }, CancellationToken.None);
-            await director.ShowAsync("kii", "worry", CancellationToken.None);
+            await director.ShowAsync("kii", NamedSprite("worry"), CancellationToken.None);
 
             Assert.Contains("switch:trio", view.Calls);
             Assert.Contains("show:1:kii:worry", view.Calls);
@@ -54,7 +65,7 @@ namespace Novel.Tests
 
             var cast = new Dictionary<string, int> { ["taylor"] = 2, ["kii"] = 0, ["protagonist"] = 1 };
             await director.StageAsync(PortraitLayout.Trio, cast, CancellationToken.None);
-            await director.ShowAsync("taylor", "smile", CancellationToken.None);
+            await director.ShowAsync("taylor", NamedSprite("smile"), CancellationToken.None);
 
             Assert.Contains("show:2:taylor:smile", view.Calls);
         });
@@ -108,7 +119,7 @@ namespace Novel.Tests
 
             await director.StageAsync(PortraitLayout.Pair, new[] { "taylor", "kii" }, CancellationToken.None);
             LogAssert.Expect(UnityEngine.LogType.Warning, new System.Text.RegularExpressions.Regex("stranger.*stage cast"));
-            await director.ShowAsync("stranger", "neutral", CancellationToken.None);
+            await director.ShowAsync("stranger", NamedSprite("neutral"), CancellationToken.None);
 
             Assert.Contains("show:0:stranger:neutral", view.Calls);
         });
@@ -122,7 +133,7 @@ namespace Novel.Tests
 
             LogAssert.Expect(UnityEngine.LogType.Warning, new System.Text.RegularExpressions.Regex("stage 宣言なし"));
             LogAssert.Expect(UnityEngine.LogType.Warning, new System.Text.RegularExpressions.Regex("stage cast"));
-            await director.ShowAsync("taylor", "smile", CancellationToken.None);
+            await director.ShowAsync("taylor", NamedSprite("smile"), CancellationToken.None);
 
             // View にも SwitchLayout(single) が伝わってから ShowAsync が走ることを順序込みで担保 (single の slot が未確保のまま Show される不整合を防ぐ)
             var switchIdx = view.Calls.IndexOf("switch:single");
@@ -141,7 +152,7 @@ namespace Novel.Tests
             var director = new DefaultPortraitDirector(view);
 
             await director.StageAsync(PortraitLayout.Pair, new[] { "taylor", "kii" }, CancellationToken.None);
-            await director.ShowAsync("taylor", "smile", CancellationToken.None);
+            await director.ShowAsync("taylor", NamedSprite("smile"), CancellationToken.None);
             view.Calls.Clear();
 
             // taylor (0→1) / kii (1→0) を入替える
