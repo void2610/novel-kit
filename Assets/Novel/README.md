@@ -184,8 +184,9 @@ builder.RegisterInstance<ISpriteLoader>(new ResourcesSpriteLoader("Novel/"));
 // game 側 View は表示だけを実装する（ロードはしない）
 public UniTask ShowAsync(ResolvedSprite background, CancellationToken ct)
 {
-    image.sprite = background.Sprite;          // 解決済み。null なら未解決
-    _currentKey = background.IsLoaded ? background.Key : "";
+    image.sprite = background.Sprite;   // 解決済み。null なら未解決
+    image.enabled = background.IsLoaded;
+    _currentKey = background.Key;       // 成否に関わらず保持すれば未解決と消去を区別できる
 }
 ```
 

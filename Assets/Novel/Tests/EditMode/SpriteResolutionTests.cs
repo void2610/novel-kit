@@ -148,6 +148,31 @@ namespace Novel.Tests
         }
 
         [Test]
+        public void 空キーはローダーを呼ばない()
+        {
+            var loader = new RecordingSpriteLoader { Result = MakeSprite() };
+            var view = new RecordingBackgroundView();
+
+            MakeHandler(loader, view).On(new BackgroundCommand { BackgroundKey = "" }, CancellationToken.None)
+                .GetAwaiter().GetResult();
+
+            // 空キーは消去でロード対象ではない (実装側に空キーガードを強いない)
+            Assert.That(loader.Requested, Is.Empty);
+            Assert.That(view.Backgrounds, Has.Count.EqualTo(1));
+            Assert.That(view.Backgrounds[0].IsLoaded, Is.False);
+            Assert.That(view.Backgrounds[0].Key, Is.Empty);
+        }
+
+        [Test]
+        public void 既定値のキーは空文字になる()
+        {
+            // struct なので default や配列要素はコンストラクタを通らない
+            Assert.That(default(ResolvedSprite).Key, Is.Empty);
+            Assert.That(ResolvedSprite.None.Key, Is.Empty);
+            Assert.That(new ResolvedSprite(null!, null).Key, Is.Empty);
+        }
+
+        [Test]
         public void ローダー未供給でもキーは渡る()
         {
             var view = new RecordingBackgroundView();

@@ -214,9 +214,12 @@ namespace Novel.Runtime
         public void On(ClearMessageCommand cmd) => _view.ClearMessage();
 
         // command-schema の解決 3 規則: 空=ナレーション / カタログ有=表示名（DisplayAs で上書き）/ 未登録=id をそのまま
-        // ローダー未供給ならスプライト null のまま返し、View 側の「未解決」経路に合流させる (キー解決はここに閉じる)
+        // 空キー (bg nil 等の消去) はロード対象でないためローダーへ渡さない。ローダー未供給なら null のまま返す
         private async UniTask<ResolvedSprite> LoadSpriteAsync(string key, CancellationToken ct)
-            => new(key, _sprites != null ? await _sprites.LoadAsync(key, ct) : null);
+        {
+            if (string.IsNullOrEmpty(key) || _sprites == null) return new ResolvedSprite(key, null);
+            return new ResolvedSprite(key, await _sprites.LoadAsync(key, ct));
+        }
 
         private string? ResolveDisplayName(SayCommand cmd)
         {

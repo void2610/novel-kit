@@ -14,8 +14,11 @@ namespace Novel.Assets
     /// </summary>
     public readonly struct ResolvedSprite
     {
+        // struct は default や配列要素でコンストラクタを通らず生まれるため、非 null 契約は取得側で担保する
+        private readonly string? _key;
+
         /// <summary>シナリオが指定した論理キー (消去・未指定は空文字)。</summary>
-        public readonly string Key;
+        public string Key => _key ?? "";
 
         /// <summary>解決済みスプライト (ロード失敗またはローダー未供給なら null)。</summary>
         public readonly Sprite? Sprite;
@@ -25,11 +28,11 @@ namespace Novel.Assets
 
         public ResolvedSprite(string key, Sprite? sprite)
         {
-            Key = key ?? "";
+            _key = key;
             Sprite = sprite;
         }
 
         /// <summary>何も指すもののない値 (消去やローダー未供給の経路で使う)。</summary>
-        public static ResolvedSprite None => new("", null);
+        public static ResolvedSprite None => default;
     }
 }
