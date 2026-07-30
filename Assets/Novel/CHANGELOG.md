@@ -19,6 +19,8 @@
   `Novel.Runtime` へ移設 (純 C# のため。自前 View 実装者が参考 View アセンブリに依存せずに使える)。
 
 ### Added
+- 辞書ルビの適用を runtime に集約。`IRubyDictionary` を DI 登録するだけで表示テキストに自動適用される
+  (既読 ID とバックログには混入しない)。View 側で `ApplyTo` を呼ぶ必要はなくなった。
 - `ITextAssetLoader` (テキスト) と `ISpriteLoader` (スプライト) のロード抽象、および Resources / Addressables 実装。
   Addressables 実装は `Novel.Addressables` asmdef に隔離し、`com.unity.addressables` 導入時のみコンパイルされる。
 - `NovelDisplayText.Build` を公開。自前 View が `TextRevealEngine` の可視文字数と整合する TMP 文字列構築を再実装せずに済む。
