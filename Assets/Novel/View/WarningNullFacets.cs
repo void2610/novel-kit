@@ -1,6 +1,7 @@
 #nullable enable
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using Novel.Assets;
 using Novel.Runtime;
 using UnityEngine;
 
@@ -13,7 +14,7 @@ namespace Novel.View
     {
         private bool _warned;
         public UniTask SwitchLayoutAsync(PortraitLayout layout, CancellationToken ct) { Warn(); return UniTask.CompletedTask; }
-        public UniTask ShowAsync(int slotIndex, string character, string portraitKey, CancellationToken ct) { Warn(); return UniTask.CompletedTask; }
+        public UniTask ShowAsync(int slotIndex, string character, UnityEngine.Sprite? sprite, CancellationToken ct) { Warn(); return UniTask.CompletedTask; }
         public UniTask HideAsync(int slotIndex, CancellationToken ct) { Warn(); return UniTask.CompletedTask; }
         private void Warn() => FacetWarning.Once(ref _warned, "portrait/stage", "IPortraitView");
     }
@@ -21,8 +22,8 @@ namespace Novel.View
     public sealed class WarningBackgroundView : IBackgroundView
     {
         private bool _warned;
-        public UniTask ShowAsync(string backgroundKey, CancellationToken ct) { Warn(); return UniTask.CompletedTask; }
-        public UniTask ShowStillAsync(string stillKey, CancellationToken ct) { Warn(); return UniTask.CompletedTask; }
+        public UniTask ShowAsync(UnityEngine.Sprite? sprite, CancellationToken ct) { Warn(); return UniTask.CompletedTask; }
+        public UniTask ShowStillAsync(UnityEngine.Sprite? sprite, CancellationToken ct) { Warn(); return UniTask.CompletedTask; }
         private void Warn() => FacetWarning.Once(ref _warned, "bg/still", "IBackgroundView");
     }
 

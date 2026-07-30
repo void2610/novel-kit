@@ -3,6 +3,7 @@
     "rootNamespace": "Novel.View",
     "references": [
         "Novel.Runtime",
+        "Novel.Assets",
         "UniTask",
         "Unity.TextMeshPro",
         "UnityEngine.UI"

@@ -1,7 +1,7 @@
 #nullable enable
 using System;
 
-namespace Novel.Runtime
+namespace Novel.Assets
 {
     // レイアウト識別子。 game が ScriptableObject 等で具体的な anchor 表を提供し、 ここでは識別だけ持つ。
     // 既定の命名規約: "single" / "pair" / "trio" / "quad" / "penta" (1〜5 人)。 game 固有の "meeting" 等も可。

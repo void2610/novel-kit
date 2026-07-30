@@ -1,4 +1,5 @@
 #nullable enable
+using Novel.Assets;
 using Novel.Runtime;
 using Novel.View;
 using VContainer;
@@ -27,6 +28,10 @@ namespace Novel.Integration
             var rubyText = loader.LoadText(rubyResourcePath);
             if (rubyText != null) ruby.Load(rubyText);
             builder.RegisterInstance<IRubyDictionary>(ruby);
+
+            // スプライトも Resources から。root なしなのでキーは Resources 相対パスそのもの
+            // (プレフィックスを付けたい / Addressables にしたい game は ISpriteLoader を後勝ち登録する)
+            builder.RegisterInstance<ISpriteLoader>(new ResourcesSpriteLoader());
 
             // dev ビルドで未供給コマンドを一度だけ警告する no-op ファセット（コアの silent 既定を上書き）
             builder.Register<IPortraitView, WarningPortraitView>(Lifetime.Singleton);

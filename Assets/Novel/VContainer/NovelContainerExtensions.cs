@@ -1,4 +1,5 @@
 #nullable enable
+using Novel.Assets;
 using Novel.Runtime;
 using VContainer;
 using VitalRouter;
@@ -28,6 +29,8 @@ namespace Novel.Integration
             builder.Register<ICenterImageView, NullCenterImageView>(Lifetime.Singleton);
             builder.Register<IAudioChannel, NullAudioChannel>(Lifetime.Singleton);
             builder.Register<IWorldEffectSink, NullWorldEffectSink>(Lifetime.Singleton);
+            // スプライト解決の no-op 既定 (常に null)。Resources/Addressables 実装は game か View ヘルパが上書きする
+            builder.Register<ISpriteLoader, NullSpriteLoader>(Lifetime.Singleton);
             builder.Register<INovelErrorHandler, NullErrorHandler>(Lifetime.Singleton);
             // ルビ辞書の no-op 既定 (本文をそのまま返す)。Resources ベース実装は View ヘルパが上書きする
             builder.Register<IRubyDictionary, NullRubyDictionary>(Lifetime.Singleton);

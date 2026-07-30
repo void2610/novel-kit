@@ -9,13 +9,15 @@ timestamp: 2026-06-14T23:59:00Z
 # アセンブリ分割
 
 6 アセンブリ（+ `Novel.Samples` / `Novel.Tests.EditMode`）+ game 側配線層に分割する。CLAUDE.md の DI 規約に従い、MonoBehaviour は
-`Novel.View` のみに置き、`Novel.Runtime` は純 C# とする。
+`Novel.View` のみに置く。`Novel.Runtime` は当初「純 C#」を掲げたが、スプライト解決を runtime へ集約した結果 `UnityEngine.Sprite` を扱う `Novel.Assets` を参照する (分離の価値は「game の View が VitalRouter/MRuby を引かずに表示ファセットだけ参照できる」点に移った)。
 
 | asmdef | 依存 | 内容 |
 |---|---|---|
 | `Novel.Commands` | VitalRouter, MRubyCS.Serializer のみ | 全 `[MRubyObject] readonly partial record struct : ICommand`。`IsExternalInit` ポリフィルを内包。publisher/receiver が型だけ共有し疎結合（apocalyptic-apartment-hunting の `Gameplay.Commands` 方式） |
 | `Novel.Runtime` | UniTask, VitalRouter, MRubyCS, Novel.Commands | 純 C# コア。シナリオランナー / `IScenarioSource` / `INovelView` / `[Routes] NovelCommandHandler` / プリアンブルローダ / `ParseSymbol<T>` / タイプライタエンジン / `IStateStore`（フラグ/変数/既読）/ バックログ / `INovelPlaybackSettings` + Default |
-| `Novel.View` | Novel.Runtime, (任意) LitMotion 等 | 任意の MonoBehaviour 参考 View（メッセージ窓・吹き出し・ナレ・立ち絵・背景・選択 UI）+ アニメツールキット。game は無視して自前 `INovelView` を供給可 |
+| `Novel.Assets` | UniTask, UnityEngine | スプライトのロード抽象 (`ISpriteLoader` + Resources 実装) と表示ファセット (`IPortraitView` / `IBackgroundView` / `ICenterImageView` / `PortraitLayout`)。Runtime から一方向に参照される末端。実体は `Assets/Novel/Presentation/` |
+| `Novel.Addressables` | Novel.Assets, Novel.Runtime, Addressables | `ITextAssetLoader` / `ISpriteLoader` の Addressables 実装。versionDefines で導入時のみコンパイル |
+| `Novel.View` | Novel.Runtime, Novel.Assets, (任意) LitMotion 等 | 任意の MonoBehaviour 参考 View（メッセージ窓・吹き出し・ナレ・立ち絵・背景・選択 UI）+ アニメツールキット。game は無視して自前 `INovelView` を供給可 |
 | `Novel.Editor` | Novel.Runtime, UnityEditor | カタログ/検証インスペクタ。`.rb`→`.mrb` の ScriptedImporter は **mrubycs-compiler パッケージが提供**するため再実装せず、それに乗る |
 | `Novel.VContainer` | Novel.Runtime, VContainer, UniTask | 任意の DI 統合層（純 `Novel.Runtime` 依存・View/Resources 非依存）。`RegisterNovelKitCore()` でコア実装（runner / no-op 既定ファセット / silent な NullErrorHandler）を一括登録。game が自前 View / 独自ローダを供給する場合に使う |
 | `Novel.View.VContainer` | Novel.Runtime, Novel.View, Novel.VContainer, VContainer | 箱出し用 DI 統合層。`RegisterNovelKit()` = コア（`RegisterNovelKitCore()`）+ Resources ローダ + dev 警告ファセット + `DebugNovelErrorHandler`（Ruby backtrace をログ） |

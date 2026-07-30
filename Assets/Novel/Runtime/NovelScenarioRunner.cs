@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using Novel.Assets;
 using MRubyCS;
 using Novel.Commands;
 using VitalRouter;
@@ -18,6 +19,7 @@ namespace Novel.Runtime
         private readonly Router _router;
         private readonly INovelErrorHandler? _errorHandler;
         private readonly IReadOnlyList<IPreambleSource> _preambleSources;
+        private readonly ISpriteLoader? _sprites;
         private readonly MRubyState _state;
         private readonly MRubyStateStore _store;
         private readonly NovelPlaybackProgress _progress = new();
@@ -38,7 +40,7 @@ namespace Novel.Runtime
             IEnumerable<IPreambleSource>? preambleSources = null,
             IEnumerable<INovelCommandModule>? commandModules = null,
             IBacklog? backlog = null,
-            ICenterImageView? centerImage = null)
+            ICenterImageView? centerImage = null, ISpriteLoader? sprites = null)
         {
             _source = source;
             _router = router;
@@ -75,7 +77,8 @@ namespace Novel.Runtime
             var handler = new NovelCommandHandler(view, _store, text, catalog,
                 portraitDirector: portraitDirector, background: background, audio: audio,
                 worldEffectSink: worldEffectSink, backlog: backlog, centerImage: centerImage,
-                progress: _progress);
+                progress: _progress, sprites: sprites);
+            _sprites = sprites;
             _subscriptions = new List<IDisposable> { handler.MapTo(_router) };
             // 独自コマンドハンドラを同じノベル専用 Router へ写像（購読は Dispose でまとめて解除）
             foreach (var module in modules) _subscriptions.Add(module.MapHandlers(_router));
@@ -187,6 +190,9 @@ namespace Novel.Runtime
                 _inFlightCts = null;
             }
             foreach (var subscription in _subscriptions) subscription.Dispose();
+            // キー解決を runner が担うようになったため、溜めたスプライトハンドルの解放も runner が持つ
+            // (シナリオ単位で解放したい game は ISpriteLoader.ReleaseAll() を直接呼べる)
+            _sprites?.ReleaseAll();
         }
     }
 }

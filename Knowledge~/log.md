@@ -3,6 +3,7 @@
 更新履歴を新しい順に記録する。日付は `YYYY-MM-DD`。
 
 ## 2026-07-30
+* **Update**: スプライト解決を runtime 側へ集約。`IPortraitView`/`IBackgroundView`/`ICenterImageView` の引数を論理キー (`string`) から解決済み `Sprite?` へ変え、`NovelCommandHandler` が `ISpriteLoader` でキーを引いてから View を呼ぶ形にした（従来は `ISpriteLoader` を novel-kit に置きながら使うのは game 側 View だけで、抽象を持つ意味が半減していた）。`IPortraitDirector` も Sprite ベースにし、slot 変更時の再表示キャッシュを Sprite 保持へ。ファセットと `PortraitLayout` は `Novel.Assets` へ移設（Runtime → Novel.Assets の一方向依存。当初 `PortraitLayout` を Runtime に残したままファセットだけ移して**循環依存**を作り、Unity が全アセンブリのコンパイルを中断してエラー 0 なのに新規テストが DLL に入らない症状を踏んだ）。`NullSpriteLoader` を Core 既定に、`RegisterNovelKit` は `ResourcesSpriteLoader` を登録。解放契機は `NovelScenarioRunner.Dispose()` が `ReleaseAll()` を呼ぶ形に決着 (ロードが kit に移った以上解放も kit が持つ。シナリオ単位で解放したい game は自分で呼べる)。フォルダは `AssetLoaders` → `Presentation` (ローダー以外も入るため)。EditMode 79/79 (バッチモード実測・leaked objects 0。`-runTests` と `-quit` は併用不可で results.xml が生成されない点も判明)。
 * **Fix**: `RegisterNovelKit` のルビ辞書読み込みでデッドロックしていた問題を修正。`async UniTask` メソッド (`RubyDictionary.LoadFromAsync`) を `GetAwaiter().GetResult()` で同期待ちしていたが、PlayerLoop が停止している `Configure`/`Awake` では状態機械の再開契機が来ず永久に待つ（Resources ローダー自体が同期完了することは根拠にならない: 待つのはローダーではなく async メソッドの完了通知）。`ResourcesTextAssetLoader` に同期 API `LoadText` を追加し、DI ヘルパーはそれを使って `RubyDictionary.Load` へ直接流す形に変更。`LoadFromAsync` の doc に PlayerLoop 停止中の同期待ち禁止を明記。実測: 修正前は Play Mode で `Time.frameCount` が 1 のまま固定しエディタが応答停止、修正後は frameCount が正常進行 (30666) し Configure も frame 0 で完走。
 
 ## 2026-07-29

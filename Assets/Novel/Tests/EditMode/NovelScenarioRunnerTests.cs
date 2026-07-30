@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using Novel.Assets;
 using MRubyCS;
 using MRubyCS.Serializer;
 using Novel.Runtime;
@@ -73,12 +74,25 @@ namespace Novel.Tests
         }
 
         // image / hide_image が ICenterImageView へ届くかを記録する fake
+        private sealed class KeyNamedSpriteLoader : ISpriteLoader
+        {
+            public UniTask<UnityEngine.Sprite?> LoadAsync(string key, CancellationToken ct)
+            {
+                var sprite = UnityEngine.Sprite.Create(new UnityEngine.Texture2D(1, 1),
+                    new UnityEngine.Rect(0, 0, 1, 1), UnityEngine.Vector2.zero);
+                sprite.name = key;
+                return UniTask.FromResult<UnityEngine.Sprite?>(sprite);
+            }
+
+            public void ReleaseAll() { }
+        }
+
         private sealed class FakeCenterImageView : ICenterImageView
         {
             public readonly List<string> Calls = new();
-            public UniTask ShowAsync(string imageKey, CancellationToken ct)
+            public UniTask ShowAsync(UnityEngine.Sprite? sprite, CancellationToken ct)
             {
-                Calls.Add("show:" + imageKey);
+                Calls.Add("show:" + sprite?.name);
                 return UniTask.CompletedTask;
             }
             public UniTask HideAsync(CancellationToken ct)
@@ -268,7 +282,8 @@ namespace Novel.Tests
                 new IdentityTextResolver(),
                 new EmptyCatalog(),
                 centerImage: centerImage,
-                preambleSources: new IPreambleSource[] { new PreambleSource(new ResourcesTextAssetLoader()) });
+                preambleSources: new IPreambleSource[] { new PreambleSource(new ResourcesTextAssetLoader()) },
+                sprites: new KeyNamedSpriteLoader());
 
             var result = await runner.PlayAsync("test_center_image", CancellationToken.None);
 
@@ -288,7 +303,8 @@ namespace Novel.Tests
                 new IdentityTextResolver(),
                 new EmptyCatalog(),
                 centerImage: centerImage,
-                preambleSources: new IPreambleSource[] { new PreambleSource(new ResourcesTextAssetLoader()) });
+                preambleSources: new IPreambleSource[] { new PreambleSource(new ResourcesTextAssetLoader()) },
+                sprites: new KeyNamedSpriteLoader());
 
             var result = await runner.PlayAsync("test_center_image_empty", CancellationToken.None);
 

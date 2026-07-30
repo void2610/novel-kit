@@ -7,11 +7,13 @@ namespace Novel.Assets
 {
     /// <summary>
     /// 論理キーからスプライトを解決するロード戦略の抽象。
-    /// 立ち絵・背景・イベント CG を表示する View 実装 (game 所有) が使う。
+    /// 呼び出すのは runtime (<c>NovelCommandHandler</c>) で、View には解決済みスプライトが渡る。
+    /// game は Resources / Addressables 等の実装を選んで DI 登録するだけでよい。
     ///
     /// テキストと違い Sprite は表示中ずっと参照が生き続ける必要があるため、
     /// <c>ITextAssetLoader</c> のような「中身を抽出して即解放」はできない。
-    /// ロード済みハンドルの寿命は実装が持ち、区切り (シナリオ終了など) で <see cref="ReleaseAll"/> を呼んで解放する。
+    /// ロード済みハンドルの寿命は実装が持つ。<c>NovelScenarioRunner.Dispose()</c> が <see cref="ReleaseAll"/> を呼ぶため
+    /// 放置してもセッション終了時には解放されるが、シナリオ単位で解放したい game は自分で呼んでもよい。
     /// </summary>
     public interface ISpriteLoader
     {

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using Novel.Assets;
 using Novel.Commands;
 using UnityEngine;
 using VitalRouter;
@@ -24,12 +25,14 @@ namespace Novel.Runtime
         private readonly IAudioChannel? _audio;
         private readonly IWorldEffectSink? _worldEffectSink;
         private readonly IBacklog? _backlog;
+        private readonly ISpriteLoader? _sprites;
         private readonly NovelPlaybackProgress _progress;
 
         public NovelCommandHandler(INovelView view, IStateStore state, ITextResolver text, ICharacterCatalog catalog,
             IPortraitDirector? portraitDirector = null, IBackgroundView? background = null, IAudioChannel? audio = null,
             IWorldEffectSink? worldEffectSink = null, IBacklog? backlog = null,
-            ICenterImageView? centerImage = null, NovelPlaybackProgress? progress = null)
+            ICenterImageView? centerImage = null, NovelPlaybackProgress? progress = null,
+            ISpriteLoader? sprites = null)
         {
             _view = view;
             _state = state;
@@ -41,6 +44,7 @@ namespace Novel.Runtime
             _audio = audio;
             _worldEffectSink = worldEffectSink;
             _backlog = backlog;
+            _sprites = sprites;
             _progress = progress ?? new NovelPlaybackProgress();
         }
 
@@ -51,7 +55,7 @@ namespace Novel.Runtime
 
             // PortraitKey が同時指定されていればここで切替（display_as で表示名を変えつつ、同一 speaker_id の立ち絵を 1 行で指定する糖衣）
             if (!string.IsNullOrEmpty(cmd.PortraitKey) && _portraitDirector != null)
-                await _portraitDirector.ShowAsync(cmd.SpeakerId, cmd.PortraitKey, ct);
+                await _portraitDirector.ShowAsync(cmd.SpeakerId, await LoadSpriteAsync(cmd.PortraitKey, ct), ct);
 
             var resolved = _text.Resolve(cmd.Text);
             var displayName = ResolveDisplayName(cmd);
@@ -88,7 +92,7 @@ namespace Novel.Runtime
 
         public async UniTask On(PortraitCommand cmd, CancellationToken ct)
         {
-            if (_portraitDirector != null) await _portraitDirector.ShowAsync(cmd.Character, cmd.PortraitKey, ct);
+            if (_portraitDirector != null) await _portraitDirector.ShowAsync(cmd.Character, await LoadSpriteAsync(cmd.PortraitKey, ct), ct);
         }
 
         // stage 宣言: layout と cast (キャラ → slot index) を Director に適用する。
@@ -138,19 +142,19 @@ namespace Novel.Runtime
 
         public async UniTask On(BackgroundCommand cmd, CancellationToken ct)
         {
-            if (_background != null) await _background.ShowAsync(cmd.BackgroundKey, ct);
+            if (_background != null) await _background.ShowAsync(await LoadSpriteAsync(cmd.BackgroundKey, ct), ct);
         }
 
         public async UniTask On(StillCommand cmd, CancellationToken ct)
         {
-            if (_background != null) await _background.ShowStillAsync(cmd.StillKey, ct);
+            if (_background != null) await _background.ShowStillAsync(await LoadSpriteAsync(cmd.StillKey, ct), ct);
         }
 
         public async UniTask On(CenterImageCommand cmd, CancellationToken ct)
         {
             // 空キー (image(nil) 等) は無効。消去は hide_image の責務なので no-op にする
             if (_centerImage != null && !string.IsNullOrEmpty(cmd.ImageKey))
-                await _centerImage.ShowAsync(cmd.ImageKey, ct);
+                await _centerImage.ShowAsync(await LoadSpriteAsync(cmd.ImageKey, ct), ct);
         }
 
         public async UniTask On(HideCenterImageCommand cmd, CancellationToken ct)
@@ -198,6 +202,10 @@ namespace Novel.Runtime
         public void On(ClearMessageCommand cmd) => _view.ClearMessage();
 
         // command-schema の解決 3 規則: 空=ナレーション / カタログ有=表示名（DisplayAs で上書き）/ 未登録=id をそのまま
+        // ローダー未供給なら null 渡しで View 側の「ロード失敗」経路に合流させる (キー解決はここに閉じる)
+        private UniTask<UnityEngine.Sprite?> LoadSpriteAsync(string key, CancellationToken ct)
+            => _sprites != null ? _sprites.LoadAsync(key, ct) : UniTask.FromResult<UnityEngine.Sprite?>(null);
+
         private string? ResolveDisplayName(SayCommand cmd)
         {
             if (string.IsNullOrEmpty(cmd.SpeakerId)) return null;

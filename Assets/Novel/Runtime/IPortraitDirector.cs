@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using Novel.Assets;
 
 namespace Novel.Runtime
 {
@@ -25,7 +26,7 @@ namespace Novel.Runtime
         bool IsStaged(string character);
 
         // 指定キャラを所定の slot に表示する。 cast にいなければ slot 0 にフォールバックして警告。
-        UniTask ShowAsync(string character, string portraitKey, CancellationToken ct);
+        UniTask ShowAsync(string character, UnityEngine.Sprite? sprite, CancellationToken ct);
 
         // 指定キャラを退場させる (cast から外し、 該当 slot を非表示に)。
         UniTask ExitAsync(string character, CancellationToken ct);

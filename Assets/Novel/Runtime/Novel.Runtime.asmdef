@@ -2,6 +2,7 @@
     "name": "Novel.Runtime",
     "rootNamespace": "Novel.Runtime",
     "references": [
+        "Novel.Assets",
         "Novel.Commands",
         "UniTask",
         "VitalRouter.Unity"
