@@ -7,7 +7,7 @@ using Novel.Assets;
 namespace Novel.Runtime
 {
     // 場面 (stage) の cast (キャラ → slot index) を保持し、 シナリオ書き手から「立ち絵を出す」コマンドを受けて
-    // 該当 slot に位置解決する司令塔。 <see cref="IPortraitView"/> の上位で、 シナリオ書き手は slot index を意識しない。
+    // 該当 slot に位置解決する司令塔。 <see cref="IPortraitChannel"/> の上位で、 シナリオ書き手は slot index を意識しない。
     //
     // 解決順 (Show 時):
     //   1. 直近の Stage 宣言で cast に含まれる → そのスロット index

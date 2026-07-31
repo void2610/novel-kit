@@ -10,21 +10,21 @@ namespace Novel.View
     // dev ビルド（Editor / Development Build）で「コマンドは来たが対応 View が未供給」を一度だけ警告する no-op 既定。
     // dsl-vocabulary の no-op（未配線でも .rb は常に動く）を保ちつつ、無言ドロップによる「なぜ出ないのか分からない」
     // デバッグ地獄を避ける（埋め込み用途での配線忘れに気づける）。本番ビルドでは黙る。
-    public sealed class WarningPortraitView : IPortraitView
+    public sealed class WarningPortraitChannel : IPortraitChannel
     {
         private bool _warned;
         public UniTask SwitchLayoutAsync(PortraitLayout layout, CancellationToken ct) { Warn(); return UniTask.CompletedTask; }
         public UniTask ShowAsync(int slotIndex, string character, ResolvedSprite portrait, CancellationToken ct) { Warn(); return UniTask.CompletedTask; }
         public UniTask HideAsync(int slotIndex, CancellationToken ct) { Warn(); return UniTask.CompletedTask; }
-        private void Warn() => FacetWarning.Once(ref _warned, "portrait/stage", "IPortraitView");
+        private void Warn() => FacetWarning.Once(ref _warned, "portrait/stage", "IPortraitChannel");
     }
 
-    public sealed class WarningBackgroundView : IBackgroundView
+    public sealed class WarningBackgroundChannel : IBackgroundChannel
     {
         private bool _warned;
         public UniTask ShowAsync(ResolvedSprite background, CancellationToken ct) { Warn(); return UniTask.CompletedTask; }
         public UniTask ShowStillAsync(ResolvedSprite still, CancellationToken ct) { Warn(); return UniTask.CompletedTask; }
-        private void Warn() => FacetWarning.Once(ref _warned, "bg/still", "IBackgroundView");
+        private void Warn() => FacetWarning.Once(ref _warned, "bg/still", "IBackgroundChannel");
     }
 
     public sealed class WarningAudioChannel : IAudioChannel

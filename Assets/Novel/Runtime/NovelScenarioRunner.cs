@@ -34,13 +34,13 @@ namespace Novel.Runtime
 
         public NovelScenarioRunner(IScenarioSource source, Router router,
             INovelView view, ITextResolver text, ICharacterCatalog catalog,
-            IPortraitDirector? portraitDirector = null, IBackgroundView? background = null, IAudioChannel? audio = null,
+            IPortraitDirector? portraitDirector = null, IBackgroundChannel? background = null, IAudioChannel? audio = null,
             IWorldEffectSink? worldEffectSink = null,
             INovelErrorHandler? errorHandler = null,
             IEnumerable<IPreambleSource>? preambleSources = null,
             IEnumerable<INovelCommandModule>? commandModules = null,
             IBacklog? backlog = null,
-            ICenterImageView? centerImage = null, ISpriteLoader? sprites = null, IRubyDictionary? ruby = null)
+            ICenterImageChannel? centerImage = null, ISpriteLoader? sprites = null, IRubyDictionary? ruby = null)
         {
             _source = source;
             _router = router;

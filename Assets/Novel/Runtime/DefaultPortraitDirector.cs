@@ -8,18 +8,18 @@ using UnityEngine;
 namespace Novel.Runtime
 {
     // <see cref="IPortraitDirector"/> の既定実装。 cast マップ (キャラ id → slot index) と現在の layout を保持し、
-    // PortraitCommand の解決と StageCommand 適用時の差分処理 (退場 / 残留 / slot 変更 / 入場) を <see cref="IPortraitView"/> に委ねる。
+    // PortraitCommand の解決と StageCommand 適用時の差分処理 (退場 / 残留 / slot 変更 / 入場) を <see cref="IPortraitChannel"/> に委ねる。
     // 入退場アニメは View 実装側の責務 (Hide/Show の中でフェード等を行う想定)。
     public sealed class DefaultPortraitDirector : IPortraitDirector
     {
-        private readonly IPortraitView _view;
+        private readonly IPortraitChannel _view;
         private readonly Dictionary<string, int> _cast = new();
         // 表示中の立ち絵を slot 込みで記録し、 重複表示の抑止と Stage 切替時の再表示に使う
         private readonly Dictionary<string, (int Slot, ResolvedSprite Portrait)> _shown = new();
         private PortraitLayout _layout;
         private bool _layoutInitialized;
 
-        public DefaultPortraitDirector(IPortraitView view)
+        public DefaultPortraitDirector(IPortraitChannel view)
         {
             _view = view;
         }

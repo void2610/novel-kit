@@ -20,8 +20,8 @@ namespace Novel.Runtime
         private readonly ITextResolver _text;
         private readonly ICharacterCatalog _catalog;
         private readonly IPortraitDirector? _portraitDirector;
-        private readonly IBackgroundView? _background;
-        private readonly ICenterImageView? _centerImage;
+        private readonly IBackgroundChannel? _background;
+        private readonly ICenterImageChannel? _centerImage;
         private readonly IAudioChannel? _audio;
         private readonly IWorldEffectSink? _worldEffectSink;
         private readonly IBacklog? _backlog;
@@ -30,9 +30,9 @@ namespace Novel.Runtime
         private readonly NovelPlaybackProgress _progress;
 
         public NovelCommandHandler(INovelView view, IStateStore state, ITextResolver text, ICharacterCatalog catalog,
-            IPortraitDirector? portraitDirector = null, IBackgroundView? background = null, IAudioChannel? audio = null,
+            IPortraitDirector? portraitDirector = null, IBackgroundChannel? background = null, IAudioChannel? audio = null,
             IWorldEffectSink? worldEffectSink = null, IBacklog? backlog = null,
-            ICenterImageView? centerImage = null, NovelPlaybackProgress? progress = null,
+            ICenterImageChannel? centerImage = null, NovelPlaybackProgress? progress = null,
             ISpriteLoader? sprites = null, IRubyDictionary? ruby = null)
         {
             _view = view;

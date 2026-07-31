@@ -73,7 +73,7 @@ namespace Novel.Tests
             public void ClearMessage() { }
         }
 
-        // image / hide_image が ICenterImageView へ届くかを記録する fake
+        // image / hide_image が ICenterImageChannel へ届くかを記録する fake
         private sealed class KeyNamedSpriteLoader : ISpriteLoader
         {
             public UniTask<UnityEngine.Sprite?> LoadAsync(string key, CancellationToken ct)
@@ -87,7 +87,7 @@ namespace Novel.Tests
             public void ReleaseAll() { }
         }
 
-        private sealed class FakeCenterImageView : ICenterImageView
+        private sealed class FakeCenterImageView : ICenterImageChannel
         {
             public readonly List<string> Calls = new();
             public UniTask ShowAsync(ResolvedSprite image, CancellationToken ct)
@@ -297,7 +297,7 @@ namespace Novel.Tests
             CollectionAssert.AreEqual(new[] { "echoed" }, module.Received);   // 独自 cmd がハンドラへ届いた
         });
 
-        // image / hide_image が ICenterImageView へ順に届くことを検証（補足画像の中央表示）
+        // image / hide_image が ICenterImageChannel へ順に届くことを検証（補足画像の中央表示）
         [UnityTest]
         public IEnumerator image_と_hide_image_が_CenterImageView_へ届く() => UniTask.ToCoroutine(async () =>
         {

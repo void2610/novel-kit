@@ -28,7 +28,7 @@ namespace Novel.Tests
             public void ReleaseAll() => ReleaseAllCount++;
         }
 
-        private sealed class RecordingBackgroundView : IBackgroundView
+        private sealed class RecordingBackgroundView : IBackgroundChannel
         {
             public readonly List<ResolvedSprite> Backgrounds = new();
             public readonly List<ResolvedSprite> Stills = new();
@@ -95,7 +95,7 @@ namespace Novel.Tests
             }
         }
 
-        private static NovelCommandHandler MakeHandler(ISpriteLoader loader, IBackgroundView background) =>
+        private static NovelCommandHandler MakeHandler(ISpriteLoader loader, IBackgroundChannel background) =>
             new(new StubView(), new StubStateStore(), new IdentityTextResolver(), new StubCatalog(),
                 background: background, sprites: loader);
 

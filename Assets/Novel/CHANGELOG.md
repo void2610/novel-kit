@@ -6,6 +6,13 @@
 ## [Unreleased]
 
 ### Changed
+- **破壊的**: スプライトを扱うファセットを `IPortraitView` / `IBackgroundView` / `ICenterImageView` から
+  `IPortraitChannel` / `IBackgroundChannel` / `ICenterImageChannel` へ改名 (`Null*` / `Warning*` 実装も同様)。
+  これらは「runtime が演出を game へ委譲する口」であり、実装は MonoBehaviour の View とは限らない。
+  状態の保持やセーブ連携を伴う game では Presenter が実装するのが自然で、"View" という名前が実態と食い違っていた。
+  既にある `IAudioChannel` / `IWorldEffectSink` と語彙を揃える。
+  なお `INovelView` は同梱の `NovelMessageView` が実装しており View が実装するのが実態のため据え置く。
+  移行: 型名の置換のみ。メンバーと意味論は変わらない。
 - `ICharacterCatalog` の `DefaultPortraitKey` を runtime が使うようになった。say で `portrait` を明示しなければ、
   stage cast 在籍の話者の既定立ち絵が自動で出る (cast 外・カタログ未登録・ナレーションでは出ない)。
   これまで宣言できるだけで適用は game 任せだったため、各 game が `INovelView` 実装から `IPortraitDirector` を
@@ -20,7 +27,7 @@
   親文字と連なって残る。ルビ適用前に算出した平文を runtime が渡すことで、View 側の平文検査を成立させる。
   移行: View が `NovelTagLexer.ToPlainText(line.Text)` していた箇所を `line.PlainText` に置き換える。
 - **破壊的**: スプライトを扱うファセットの引数を `Sprite?` から `ResolvedSprite` (論理キー + 解決済みスプライト) へ変更。
-  `IPortraitView` / `IBackgroundView` / `ICenterImageView` / `IPortraitDirector` が対象。ロードは引き続き runtime が行い
+  `IPortraitChannel` / `IBackgroundChannel` / `ICenterImageChannel` / `IPortraitDirector` が対象。ロードは引き続き runtime が行い
   View に解決の裁量はないが、未解決と消去の区別・同一キー再表示の no-op 判定・game 側の状態記録 (セーブからの背景復元、
   イベント CG の解放) はキーを要するため、キーを併せて渡す。
   移行: `ShowAsync(Sprite? sprite, ct)` を `ShowAsync(ResolvedSprite x, ct)` にして `x.Sprite` / `x.Key` を使う。
@@ -31,7 +38,7 @@
   コンストラクタで明示指定する。`ResourcesScenarioSource` / `ResourcesPreambleSource` / `ResourcesRubyDictionary` は削除。
   移行: `new ScenarioSource(new ResourcesTextAssetLoader(), "Scenarios/")`。
 - **破壊的**: スプライトのロードを追加 (`ISpriteLoader`) したうえで、解決を runtime 側へ集約。
-  `IPortraitView` / `IBackgroundView` / `ICenterImageView` / `IPortraitDirector` の引数を論理キー (`string`) から
+  `IPortraitChannel` / `IBackgroundChannel` / `ICenterImageChannel` / `IPortraitDirector` の引数を論理キー (`string`) から
   解決済み `Sprite?` へ変更した。View は「渡された絵を表示する」だけになり、キー解決は `NovelCommandHandler` が行う。
   これらのファセットと `PortraitLayout` は名前空間が `Novel.Runtime` → `Novel.Assets` に移動。
   移行: View の `ShowAsync(string key, ct)` を `ShowAsync(Sprite? sprite, ct)` に変え、内部のロード処理を削除する。

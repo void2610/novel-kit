@@ -10,7 +10,7 @@ namespace Novel.Assets
     /// ロードは runtime (<c>NovelCommandHandler</c>) が済ませるため View に解決の裁量はないが、
     /// キーは表示以外の用途で必要になる。ロード失敗と消去の区別、同一キー再表示の no-op 判定、
     /// game 側の状態記録 (セーブからの背景復元、イベント CG の解放) はいずれもキーを要求する。
-    /// <see cref="IPortraitView"/> が character を表示側のヒントとして受けているのと同じ位置づけ。
+    /// <see cref="IPortraitChannel"/> が character を表示側のヒントとして受けているのと同じ位置づけ。
     /// </summary>
     public readonly struct ResolvedSprite
     {

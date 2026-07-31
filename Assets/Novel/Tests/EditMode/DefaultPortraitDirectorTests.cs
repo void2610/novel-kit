@@ -13,7 +13,7 @@ namespace Novel.Tests
     public sealed class DefaultPortraitDirectorTests
     {
         // View 呼び出しを記録するフェイク。 順序保持で「先に旧 cast 退場 → SwitchLayout → 新 cast 表示」を検証できる
-        private sealed class RecordingPortraitView : IPortraitView
+        private sealed class RecordingPortraitView : IPortraitChannel
         {
             public readonly List<string> Calls = new();
             public UniTask SwitchLayoutAsync(PortraitLayout layout, CancellationToken ct)
