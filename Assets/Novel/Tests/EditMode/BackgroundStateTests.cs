@@ -135,14 +135,44 @@ namespace Novel.Tests
         }
 
         [Test]
-        public void スナップショットは背景キーを往復させる()
+        public void スナップショットの背景キーは既定値でも空文字になる()
         {
-            var snapshot = new NovelStateSnapshot(new Dictionary<string, int>(), new[] { "id" }, "room");
-
-            Assert.That(snapshot.BackgroundKey, Is.EqualTo("room"));
-            // 既定値でも null にはしない (game が空判定だけで扱えるように)
+            // game が空判定だけで扱えるように null を出さない
+            Assert.That(new NovelStateSnapshot(new Dictionary<string, int>(), new[] { "id" }, "room").BackgroundKey,
+                Is.EqualTo("room"));
             Assert.That(new NovelStateSnapshot(new Dictionary<string, int>(), new string[0]).BackgroundKey, Is.Empty);
             Assert.That(default(NovelStateSnapshot).BackgroundKey, Is.Empty);
+        }
+
+        [Test]
+        public void 直列化を通しても背景キーが往復する()
+        {
+            // 同梱の直列化が新フィールドに追随しないと、game が自前追跡を捨てた後に無言で背景が消える
+            var snapshot = new NovelStateSnapshot(new Dictionary<string, int> { ["flag"] = 1 }, new[] { "id" }, "room");
+
+            var restored = NovelSaveData.From(snapshot).ToSnapshot();
+
+            Assert.That(restored.BackgroundKey, Is.EqualTo("room"));
+        }
+
+        [Test]
+        public void 文字列直列化を通しても背景キーが往復する()
+        {
+            var snapshot = new NovelStateSnapshot(new Dictionary<string, int>(), new string[0], "room");
+
+            var json = NovelSaveSerializer.Serialize(snapshot);
+            NovelSaveSerializer.TryDeserialize(json, out var restored);
+
+            Assert.That(restored.BackgroundKey, Is.EqualTo("room"));
+        }
+
+        [Test]
+        public void 背景キーを持たない旧セーブは空文字として読める()
+        {
+            // JsonUtility は欠けたフィールドを既定値にするため FormatVersion の bump は要らない
+            NovelSaveSerializer.TryDeserialize("{\"version\":1,\"values\":[],\"read\":[]}", out var restored);
+
+            Assert.That(restored.BackgroundKey, Is.Empty);
         }
     }
 }

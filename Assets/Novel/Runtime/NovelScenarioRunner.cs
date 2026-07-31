@@ -123,19 +123,19 @@ namespace Novel.Runtime
         }
 
         // 復元したキーを View へ出し直す。ノベルパートを抜けた先でロードすると bg が走らないため、
-        // game はロード直後にこれを呼んで盤面を戻す
+        // game はロード直後にこれを呼んで盤面を戻す。
+        // 保持が空 (セーブ時に背景が無かった) なら消去するので、ロード前の絵が残らない
         public UniTask RestoreBackgroundAsync(CancellationToken ct) => ShowBackgroundAsync(_presentation.BackgroundKey, ct);
 
         // bg コマンドを経ずに背景を差し替える (非ノベルパートでの演出・デバッグ発火)。
-        // 保持も更新するので、この経路で変えた背景もセーブに乗る
+        // 挙動は bg コマンドと揃える: 空キーは消去、View 未供給でも保持は更新する
         public async UniTask ShowBackgroundAsync(string key, CancellationToken ct)
         {
-            if (_background == null || string.IsNullOrEmpty(key)) return;
-            var sprite = _sprites != null ? await _sprites.LoadAsync(key, ct) : null;
+            var sprite = string.IsNullOrEmpty(key) || _sprites == null ? null : await _sprites.LoadAsync(key, ct);
             var background = new ResolvedSprite(key, sprite);
             // ロード失敗は「出せなかった」ので記録しない (復元時に出ない絵を指し続けないように)
             _presentation.SetBackground(background.IsLoaded ? background.Key : "");
-            await _background.ShowAsync(background, ct);
+            if (_background != null) await _background.ShowAsync(background, ct);
         }
 
         // 前再生を中断し専用の完了通知(UTCS)を待ってから直列実行する（同一 UniTask の二重 await 回避）

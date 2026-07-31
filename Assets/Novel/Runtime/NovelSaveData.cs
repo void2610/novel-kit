@@ -17,6 +17,8 @@ namespace Novel.Runtime
         public int version = NovelSaveSerializer.FormatVersion;
         public List<NovelSaveValue> values = new();
         public List<string> read = new();
+        // 旧セーブには無いフィールドだが、JsonUtility は欠けたフィールドを既定値にするため version の bump は不要
+        public string backgroundKey = "";
 
         // 出力は決定的(キー/既読 id を序数ソート)にして diff/テストを安定させる。
         public static NovelSaveData From(NovelStateSnapshot snapshot)
@@ -30,6 +32,7 @@ namespace Novel.Runtime
 
             data.read = new List<string>(snapshot.ReadTextIds);
             data.read.Sort(StringComparer.Ordinal);
+            data.backgroundKey = snapshot.BackgroundKey;
             return data;
         }
 
@@ -48,7 +51,7 @@ namespace Novel.Runtime
                     if (!string.IsNullOrEmpty(id))
                         readIds.Add(id);
 
-            return new NovelStateSnapshot(dict, readIds);
+            return new NovelStateSnapshot(dict, readIds, backgroundKey ?? "");
         }
     }
 
