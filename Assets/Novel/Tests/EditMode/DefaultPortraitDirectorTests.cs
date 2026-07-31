@@ -176,6 +176,26 @@ namespace Novel.Tests
         });
 
         [UnityTest]
+        public IEnumerator stage再宣言で退場したキャラは同じ立ち絵で戻ると再表示される() => UniTask.ToCoroutine(async () =>
+        {
+            var view = new RecordingPortraitView();
+            var director = new DefaultPortraitDirector(view);
+            var portrait = NamedSprite("smile");
+
+            await director.StageAsync(PortraitLayout.Single, new[] { "taylor" }, CancellationToken.None);
+            await director.ShowAsync("taylor", portrait, CancellationToken.None);
+
+            // stage 再宣言で退場 → 同じ slot へ再登場
+            await director.StageAsync(PortraitLayout.Single, new[] { "kii" }, CancellationToken.None);
+            await director.StageAsync(PortraitLayout.Single, new[] { "taylor" }, CancellationToken.None);
+            view.Calls.Clear();
+
+            await director.ShowAsync("taylor", portrait, CancellationToken.None);
+
+            Assert.That(view.Calls, Is.EqualTo(new[] { "show:0:taylor:smile" }));
+        });
+
+        [UnityTest]
         public IEnumerator 別キーへの差し替えは再表示される() => UniTask.ToCoroutine(async () =>
         {
             var view = new RecordingPortraitView();

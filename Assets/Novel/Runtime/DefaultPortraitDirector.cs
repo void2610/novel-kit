@@ -46,8 +46,9 @@ namespace Novel.Runtime
             {
                 if (!cast.TryGetValue(oldEntry.Key, out var newSlot))
                 {
-                    // 退場
+                    // 退場。 記録も落とさないと、 同じ slot に同じ立ち絵で戻ったとき重複判定に潰されて二度と出せない
                     await _view.HideAsync(oldEntry.Value, ct);
+                    _shown.Remove(oldEntry.Key);
                 }
                 else if (newSlot != oldEntry.Value)
                 {
