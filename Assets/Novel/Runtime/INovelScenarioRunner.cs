@@ -26,5 +26,8 @@ namespace Novel.Runtime
 
         // 復元した背景を View へ出し直す。ノベルパートを抜けた先でのロードは bg が走らないため game が呼ぶ
         UniTask RestoreBackgroundAsync(CancellationToken ct);
+
+        // bg コマンドを経ずに背景を差し替える。保持も更新するのでセーブに乗る
+        UniTask ShowBackgroundAsync(string key, CancellationToken ct);
     }
 }
