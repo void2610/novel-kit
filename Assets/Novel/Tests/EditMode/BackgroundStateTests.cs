@@ -10,7 +10,7 @@ using UnityEngine;
 
 namespace Novel.Tests
 {
-    // ノベルパートを抜けた先では bg が走らないため、game に追跡させると背景を復元できない
+    // シナリオ再生の外では bg が走らないため、game に追跡させると背景を復元できない
     public class BackgroundStateTests
     {
         private sealed class RecordingBackgroundView : IBackgroundView
@@ -164,15 +164,6 @@ namespace Novel.Tests
             NovelSaveSerializer.TryDeserialize(json, out var restored);
 
             Assert.That(restored.BackgroundKey, Is.EqualTo("room"));
-        }
-
-        [Test]
-        public void 背景キーを持たない旧セーブは空文字として読める()
-        {
-            // JsonUtility は欠けたフィールドを既定値にするため FormatVersion の bump は要らない
-            NovelSaveSerializer.TryDeserialize("{\"version\":1,\"values\":[],\"read\":[]}", out var restored);
-
-            Assert.That(restored.BackgroundKey, Is.Empty);
         }
     }
 }

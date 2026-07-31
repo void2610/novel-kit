@@ -17,7 +17,6 @@ namespace Novel.Runtime
         public int version = NovelSaveSerializer.FormatVersion;
         public List<NovelSaveValue> values = new();
         public List<string> read = new();
-        // 旧セーブには無いフィールドだが、JsonUtility は欠けたフィールドを既定値にするため version の bump は不要
         public string backgroundKey = "";
 
         // 出力は決定的(キー/既読 id を序数ソート)にして diff/テストを安定させる。

@@ -122,7 +122,7 @@ namespace Novel.Runtime
             _presentation.SetBackground(snapshot.BackgroundKey);
         }
 
-        // 復元したキーを View へ出し直す。ノベルパートを抜けた先でロードすると bg が走らないため、
+        // 復元したキーを View へ出し直す。シナリオ再生の外でロードすると bg が走らないため、
         // game はロード直後にこれを呼んで盤面を戻す。
         // 保持が空 (セーブ時に背景が無かった) なら消去するので、ロード前の絵が残らない
         public UniTask RestoreBackgroundAsync(CancellationToken ct) => ShowBackgroundAsync(_presentation.BackgroundKey, ct);

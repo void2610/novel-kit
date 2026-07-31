@@ -10,7 +10,7 @@ namespace Novel.Runtime
         public IReadOnlyDictionary<string, int> Values { get; }
         public IReadOnlyCollection<string> ReadTextIds { get; }
 
-        // 実表示中の背景キー。ノベルパートを抜けた先では bg が走らないため、再実行では戻せない
+        // 実表示中の背景キー。シナリオ再生の外では bg が走らないため、再実行では戻せない
         public string BackgroundKey => _backgroundKey ?? "";
         private readonly string? _backgroundKey;
 

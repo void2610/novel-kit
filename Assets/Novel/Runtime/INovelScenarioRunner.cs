@@ -24,7 +24,7 @@ namespace Novel.Runtime
         // （PlayAsync 実行中の呼び出しは想定しない）。
         void RestoreState(NovelStateSnapshot snapshot);
 
-        // 復元した背景を View へ出し直す。ノベルパートを抜けた先でのロードは bg が走らないため game が呼ぶ。
+        // 復元した背景を View へ出し直す。シナリオ再生の外でのロードは bg が走らないため game が呼ぶ。
         // セーブ時に背景が無ければ消去する (ロード前の絵が残らない)
         UniTask RestoreBackgroundAsync(CancellationToken ct);
 
