@@ -23,5 +23,8 @@ namespace Novel.Runtime
         // 保存済みスナップショットを復元する。continue 時など、次の PlayAsync より前に呼ぶ
         // （PlayAsync 実行中の呼び出しは想定しない）。
         void RestoreState(NovelStateSnapshot snapshot);
+
+        // 復元した背景を View へ出し直す。ノベルパートを抜けた先でのロードは bg が走らないため game が呼ぶ
+        UniTask RestoreBackgroundAsync(CancellationToken ct);
     }
 }

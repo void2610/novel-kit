@@ -6,6 +6,12 @@
 ## [Unreleased]
 
 ### Changed
+- **破壊的**: 実表示中の背景キーを runtime が保持し、`NovelStateSnapshot` に含めるようにした。
+  立ち絵やメッセージは途中復帰の早送りで再構築されるが、背景はノベルパートを抜けた先 (パズル画面等) で
+  bg が走らないため戻せない。キーを知っているのは runtime なのに追跡を game に強いており、
+  game 側に「キーを保持して記録する」層 (Presenter) を書かせる原因になっていた。
+  復元表示は `INovelScenarioRunner.RestoreBackgroundAsync` で行う。
+  移行: game 側の背景キー追跡とセーブ項目を捨て、snapshot 経由にする。ロード直後に `RestoreBackgroundAsync` を呼ぶ。
 - `ICharacterCatalog` の `DefaultPortraitKey` を runtime が使うようになった。say で `portrait` を明示しなければ、
   stage cast 在籍の話者の既定立ち絵が自動で出る (cast 外・カタログ未登録・ナレーションでは出ない)。
   これまで宣言できるだけで適用は game 任せだったため、各 game が `INovelView` 実装から `IPortraitDirector` を

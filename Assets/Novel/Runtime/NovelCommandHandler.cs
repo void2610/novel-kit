@@ -28,12 +28,13 @@ namespace Novel.Runtime
         private readonly ISpriteLoader? _sprites;
         private readonly IRubyDictionary? _ruby;
         private readonly NovelPlaybackProgress _progress;
+        private readonly NovelPresentationState _presentation;
 
         public NovelCommandHandler(INovelView view, IStateStore state, ITextResolver text, ICharacterCatalog catalog,
             IPortraitDirector? portraitDirector = null, IBackgroundView? background = null, IAudioChannel? audio = null,
             IWorldEffectSink? worldEffectSink = null, IBacklog? backlog = null,
             ICenterImageView? centerImage = null, NovelPlaybackProgress? progress = null,
-            ISpriteLoader? sprites = null, IRubyDictionary? ruby = null)
+            ISpriteLoader? sprites = null, IRubyDictionary? ruby = null, NovelPresentationState? presentation = null)
         {
             _view = view;
             _state = state;
@@ -48,6 +49,7 @@ namespace Novel.Runtime
             _sprites = sprites;
             _ruby = ruby;
             _progress = progress ?? new NovelPlaybackProgress();
+            _presentation = presentation ?? new NovelPresentationState();
         }
 
         public async UniTask On(SayCommand cmd, CancellationToken ct)
@@ -158,7 +160,10 @@ namespace Novel.Runtime
 
         public async UniTask On(BackgroundCommand cmd, CancellationToken ct)
         {
-            if (_background != null) await _background.ShowAsync(await LoadSpriteAsync(cmd.BackgroundKey, ct), ct);
+            var background = await LoadSpriteAsync(cmd.BackgroundKey, ct);
+            // ロード失敗は「出せなかった」ので記録しない (復元時に出ない絵を指し続けないように)
+            _presentation.SetBackground(background.IsLoaded ? background.Key : "");
+            if (_background != null) await _background.ShowAsync(background, ct);
         }
 
         public async UniTask On(StillCommand cmd, CancellationToken ct)

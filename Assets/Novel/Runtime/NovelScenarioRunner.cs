@@ -20,6 +20,8 @@ namespace Novel.Runtime
         private readonly INovelErrorHandler? _errorHandler;
         private readonly IReadOnlyList<IPreambleSource> _preambleSources;
         private readonly ISpriteLoader? _sprites;
+        private readonly IBackgroundView? _background;
+        private readonly NovelPresentationState _presentation = new();
         private readonly MRubyState _state;
         private readonly MRubyStateStore _store;
         private readonly NovelPlaybackProgress _progress = new();
@@ -77,8 +79,9 @@ namespace Novel.Runtime
             var handler = new NovelCommandHandler(view, _store, text, catalog,
                 portraitDirector: portraitDirector, background: background, audio: audio,
                 worldEffectSink: worldEffectSink, backlog: backlog, centerImage: centerImage,
-                progress: _progress, sprites: sprites, ruby: ruby);
+                progress: _progress, sprites: sprites, ruby: ruby, presentation: _presentation);
             _sprites = sprites;
+            _background = background;
             _subscriptions = new List<IDisposable> { handler.MapTo(_router) };
             // 独自コマンドハンドラを同じノベル専用 Router へ写像（購読は Dispose でまとめて解除）
             foreach (var module in modules) _subscriptions.Add(module.MapHandlers(_router));
@@ -106,10 +109,28 @@ namespace Novel.Runtime
 
         // 永続状態(フラグ/変数 + 既読)を引く。live state はセッション中 runner が保持しており、
         // game が保存したいタイミングで呼ぶ。直列化(NovelSaveData / NovelSaveSerializer)と保存は game 所有。
-        public NovelStateSnapshot CaptureState() => _store.Capture();
+        public NovelStateSnapshot CaptureState()
+        {
+            var state = _store.Capture();
+            return new NovelStateSnapshot(state.Values, state.ReadTextIds, _presentation.BackgroundKey);
+        }
 
         // 保存済みスナップショットを live state へ復元する。continue 時など次の PlayAsync より前に呼ぶ。
-        public void RestoreState(NovelStateSnapshot snapshot) => _store.Restore(snapshot);
+        public void RestoreState(NovelStateSnapshot snapshot)
+        {
+            _store.Restore(snapshot);
+            _presentation.SetBackground(snapshot.BackgroundKey);
+        }
+
+        // 復元したキーを View へ出し直す。ノベルパートを抜けた先でロードすると bg が走らないため、
+        // game はロード直後にこれを呼んで盤面を戻す
+        public async UniTask RestoreBackgroundAsync(CancellationToken ct)
+        {
+            var key = _presentation.BackgroundKey;
+            if (_background == null || string.IsNullOrEmpty(key)) return;
+            var sprite = _sprites != null ? await _sprites.LoadAsync(key, ct) : null;
+            await _background.ShowAsync(new ResolvedSprite(key, sprite), ct);
+        }
 
         // 前再生を中断し専用の完了通知(UTCS)を待ってから直列実行する（同一 UniTask の二重 await 回避）
         // 前 cts は中断→待機後にここで破棄する（後継が前任を破棄する規約: 破棄後 Cancel / 二重破棄を避ける）
