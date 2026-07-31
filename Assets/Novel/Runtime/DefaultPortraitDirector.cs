@@ -14,8 +14,8 @@ namespace Novel.Runtime
     {
         private readonly IPortraitView _view;
         private readonly Dictionary<string, int> _cast = new();
-        // Show のたびに最後に表示した立ち絵を記録し、 Stage 切替で slot 変更があった残留キャラの再表示に使う
-        private readonly Dictionary<string, ResolvedSprite> _lastPortrait = new();
+        // 表示中の立ち絵を slot 込みで記録し、 重複表示の抑止と Stage 切替時の再表示に使う
+        private readonly Dictionary<string, (int Slot, ResolvedSprite Portrait)> _shown = new();
         private PortraitLayout _layout;
         private bool _layoutInitialized;
 
@@ -46,14 +46,15 @@ namespace Novel.Runtime
             {
                 if (!cast.TryGetValue(oldEntry.Key, out var newSlot))
                 {
-                    // 退場
+                    // 退場。 記録も落とさないと、 同じ slot に同じ立ち絵で戻ったとき重複判定に潰されて二度と出せない
                     await _view.HideAsync(oldEntry.Value, ct);
+                    _shown.Remove(oldEntry.Key);
                 }
                 else if (newSlot != oldEntry.Value)
                 {
                     // slot 変更: 旧 slot を Hide してから後で新 slot で再 Show
                     await _view.HideAsync(oldEntry.Value, ct);
-                    if (_lastPortrait.TryGetValue(oldEntry.Key, out _))
+                    if (_shown.ContainsKey(oldEntry.Key))
                         toReshow.Add((oldEntry.Key, newSlot));
                 }
             }
@@ -64,15 +65,24 @@ namespace Novel.Runtime
             _layoutInitialized = true;
             await _view.SwitchLayoutAsync(layout, ct);
 
-            // SwitchLayout 後に新 slot で再 Show (slot 変更があった残留キャラのみ)
+            // SwitchLayout 後に新 slot で再 Show (slot 変更があった残留キャラのみ)。
+            // キーは同じでも slot が変わるため、 重複表示の抑止対象にしてはいけない
             foreach (var (character, slot) in toReshow)
             {
-                if (_lastPortrait.TryGetValue(character, out var last))
-                    await _view.ShowAsync(slot, character, last, ct);
+                if (!_shown.TryGetValue(character, out var last)) continue;
+                _shown[character] = (slot, last.Portrait);
+                await _view.ShowAsync(slot, character, last.Portrait, ct);
             }
         }
 
         public bool IsStaged(string character) => _cast.ContainsKey(character);
+
+        // 同一話者が連続して喋ると say ごとに呼ばれるため、 呼び出し側がスプライトのロード前に空振りを避けられるようにする。
+        // slot も見るのは、 キーが同じでも stage 切替で位置が変われば出し直しが要るため
+        public bool IsShowing(string character, string portraitKey) =>
+            _cast.TryGetValue(character, out var slot) &&
+            _shown.TryGetValue(character, out var current) &&
+            current.Slot == slot && current.Portrait.Key == portraitKey;
 
         public async UniTask ShowAsync(string character, ResolvedSprite portrait, CancellationToken ct)
         {
@@ -87,7 +97,10 @@ namespace Novel.Runtime
                 await _view.SwitchLayoutAsync(_layout, ct);
             }
             var slotIndex = ResolveSlot(character);
-            _lastPortrait[character] = portrait;
+            // 同じ slot に同じ立ち絵を出し直すと、 表示時にフェード等を行う View で演出が再発火する
+            if (_shown.TryGetValue(character, out var current) &&
+                current.Slot == slotIndex && current.Portrait.Key == portrait.Key) return;
+            _shown[character] = (slotIndex, portrait);
             await _view.ShowAsync(slotIndex, character, portrait, ct);
         }
 
@@ -95,7 +108,7 @@ namespace Novel.Runtime
         {
             if (!_cast.TryGetValue(character, out var slotIndex)) return;
             _cast.Remove(character);
-            _lastPortrait.Remove(character);
+            _shown.Remove(character);
             await _view.HideAsync(slotIndex, ct);
         }
 
@@ -103,7 +116,7 @@ namespace Novel.Runtime
         {
             foreach (var entry in _cast) await _view.HideAsync(entry.Value, ct);
             _cast.Clear();
-            _lastPortrait.Clear();
+            _shown.Clear();
             // layout はリセットせず、 次の Stage 呼び出しまで現状維持 (画面が突然真っさらにならないように)
         }
 

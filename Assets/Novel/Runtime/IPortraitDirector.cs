@@ -25,6 +25,9 @@ namespace Novel.Runtime
         // 指定キャラが現在の stage cast に含まれるか。 立ち絵の自動表示可否など、 cast 前提の判定に使う。
         bool IsStaged(string character);
 
+        // 指定キャラに指定キーの立ち絵を現在の slot で表示中か。 呼び出し側がロード前に空振りを避けるために使う。
+        bool IsShowing(string character, string portraitKey);
+
         // 指定キャラを所定の slot に表示する。 cast にいなければ slot 0 にフォールバックして警告。
         UniTask ShowAsync(string character, ResolvedSprite portrait, CancellationToken ct);
 

@@ -158,6 +158,59 @@ namespace Novel.Tests
         // 残留キャラの slot index が Stage 切替で変わった場合: 旧 slot を Hide してから SwitchLayout、 そのあと新 slot で再 Show する
         // (View 側に重複表示が残らないことの回帰防止)
         [UnityTest]
+        public IEnumerator 同一slotへの同一キー再表示はViewを呼ばない() => UniTask.ToCoroutine(async () =>
+        {
+            // say ごとに既定立ち絵が来るため、 表示時にフェードする View で演出が毎行再発火してしまう
+            var view = new RecordingPortraitView();
+            var director = new DefaultPortraitDirector(view);
+
+            await director.StageAsync(PortraitLayout.Single, new[] { "taylor" }, CancellationToken.None);
+            var portrait = NamedSprite("smile");
+            await director.ShowAsync("taylor", portrait, CancellationToken.None);
+            view.Calls.Clear();
+
+            await director.ShowAsync("taylor", portrait, CancellationToken.None);
+
+            Assert.That(view.Calls, Is.Empty);
+            Assert.IsTrue(director.IsShowing("taylor", portrait.Key));
+        });
+
+        [UnityTest]
+        public IEnumerator stage再宣言で退場したキャラは同じ立ち絵で戻ると再表示される() => UniTask.ToCoroutine(async () =>
+        {
+            var view = new RecordingPortraitView();
+            var director = new DefaultPortraitDirector(view);
+            var portrait = NamedSprite("smile");
+
+            await director.StageAsync(PortraitLayout.Single, new[] { "taylor" }, CancellationToken.None);
+            await director.ShowAsync("taylor", portrait, CancellationToken.None);
+
+            // stage 再宣言で退場 → 同じ slot へ再登場
+            await director.StageAsync(PortraitLayout.Single, new[] { "kii" }, CancellationToken.None);
+            await director.StageAsync(PortraitLayout.Single, new[] { "taylor" }, CancellationToken.None);
+            view.Calls.Clear();
+
+            await director.ShowAsync("taylor", portrait, CancellationToken.None);
+
+            Assert.That(view.Calls, Is.EqualTo(new[] { "show:0:taylor:smile" }));
+        });
+
+        [UnityTest]
+        public IEnumerator 別キーへの差し替えは再表示される() => UniTask.ToCoroutine(async () =>
+        {
+            var view = new RecordingPortraitView();
+            var director = new DefaultPortraitDirector(view);
+
+            await director.StageAsync(PortraitLayout.Single, new[] { "taylor" }, CancellationToken.None);
+            await director.ShowAsync("taylor", NamedSprite("smile"), CancellationToken.None);
+            view.Calls.Clear();
+
+            await director.ShowAsync("taylor", NamedSprite("angry"), CancellationToken.None);
+
+            Assert.That(view.Calls, Is.EqualTo(new[] { "show:0:taylor:angry" }));
+        });
+
+        [UnityTest]
         public IEnumerator Stage切替で残留キャラのslot変更時に旧slotHideと新slot再Showが走る() => UniTask.ToCoroutine(async () =>
         {
             var view = new RecordingPortraitView();
