@@ -14,7 +14,7 @@ namespace Novel.View
     {
         private bool _warned;
         public UniTask SwitchLayoutAsync(PortraitLayout layout, CancellationToken ct) { Warn(); return UniTask.CompletedTask; }
-        public UniTask ShowAsync(int slotIndex, string character, ResolvedSprite portrait, CancellationToken ct) { Warn(); return UniTask.CompletedTask; }
+        public UniTask ShowAsync(int slotIndex, ResolvedSprite portrait, CancellationToken ct) { Warn(); return UniTask.CompletedTask; }
         public UniTask HideAsync(int slotIndex, CancellationToken ct) { Warn(); return UniTask.CompletedTask; }
         private void Warn() => FacetWarning.Once(ref _warned, "portrait/stage", "IPortraitChannel");
     }
@@ -23,8 +23,14 @@ namespace Novel.View
     {
         private bool _warned;
         public UniTask ShowAsync(ResolvedSprite background, CancellationToken ct) { Warn(); return UniTask.CompletedTask; }
-        public UniTask ShowStillAsync(ResolvedSprite still, CancellationToken ct) { Warn(); return UniTask.CompletedTask; }
-        private void Warn() => FacetWarning.Once(ref _warned, "bg/still", "IBackgroundChannel");
+        private void Warn() => FacetWarning.Once(ref _warned, "bg", "IBackgroundChannel");
+    }
+
+    public sealed class WarningStillChannel : IStillChannel
+    {
+        private bool _warned;
+        public UniTask ShowAsync(ResolvedSprite still, CancellationToken ct) { Warn(); return UniTask.CompletedTask; }
+        private void Warn() => FacetWarning.Once(ref _warned, "still", "IStillChannel");
     }
 
     public sealed class WarningAudioChannel : IAudioChannel

@@ -26,6 +26,7 @@ namespace Novel.Integration
             // game 側が IPortraitChannel を差し替えれば Director も自動的に新 View を使う。
             builder.Register<IPortraitDirector, DefaultPortraitDirector>(Lifetime.Singleton);
             builder.Register<IBackgroundChannel, NullBackgroundChannel>(Lifetime.Singleton);
+            builder.Register<IStillChannel, NullStillChannel>(Lifetime.Singleton);
             builder.Register<ICenterImageChannel, NullCenterImageChannel>(Lifetime.Singleton);
             builder.Register<IAudioChannel, NullAudioChannel>(Lifetime.Singleton);
             builder.Register<IWorldEffectSink, NullWorldEffectSink>(Lifetime.Singleton);

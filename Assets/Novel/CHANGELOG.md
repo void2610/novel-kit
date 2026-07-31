@@ -6,6 +6,16 @@
 ## [Unreleased]
 
 ### Changed
+- **破壊的**: スプライトを扱うファセットを整理した。
+  - `IPortraitView` / `IBackgroundView` / `ICenterImageView` を `IPortraitChannel` / `IBackgroundChannel` /
+    `ICenterImageChannel` へ改名 (`Null*` / `Warning*` 実装も同様)。実装は MonoBehaviour の View とは限らないため、
+    既にある `IAudioChannel` / `IWorldEffectSink` と語彙を揃える。`INovelView` は同梱 View が実装するので据え置き
+  - `IBackgroundChannel` からイベント CG を `IStillChannel` として切り出した。背景と CG はレイヤーも game 側の
+    関心も別で、1 つの実装に抱えさせると肥大化する
+  - `IPortraitChannel.ShowAsync` から未使用の `character` を削除
+  - `ResolvedSprite` でキーを渡す点は維持。novel-kit 自身はシナリオ再生の外を関知しないが、CG 回収の記録や
+    シナリオ外での背景維持といった拡張を game 側でできるようにしておくため
+  移行: 型名とシグネチャの置換。`still` を出す game は `IStillChannel` を実装して登録する。
 - **破壊的**: スプライトを扱うファセットを `IPortraitView` / `IBackgroundView` / `ICenterImageView` から
   `IPortraitChannel` / `IBackgroundChannel` / `ICenterImageChannel` へ改名 (`Null*` / `Warning*` 実装も同様)。
   これらは「runtime が演出を game へ委譲する口」であり、実装は MonoBehaviour の View とは限らない。

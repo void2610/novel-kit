@@ -46,7 +46,7 @@ https://github.com/void2610/novel-kit.git?path=Assets/Novel
 | `Novel.View` | TMP 参考 View・Resources ローダ・ScriptableObject カタログ（game は差し替え可） |
 | `Novel.VContainer` | コア DI 統合（`RegisterNovelKitCore`）。純 `Novel.Runtime` のみ依存・View/Resources 非依存 |
 | `Novel.View.VContainer` | 参考 View 込みの DI 統合（`RegisterNovelKit` = Core + Resources ローダ + 警告ファセット + ログ） |
-| `Novel.Assets` | スプライトのロード抽象と表示ファセット（実体は `Assets/Novel/Presentation/`）。`ISpriteLoader` / Resources 実装 / `IPortraitChannel`・`IBackgroundChannel`・`ICenterImageChannel`・`PortraitLayout`。Runtime から一方向に参照される末端で、game の View は VitalRouter/MRuby を引かずにこれだけ参照できる |
+| `Novel.Assets` | スプライトのロード抽象と表示ファセット（実体は `Assets/Novel/Presentation/`）。`ISpriteLoader` / Resources 実装 / `IPortraitChannel`・`IBackgroundChannel`・`IStillChannel`・`ICenterImageChannel`・`PortraitLayout`。Runtime から一方向に参照される末端で、game の View は VitalRouter/MRuby を引かずにこれだけ参照できる |
 | `Novel.Addressables` | `ITextAssetLoader` / `ISpriteLoader` の Addressables 実装。`com.unity.addressables` 導入時のみコンパイルされる（versionDefines ゲート） |
 | `Novel.Editor` | シナリオ検証メニュー `Novel/Validate Scenarios`（`ScenarioValidator`・全 `.rb` の `.mrb` 生成有無を検査）。`.rb`→`.mrb` のコンパイル自体は mrubycs-compiler パッケージが担当 |
 
@@ -184,8 +184,8 @@ builder.RegisterInstance<IRubyDictionary>(ruby);
 
 ### スプライト（立ち絵 / 背景 / CG）
 
-立ち絵・背景・CG の表示 View は game 所有だが、**キーからスプライトを引くのは novel-kit の責務**。
-`ISpriteLoader` を登録すれば runtime がキーを解決し、View には論理キーと解決済みスプライトの対 (`ResolvedSprite`) が渡る:
+立ち絵・背景・CG の表示は game 所有だが、**キーからスプライトを引くのは novel-kit の責務**。
+`ISpriteLoader` を登録すれば runtime がキーを解決し、Channel には論理キーと解決済みスプライトの対 (`ResolvedSprite`) が渡る:
 
 ```csharp
 // Resources なら
@@ -195,20 +195,19 @@ builder.RegisterInstance<ISpriteLoader>(new ResourcesSpriteLoader("Novel/"));
 ```
 
 ```csharp
-// game 側 View は表示だけを実装する（ロードはしない）
+// game 側は表示だけを実装する（ロードはしない）
 public UniTask ShowAsync(ResolvedSprite background, CancellationToken ct)
 {
     image.sprite = background.Sprite;   // 解決済み。null なら未解決
     image.enabled = background.IsLoaded;
-    _currentKey = background.Key;       // 成否に関わらず保持すれば未解決と消去を区別できる
 }
 ```
 
-キーを併せて渡すのは、表示以外にキーを要する用途があるため。未解決と消去の区別、同一キー再表示の
-no-op 判定、セーブからの背景復元やイベント CG の解放といった game 側の状態記録は、いずれも `Sprite`
-参照だけでは書けない。消去 (空キー) とロード失敗はどちらも `IsLoaded == false` なので、両者を分けたい
-View は `IsCleared` を見る。`IPortraitChannel` が `character` を表示側のヒントとして受けているのと同じ位置づけで、
-**ロードの裁量は View に戻さない**（キー→スプライトの解決は runtime に閉じたまま）。
+キーを併せて渡すのは、消去とロード失敗の区別に加え、**game が novel-kit の外へ拡張するときの手掛かり**に
+なるため。novel-kit 自身はシナリオ再生の外を関知しない (再生が終われば背景も立ち絵も忘れる) が、
+CG 回収の記録やシナリオ外での背景維持といった拡張は game 側でできるようにしておく。
+消去 (空キー) とロード失敗はどちらも `IsLoaded == false` なので、両者を分けたい実装は `IsCleared` を見る。
+**ロードの裁量は実装に戻さない**（キー→スプライトの解決は runtime に閉じたまま）。
 
 テキストと違いスプライトは表示中ずっと参照が生きている必要があるため、ハンドルはローダーが保持する。
 解放は `NovelScenarioRunner.Dispose()` が `ReleaseAll()` を呼ぶので、game は放置してもセッション終了時に解放される。

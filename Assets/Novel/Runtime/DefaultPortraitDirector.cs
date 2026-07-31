@@ -71,7 +71,7 @@ namespace Novel.Runtime
             {
                 if (!_shown.TryGetValue(character, out var last)) continue;
                 _shown[character] = (slot, last.Portrait);
-                await _view.ShowAsync(slot, character, last.Portrait, ct);
+                await _view.ShowAsync(slot, last.Portrait, ct);
             }
         }
 
@@ -97,11 +97,11 @@ namespace Novel.Runtime
                 await _view.SwitchLayoutAsync(_layout, ct);
             }
             var slotIndex = ResolveSlot(character);
-            // 同じ slot に同じ立ち絵を出し直すと、 表示時にフェード等を行う View で演出が再発火する
+            // 同じ slot に同じ立ち絵を出し直すと、 表示時にフェード等を行う実装で演出が再発火する
             if (_shown.TryGetValue(character, out var current) &&
                 current.Slot == slotIndex && current.Portrait.Key == portrait.Key) return;
             _shown[character] = (slotIndex, portrait);
-            await _view.ShowAsync(slotIndex, character, portrait, ct);
+            await _view.ShowAsync(slotIndex, portrait, ct);
         }
 
         public async UniTask ExitAsync(string character, CancellationToken ct)

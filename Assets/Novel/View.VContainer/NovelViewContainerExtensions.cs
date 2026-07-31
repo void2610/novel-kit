@@ -36,6 +36,7 @@ namespace Novel.Integration
             // dev ビルドで未供給コマンドを一度だけ警告する no-op ファセット（コアの silent 既定を上書き）
             builder.Register<IPortraitChannel, WarningPortraitChannel>(Lifetime.Singleton);
             builder.Register<IBackgroundChannel, WarningBackgroundChannel>(Lifetime.Singleton);
+            builder.Register<IStillChannel, WarningStillChannel>(Lifetime.Singleton);
             builder.Register<IAudioChannel, WarningAudioChannel>(Lifetime.Singleton);
             // エラーは無音にしない（シナリオ名 + Ruby backtrace をログ。コアの NullErrorHandler を上書き）
             builder.Register<INovelErrorHandler, DebugNovelErrorHandler>(Lifetime.Singleton);
