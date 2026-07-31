@@ -58,7 +58,9 @@ namespace Novel.Runtime
             // PortraitKey が同時指定されていればここで切替（display_as で表示名を変えつつ、同一 speaker_id の立ち絵を 1 行で指定する糖衣）。
             // 未指定なら catalog の既定立ち絵へフォールバックし、話者が喋るたびにその人の絵が出る
             var portraitKey = ResolvePortraitKey(cmd);
-            if (!string.IsNullOrEmpty(portraitKey) && _portraitDirector != null)
+            // 表示中ならスプライトのロードごと省く (同一話者が連続で喋る間、 毎行ロードが走らないように)
+            if (!string.IsNullOrEmpty(portraitKey) && _portraitDirector != null &&
+                !_portraitDirector.IsShowing(cmd.SpeakerId, portraitKey))
                 await _portraitDirector.ShowAsync(cmd.SpeakerId, await LoadSpriteAsync(portraitKey, ct), ct);
 
             var resolved = _text.Resolve(cmd.Text);

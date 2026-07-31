@@ -21,6 +21,7 @@ namespace Novel.Tests
             public UniTask StageAsync(PortraitLayout layout, IReadOnlyList<string> cast, CancellationToken ct) => UniTask.CompletedTask;
             public UniTask StageAsync(PortraitLayout layout, IReadOnlyDictionary<string, int> cast, CancellationToken ct) => UniTask.CompletedTask;
             public bool IsStaged(string character) => Staged.Contains(character);
+            public bool IsShowing(string character, string portraitKey) => Shown.Contains($"{character}:{portraitKey}");
 
             public UniTask ShowAsync(string character, ResolvedSprite portrait, CancellationToken ct)
             {
@@ -73,6 +74,19 @@ namespace Novel.Tests
             public void ReleaseAll() { }
         }
 
+        private sealed class RecordingSpriteLoader : ISpriteLoader
+        {
+            public readonly List<string> Requested = new();
+
+            public UniTask<Sprite?> LoadAsync(string key, CancellationToken ct)
+            {
+                Requested.Add(key);
+                return UniTask.FromResult<Sprite?>(null);
+            }
+
+            public void ReleaseAll() { }
+        }
+
         private static NovelCommandHandler MakeHandler(IPortraitDirector director) =>
             new(new StubView(), new StubStateStore(), new IdentityTextResolver(), new StubCatalog(),
                 portraitDirector: director, sprites: new NullSprites());
@@ -89,6 +103,36 @@ namespace Novel.Tests
             MakeHandler(director).On(Say("kii"), CancellationToken.None).GetAwaiter().GetResult();
 
             Assert.That(director.Shown, Is.EqualTo(new[] { "kii:Characters/kii/default" }));
+        }
+
+        [Test]
+        public void 同一話者が連続で喋っても立ち絵は出し直さない()
+        {
+            // 表示時にフェードする View で演出が毎行再発火するのを防ぐ
+            var director = new RecordingPortraitDirector();
+            director.Staged.Add("kii");
+            var handler = MakeHandler(director);
+
+            handler.On(Say("kii"), CancellationToken.None).GetAwaiter().GetResult();
+            handler.On(Say("kii"), CancellationToken.None).GetAwaiter().GetResult();
+            handler.On(Say("kii"), CancellationToken.None).GetAwaiter().GetResult();
+
+            Assert.That(director.Shown, Is.EqualTo(new[] { "kii:Characters/kii/default" }));
+        }
+
+        [Test]
+        public void 表示中ならスプライトのロードも走らない()
+        {
+            // 途中復帰の早送りは表示を省いてもこの経路を通るため、 行数分のロードが積み上がらないようにする
+            var director = new RecordingPortraitDirector();
+            director.Staged.Add("kii");
+            var loader = new RecordingSpriteLoader();
+            var handler = new NovelCommandHandler(new StubView(), new StubStateStore(), new IdentityTextResolver(),
+                new StubCatalog(), portraitDirector: director, sprites: loader);
+
+            for (var i = 0; i < 5; i++) handler.On(Say("kii"), CancellationToken.None).GetAwaiter().GetResult();
+
+            Assert.That(loader.Requested, Is.EqualTo(new[] { "Characters/kii/default" }));
         }
 
         [Test]
