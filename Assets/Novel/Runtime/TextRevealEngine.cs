@@ -91,10 +91,13 @@ namespace Novel.Runtime
 
         // 行を逐次 Reveal し、可視文字数が変わるたび onVisible を呼ぶ。Reveal 後は行末の送り待ちまで行う。
         // 事前に Build を呼んでおくこと。
-        public async UniTask RevealAsync(bool alreadyRead, Action<int> onVisible, CancellationToken ct)
+        public async UniTask RevealAsync(bool alreadyRead, Action<int> onVisible, CancellationToken ct,
+            Action? onRevealStarted = null, Action? onRevealCompleted = null)
         {
             bool skipThisLine = _skip && (_settings.SkipUnread || alreadyRead);
             int lastNotified = -1;   // 可視文字数が変化したフレームだけ通知する（無変化フレームの View 更新を避ける）
+
+            onRevealStarted?.Invoke();
 
             if (!skipThisLine)
             {
@@ -160,6 +163,10 @@ namespace Novel.Runtime
             }
 
             if (_total != lastNotified) onVisible(_total);
+
+            // 本メソッドの完了は送り入力後になるため、打ち終わりで止めたい演出 (文字送り音等) はここを使う
+            onRevealCompleted?.Invoke();
+
             await WaitForAdvanceAsync(alreadyRead, ct);
         }
 

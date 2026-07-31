@@ -31,6 +31,14 @@ namespace Novel.Tests
             public bool SkipUnread => true;
         }
 
+        // 行末の送り待ちがフレームを消費する設定。打ち終わり通知との前後関係を観測するために使う
+        private sealed class SlowAdvanceSettings : INovelPlaybackSettings
+        {
+            public float CharsPerSecond => 1000f;
+            public float AutoAdvanceDelay => 3f;
+            public bool SkipUnread => true;
+        }
+
         [Test]
         public void Build_タグを除いた可視文字数を返す()
         {
@@ -72,6 +80,22 @@ namespace Novel.Tests
 
             Assert.AreEqual(6, total);                       // 長い(2)+テキスト(4)、<p>は数えない
             Assert.AreEqual(6, values[values.Count - 1]);    // 全文表示で完了
+        });
+
+        // 打鍵音を打ち終わりで止められること。RevealAsync の完了で止めると送り待ちの間も鳴り続ける
+        [UnityTest]
+        public IEnumerator RevealAsync_打ち終わり通知は送り待ちに入る前に来る() => UniTask.ToCoroutine(async () =>
+        {
+            var clock = new FakeClock();
+            var engine = new TextRevealEngine(new SlowAdvanceSettings(), clock) { Auto = true };
+            engine.Build(NovelTagLexer.Parse("やあ世界"));
+
+            var framesAtCompleted = -1;
+            await engine.RevealAsync(alreadyRead: false, onVisible: _ => { }, ct: CancellationToken.None,
+                onRevealCompleted: () => framesAtCompleted = clock.Frames);
+
+            Assert.AreNotEqual(-1, framesAtCompleted, "打ち終わり通知が呼ばれていない");
+            Assert.Less(framesAtCompleted, clock.Frames, "送り待ちより後に通知されている");
         });
     }
 }

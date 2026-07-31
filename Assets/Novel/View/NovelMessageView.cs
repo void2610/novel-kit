@@ -50,6 +50,10 @@ namespace Novel.View
         public bool IsAuto => Engine.Auto;
         public bool IsSkip => Engine.Skip;
 
+        // ShowMessageAsync の完了は送り入力後になるため、打鍵音のように打ち終わりで止める演出はこれを使う
+        public event Action? RevealStarted;
+        public event Action? RevealCompleted;
+
         // game が送り入力（クリック/決定キー）を配線して呼ぶ
         public void Advance() => Engine.RequestAdvance();
         public void ToggleAuto() => Engine.Auto = !Engine.Auto;     // auto/skip は排他（エンジン側で保証）
@@ -74,7 +78,9 @@ namespace Novel.View
             try
             {
                 await Engine.RevealAsync(line.IsAlreadyRead,
-                    v => messageLabel.maxVisibleCharacters = Mathf.Min(v, tmpTotal), ct);
+                    v => messageLabel.maxVisibleCharacters = Mathf.Min(v, tmpTotal), ct,
+                    onRevealStarted: () => RevealStarted?.Invoke(),
+                    onRevealCompleted: () => RevealCompleted?.Invoke());
             }
             finally
             {
