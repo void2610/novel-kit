@@ -12,6 +12,10 @@ namespace Novel.Assets
         // 既存キャラの移動/退場アニメは実装側が差分検出で決める
         UniTask SwitchLayoutAsync(PortraitLayout layout, CancellationToken ct);
 
+        /// <summary>
+        /// 指定 slot に立ち絵を出す。誰の絵かは渡さない (表示先は slot で決まるため)。
+        /// キャラ別に入退場演出を出し分けたい場合は、stage 宣言を写して game 側で slot → character を持つ
+        /// </summary>
         UniTask ShowAsync(int slotIndex, ResolvedSprite portrait, CancellationToken ct);
 
         UniTask HideAsync(int slotIndex, CancellationToken ct);

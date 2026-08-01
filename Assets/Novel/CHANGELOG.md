@@ -16,13 +16,6 @@
   - `ResolvedSprite` でキーを渡す点は維持。novel-kit 自身はシナリオ再生の外を関知しないが、CG 回収の記録や
     シナリオ外での背景維持といった拡張を game 側でできるようにしておくため
   移行: 型名とシグネチャの置換。`still` を出す game は `IStillChannel` を実装して登録する。
-- **破壊的**: スプライトを扱うファセットを `IPortraitView` / `IBackgroundView` / `ICenterImageView` から
-  `IPortraitChannel` / `IBackgroundChannel` / `ICenterImageChannel` へ改名 (`Null*` / `Warning*` 実装も同様)。
-  これらは「runtime が演出を game へ委譲する口」であり、実装は MonoBehaviour の View とは限らない。
-  状態の保持やセーブ連携を伴う game では Presenter が実装するのが自然で、"View" という名前が実態と食い違っていた。
-  既にある `IAudioChannel` / `IWorldEffectSink` と語彙を揃える。
-  なお `INovelView` は同梱の `NovelMessageView` が実装しており View が実装するのが実態のため据え置く。
-  移行: 型名の置換のみ。メンバーと意味論は変わらない。
 - `ICharacterCatalog` の `DefaultPortraitKey` を runtime が使うようになった。say で `portrait` を明示しなければ、
   stage cast 在籍の話者の既定立ち絵が自動で出る (cast 外・カタログ未登録・ナレーションでは出ない)。
   これまで宣言できるだけで適用は game 任せだったため、各 game が `INovelView` 実装から `IPortraitDirector` を

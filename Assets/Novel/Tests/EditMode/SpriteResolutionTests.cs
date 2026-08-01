@@ -148,6 +148,8 @@ namespace Novel.Tests
 
             Assert.That(background.Backgrounds, Has.Count.EqualTo(1));
             Assert.That(background.Backgrounds[0].Sprite, Is.Null);
+            // 未解決でもキーは渡す (実装が「消去」と「ロード失敗」を区別できるように)
+            Assert.That(background.Backgrounds[0].Key, Is.EqualTo("missing"));
         }
 
         [Test]
@@ -163,6 +165,7 @@ namespace Novel.Tests
             Assert.That(loader.Requested, Is.Empty);
             Assert.That(background.Backgrounds, Has.Count.EqualTo(1));
             Assert.That(background.Backgrounds[0].Sprite, Is.Null);
+            Assert.That(background.Backgrounds[0].Key, Is.Empty);
         }
 
         [Test]
@@ -176,6 +179,25 @@ namespace Novel.Tests
 
             Assert.That(background.Backgrounds, Has.Count.EqualTo(1));
             Assert.That(background.Backgrounds[0].Sprite, Is.Null);
+            Assert.That(background.Backgrounds[0].Key, Is.EqualTo("room"));
+        }
+
+        [Test]
+        public void 既定値のキーは空文字になる()
+        {
+            // struct なので default や配列要素はコンストラクタを通らない
+            Assert.That(default(ResolvedSprite).Key, Is.Empty);
+            Assert.That(ResolvedSprite.None.Key, Is.Empty);
+            Assert.That(new ResolvedSprite(null!, null).Key, Is.Empty);
+        }
+
+        [Test]
+        public void 消去とロード失敗はIsClearedで区別できる()
+        {
+            // どちらも IsLoaded は false なので、実装が両者を同一視しないための述語
+            Assert.That(ResolvedSprite.None.IsCleared, Is.True);
+            Assert.That(new ResolvedSprite("missing", null).IsCleared, Is.False);
+            Assert.That(new ResolvedSprite("missing", null).IsLoaded, Is.False);
         }
     }
 }
