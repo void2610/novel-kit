@@ -174,10 +174,13 @@ namespace Novel.Runtime
         {
             _advance = false;
             float elapsed = 0f;
+            bool wasAuto = _auto;
             while (true)
             {
                 if (_advance) break;
                 if (_skip && (_settings.SkipUnread || alreadyRead)) break;
+                // 待機中に auto を入れた場合、それまでの手動待ちを auto の経過に数えると即進行してしまう
+                if (_auto != wasAuto) { wasAuto = _auto; elapsed = 0f; }
                 if (_auto && elapsed >= _settings.AutoAdvanceDelay) break;
                 elapsed += _clock.DeltaTime;
                 await _clock.NextFrameAsync(ct);

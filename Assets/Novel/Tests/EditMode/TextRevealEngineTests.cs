@@ -39,6 +39,22 @@ namespace Novel.Tests
             public bool SkipUnread => true;
         }
 
+        // 待機の途中で auto を入れる状況を、フレーム進行に合わせて決定的に再現する
+        private sealed class AutoAtFrameClock : IFrameClock
+        {
+            public TextRevealEngine Engine = null!;
+            public int ToggleAtFrame;
+            public float DeltaTime => 1f;
+            public int Frames { get; private set; }
+
+            public UniTask NextFrameAsync(CancellationToken ct)
+            {
+                Frames++;
+                if (Frames == ToggleAtFrame) Engine.Auto = true;
+                return UniTask.CompletedTask;
+            }
+        }
+
         [Test]
         public void Build_タグを除いた可視文字数を返す()
         {
@@ -99,6 +115,21 @@ namespace Novel.Tests
             await engine.WaitForAdvanceAsync(alreadyRead: false, ct: CancellationToken.None);
 
             Assert.Greater(clock.Frames, framesAfterReveal, "送り待ちが RevealOnlyAsync に含まれている");
+        });
+
+        // 手動で長く待った後に auto を入れても、その経過を auto の待ち時間に数えず数え直すこと
+        [UnityTest]
+        public IEnumerator WaitForAdvanceAsync_待機中のauto投入は待ち時間を数え直す() => UniTask.ToCoroutine(async () =>
+        {
+            var clock = new AutoAtFrameClock { ToggleAtFrame = 10 };
+            var engine = new TextRevealEngine(new SlowAdvanceSettings(), clock);
+            clock.Engine = engine;
+            engine.Build(NovelTagLexer.Parse("やあ"));
+
+            await engine.WaitForAdvanceAsync(alreadyRead: false, ct: CancellationToken.None);
+
+            // 投入時点(10)から遅延3を数え直すので13前後。数え直さないと投入直後(10)に抜ける
+            Assert.GreaterOrEqual(clock.Frames, 13, "auto 投入前の手動待ちが待ち時間に数えられている");
         });
     }
 }
