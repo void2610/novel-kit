@@ -47,6 +47,7 @@ namespace Novel.Tests
             public float DeltaTime => 1f;
             public int Frames { get; private set; }
 
+            // auto 投入の検証だけが目的なので ct は見ていない (キャンセル経路を検証するなら ct を尊重すること)
             public UniTask NextFrameAsync(CancellationToken ct)
             {
                 Frames++;

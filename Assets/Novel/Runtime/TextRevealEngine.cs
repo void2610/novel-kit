@@ -169,7 +169,7 @@ namespace Novel.Runtime
             if (_total != lastNotified) onVisible(_total);
         }
 
-        // 行末の送り待ち。待機中の auto/skip 切り替えにも毎フレーム反応する
+        // 行末の送り待ち。入口で送り要求をクリアするため RevealOnlyAsync との境目に来た入力は持ち越さない (待機中の auto/skip 切り替えには毎フレーム反応する)
         public async UniTask WaitForAdvanceAsync(bool alreadyRead, CancellationToken ct)
         {
             _advance = false;
