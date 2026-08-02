@@ -8,10 +8,10 @@ namespace Novel.Runtime
 {
     // 未配線時に注入できる no-op 既定（dsl-vocabulary: 未配線は握りつぶす）。DI で省略可能依存を埋める用途
 
-    public sealed class NullPortraitView : IPortraitView
+    public sealed class NullPortraitChannel : IPortraitChannel
     {
         public UniTask SwitchLayoutAsync(PortraitLayout layout, CancellationToken ct) => UniTask.CompletedTask;
-        public UniTask ShowAsync(int slotIndex, string character, ResolvedSprite portrait, CancellationToken ct) => UniTask.CompletedTask;
+        public UniTask ShowAsync(int slotIndex, ResolvedSprite portrait, CancellationToken ct) => UniTask.CompletedTask;
         public UniTask HideAsync(int slotIndex, CancellationToken ct) => UniTask.CompletedTask;
     }
 
@@ -26,13 +26,17 @@ namespace Novel.Runtime
         public UniTask ClearStageAsync(CancellationToken ct) => UniTask.CompletedTask;
     }
 
-    public sealed class NullBackgroundView : IBackgroundView
+    public sealed class NullBackgroundChannel : IBackgroundChannel
     {
         public UniTask ShowAsync(ResolvedSprite background, CancellationToken ct) => UniTask.CompletedTask;
-        public UniTask ShowStillAsync(ResolvedSprite still, CancellationToken ct) => UniTask.CompletedTask;
     }
 
-    public sealed class NullCenterImageView : ICenterImageView
+    public sealed class NullStillChannel : IStillChannel
+    {
+        public UniTask ShowAsync(ResolvedSprite still, CancellationToken ct) => UniTask.CompletedTask;
+    }
+
+    public sealed class NullCenterImageChannel : ICenterImageChannel
     {
         public UniTask ShowAsync(ResolvedSprite image, CancellationToken ct) => UniTask.CompletedTask;
         public UniTask HideAsync(CancellationToken ct) => UniTask.CompletedTask;

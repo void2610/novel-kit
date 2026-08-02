@@ -20,8 +20,9 @@ namespace Novel.Runtime
         private readonly ITextResolver _text;
         private readonly ICharacterCatalog _catalog;
         private readonly IPortraitDirector? _portraitDirector;
-        private readonly IBackgroundView? _background;
-        private readonly ICenterImageView? _centerImage;
+        private readonly IBackgroundChannel? _background;
+        private readonly IStillChannel? _still;
+        private readonly ICenterImageChannel? _centerImage;
         private readonly IAudioChannel? _audio;
         private readonly IWorldEffectSink? _worldEffectSink;
         private readonly IBacklog? _backlog;
@@ -30,9 +31,10 @@ namespace Novel.Runtime
         private readonly NovelPlaybackProgress _progress;
 
         public NovelCommandHandler(INovelView view, IStateStore state, ITextResolver text, ICharacterCatalog catalog,
-            IPortraitDirector? portraitDirector = null, IBackgroundView? background = null, IAudioChannel? audio = null,
+            IPortraitDirector? portraitDirector = null, IBackgroundChannel? background = null, IStillChannel? still = null,
+            IAudioChannel? audio = null,
             IWorldEffectSink? worldEffectSink = null, IBacklog? backlog = null,
-            ICenterImageView? centerImage = null, NovelPlaybackProgress? progress = null,
+            ICenterImageChannel? centerImage = null, NovelPlaybackProgress? progress = null,
             ISpriteLoader? sprites = null, IRubyDictionary? ruby = null)
         {
             _view = view;
@@ -41,6 +43,7 @@ namespace Novel.Runtime
             _catalog = catalog;
             _portraitDirector = portraitDirector;
             _background = background;
+            _still = still;
             _centerImage = centerImage;
             _audio = audio;
             _worldEffectSink = worldEffectSink;
@@ -61,7 +64,7 @@ namespace Novel.Runtime
             // 表示中ならスプライトのロードごと省く (同一話者が連続で喋る間、 毎行ロードが走らないように)
             if (!string.IsNullOrEmpty(portraitKey) && _portraitDirector != null &&
                 !_portraitDirector.IsShowing(cmd.SpeakerId, portraitKey))
-                await _portraitDirector.ShowAsync(cmd.SpeakerId, await LoadSpriteAsync(portraitKey, ct), ct);
+                await _portraitDirector.ShowAsync(cmd.SpeakerId, await LoadSpriteAsync(portraitKey!, ct), ct);
 
             var resolved = _text.Resolve(cmd.Text);
             var displayName = ResolveDisplayName(cmd);
@@ -108,7 +111,8 @@ namespace Novel.Runtime
 
         public async UniTask On(PortraitCommand cmd, CancellationToken ct)
         {
-            if (_portraitDirector != null) await _portraitDirector.ShowAsync(cmd.Character, await LoadSpriteAsync(cmd.PortraitKey, ct), ct);
+            if (_portraitDirector != null)
+                await _portraitDirector.ShowAsync(cmd.Character, await LoadSpriteAsync(cmd.PortraitKey, ct), ct);
         }
 
         // stage 宣言: layout と cast (キャラ → slot index) を Director に適用する。
@@ -163,7 +167,7 @@ namespace Novel.Runtime
 
         public async UniTask On(StillCommand cmd, CancellationToken ct)
         {
-            if (_background != null) await _background.ShowStillAsync(await LoadSpriteAsync(cmd.StillKey, ct), ct);
+            if (_still != null) await _still.ShowAsync(await LoadSpriteAsync(cmd.StillKey, ct), ct);
         }
 
         public async UniTask On(CenterImageCommand cmd, CancellationToken ct)

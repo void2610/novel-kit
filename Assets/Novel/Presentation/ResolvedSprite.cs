@@ -7,10 +7,10 @@ namespace Novel.Assets
     /// 論理キーと、それを <see cref="ISpriteLoader"/> で解決した結果の対。
     /// スプライトを扱うファセットはこの型で受け取る。
     ///
-    /// ロードは runtime (<c>NovelCommandHandler</c>) が済ませるため View に解決の裁量はないが、
-    /// キーは表示以外の用途で必要になる。ロード失敗と消去の区別、同一キー再表示の no-op 判定、
-    /// game 側の状態記録 (セーブからの背景復元、イベント CG の解放) はいずれもキーを要求する。
-    /// <see cref="IPortraitView"/> が character を表示側のヒントとして受けているのと同じ位置づけ。
+    /// ロードは runtime (<c>NovelCommandHandler</c>) が済ませるため実装に解決の裁量はないが、
+    /// キーは表示以外の用途で要る。ロード失敗と消去の区別に加え、game が novel-kit の外へ拡張するとき
+    /// (CG 回収の記録、シナリオ外での背景の維持) の手掛かりになる。
+    /// novel-kit 自身はシナリオ再生の外を関知しないが、game が拡張できる余地は残す
     /// </summary>
     public readonly struct ResolvedSprite
     {

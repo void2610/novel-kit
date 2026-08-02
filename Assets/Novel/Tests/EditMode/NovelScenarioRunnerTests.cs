@@ -73,7 +73,7 @@ namespace Novel.Tests
             public void ClearMessage() { }
         }
 
-        // image / hide_image が ICenterImageView へ届くかを記録する fake
+        // 解決したスプライトにキー名を付けて返す fake (どのキーが届いたかを name で検証できるように)
         private sealed class KeyNamedSpriteLoader : ISpriteLoader
         {
             public UniTask<UnityEngine.Sprite?> LoadAsync(string key, CancellationToken ct)
@@ -87,7 +87,8 @@ namespace Novel.Tests
             public void ReleaseAll() { }
         }
 
-        private sealed class FakeCenterImageView : ICenterImageView
+        // image / hide_image が ICenterImageChannel へ届くかを記録する fake
+        private sealed class FakeCenterImageChannel : ICenterImageChannel
         {
             public readonly List<string> Calls = new();
             public UniTask ShowAsync(ResolvedSprite image, CancellationToken ct)
@@ -297,11 +298,11 @@ namespace Novel.Tests
             CollectionAssert.AreEqual(new[] { "echoed" }, module.Received);   // 独自 cmd がハンドラへ届いた
         });
 
-        // image / hide_image が ICenterImageView へ順に届くことを検証（補足画像の中央表示）
+        // image / hide_image が ICenterImageChannel へ順に届くことを検証（補足画像の中央表示）
         [UnityTest]
-        public IEnumerator image_と_hide_image_が_CenterImageView_へ届く() => UniTask.ToCoroutine(async () =>
+        public IEnumerator image_と_hide_image_が_CenterImageChannel_へ届く() => UniTask.ToCoroutine(async () =>
         {
-            var centerImage = new FakeCenterImageView();
+            var centerImage = new FakeCenterImageChannel();
             var runner = new NovelScenarioRunner(
                 new ScenarioSource(new ResourcesTextAssetLoader()),
                 new Router(),
@@ -320,9 +321,9 @@ namespace Novel.Tests
 
         // 空キー image("") は無効 → ShowAsync を呼ばず no-op (消去は hide_image の責務)
         [UnityTest]
-        public IEnumerator 空キーの_image_は_CenterImageView_を呼ばない() => UniTask.ToCoroutine(async () =>
+        public IEnumerator 空キーの_image_は_CenterImageChannel_を呼ばない() => UniTask.ToCoroutine(async () =>
         {
-            var centerImage = new FakeCenterImageView();
+            var centerImage = new FakeCenterImageChannel();
             var runner = new NovelScenarioRunner(
                 new ScenarioSource(new ResourcesTextAssetLoader()),
                 new Router(),

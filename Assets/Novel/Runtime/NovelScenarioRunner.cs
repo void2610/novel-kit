@@ -34,13 +34,14 @@ namespace Novel.Runtime
 
         public NovelScenarioRunner(IScenarioSource source, Router router,
             INovelView view, ITextResolver text, ICharacterCatalog catalog,
-            IPortraitDirector? portraitDirector = null, IBackgroundView? background = null, IAudioChannel? audio = null,
+            IPortraitDirector? portraitDirector = null, IBackgroundChannel? background = null, IStillChannel? still = null,
+            IAudioChannel? audio = null,
             IWorldEffectSink? worldEffectSink = null,
             INovelErrorHandler? errorHandler = null,
             IEnumerable<IPreambleSource>? preambleSources = null,
             IEnumerable<INovelCommandModule>? commandModules = null,
             IBacklog? backlog = null,
-            ICenterImageView? centerImage = null, ISpriteLoader? sprites = null, IRubyDictionary? ruby = null)
+            ICenterImageChannel? centerImage = null, ISpriteLoader? sprites = null, IRubyDictionary? ruby = null)
         {
             _source = source;
             _router = router;
@@ -75,7 +76,7 @@ namespace Novel.Runtime
             });
 
             var handler = new NovelCommandHandler(view, _store, text, catalog,
-                portraitDirector: portraitDirector, background: background, audio: audio,
+                portraitDirector: portraitDirector, background: background, still: still, audio: audio,
                 worldEffectSink: worldEffectSink, backlog: backlog, centerImage: centerImage,
                 progress: _progress, sprites: sprites, ruby: ruby);
             _sprites = sprites;

@@ -21,12 +21,13 @@ namespace Novel.Integration
             builder.Register<INovelPlaybackSettings, DefaultNovelPlaybackSettings>(Lifetime.Singleton);
 
             // 省略可能ファセット/サービスの no-op 既定（silent）。dev 警告版/ログ版は View ヘルパが上書きする
-            builder.Register<IPortraitView, NullPortraitView>(Lifetime.Singleton);
-            // IPortraitDirector の既定は IPortraitView を内部で参照する DefaultPortraitDirector。
-            // game 側が IPortraitView を差し替えれば Director も自動的に新 View を使う。
+            builder.Register<IPortraitChannel, NullPortraitChannel>(Lifetime.Singleton);
+            // IPortraitDirector の既定は IPortraitChannel を内部で参照する DefaultPortraitDirector。
+            // game 側が IPortraitChannel を差し替えれば Director も自動的に差し替え後の実装を使う。
             builder.Register<IPortraitDirector, DefaultPortraitDirector>(Lifetime.Singleton);
-            builder.Register<IBackgroundView, NullBackgroundView>(Lifetime.Singleton);
-            builder.Register<ICenterImageView, NullCenterImageView>(Lifetime.Singleton);
+            builder.Register<IBackgroundChannel, NullBackgroundChannel>(Lifetime.Singleton);
+            builder.Register<IStillChannel, NullStillChannel>(Lifetime.Singleton);
+            builder.Register<ICenterImageChannel, NullCenterImageChannel>(Lifetime.Singleton);
             builder.Register<IAudioChannel, NullAudioChannel>(Lifetime.Singleton);
             builder.Register<IWorldEffectSink, NullWorldEffectSink>(Lifetime.Singleton);
             // スプライト解決の no-op 既定 (常に null)。Resources/Addressables 実装は game か View ヘルパが上書きする

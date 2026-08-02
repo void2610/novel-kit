@@ -13,7 +13,7 @@ namespace Novel.Tests
     public sealed class DefaultPortraitDirectorTests
     {
         // View 呼び出しを記録するフェイク。 順序保持で「先に旧 cast 退場 → SwitchLayout → 新 cast 表示」を検証できる
-        private sealed class RecordingPortraitView : IPortraitView
+        private sealed class RecordingPortraitChannel : IPortraitChannel
         {
             public readonly List<string> Calls = new();
             public UniTask SwitchLayoutAsync(PortraitLayout layout, CancellationToken ct)
@@ -21,9 +21,9 @@ namespace Novel.Tests
                 Calls.Add($"switch:{layout.Id}");
                 return UniTask.CompletedTask;
             }
-            public UniTask ShowAsync(int slotIndex, string character, ResolvedSprite portrait, CancellationToken ct)
+            public UniTask ShowAsync(int slotIndex, ResolvedSprite portrait, CancellationToken ct)
             {
-                Calls.Add($"show:{slotIndex}:{character}:{portrait.Sprite?.name}");
+                Calls.Add($"show:{slotIndex}:{portrait.Key}");
                 return UniTask.CompletedTask;
             }
             public UniTask HideAsync(int slotIndex, CancellationToken ct)
@@ -43,7 +43,7 @@ namespace Novel.Tests
             _created.Clear();
         }
 
-        // Director は受けた立ち絵をそのまま View へ流すため、記録・検証用に name 付きスプライトを作る
+        // Director は受けた立ち絵をそのまま実装へ流すため、記録・検証用にキー付きで作る
         private ResolvedSprite NamedSprite(string name)
         {
             var texture = new UnityEngine.Texture2D(1, 1);
@@ -58,35 +58,35 @@ namespace Novel.Tests
         [UnityTest]
         public IEnumerator StageArrayCast_でportraitが正しいslotに解決される() => UniTask.ToCoroutine(async () =>
         {
-            var view = new RecordingPortraitView();
+            var view = new RecordingPortraitChannel();
             var director = new DefaultPortraitDirector(view);
 
             await director.StageAsync(PortraitLayout.Trio, new[] { "taylor", "kii", "protagonist" }, CancellationToken.None);
             await director.ShowAsync("kii", NamedSprite("worry"), CancellationToken.None);
 
             Assert.Contains("switch:trio", view.Calls);
-            Assert.Contains("show:1:kii:worry", view.Calls);
+            Assert.Contains("show:1:worry", view.Calls);
         });
 
         // hash 形式 (明示 index 指定) でも cast が正しく適用される
         [UnityTest]
         public IEnumerator StageDictCast_でindex明示が反映される() => UniTask.ToCoroutine(async () =>
         {
-            var view = new RecordingPortraitView();
+            var view = new RecordingPortraitChannel();
             var director = new DefaultPortraitDirector(view);
 
             var cast = new Dictionary<string, int> { ["taylor"] = 2, ["kii"] = 0, ["protagonist"] = 1 };
             await director.StageAsync(PortraitLayout.Trio, cast, CancellationToken.None);
             await director.ShowAsync("taylor", NamedSprite("smile"), CancellationToken.None);
 
-            Assert.Contains("show:2:taylor:smile", view.Calls);
+            Assert.Contains("show:2:smile", view.Calls);
         });
 
         // IsStaged は stage 宣言 / exit / clear_stage に追従して cast 在籍を返す
         [UnityTest]
         public IEnumerator IsStaged_がcast在籍に追従する() => UniTask.ToCoroutine(async () =>
         {
-            var view = new RecordingPortraitView();
+            var view = new RecordingPortraitChannel();
             var director = new DefaultPortraitDirector(view);
 
             Assert.IsFalse(director.IsStaged("taylor"));
@@ -107,7 +107,7 @@ namespace Novel.Tests
         [UnityTest]
         public IEnumerator Stage切替で旧castにのみあるキャラがHideされる() => UniTask.ToCoroutine(async () =>
         {
-            var view = new RecordingPortraitView();
+            var view = new RecordingPortraitChannel();
             var director = new DefaultPortraitDirector(view);
 
             await director.StageAsync(PortraitLayout.Trio, new[] { "taylor", "kii", "protagonist" }, CancellationToken.None);
@@ -126,21 +126,21 @@ namespace Novel.Tests
         [UnityTest]
         public IEnumerator 未宣言キャラのportraitはslot0にフォールバック() => UniTask.ToCoroutine(async () =>
         {
-            var view = new RecordingPortraitView();
+            var view = new RecordingPortraitChannel();
             var director = new DefaultPortraitDirector(view);
 
             await director.StageAsync(PortraitLayout.Pair, new[] { "taylor", "kii" }, CancellationToken.None);
             LogAssert.Expect(UnityEngine.LogType.Warning, new System.Text.RegularExpressions.Regex("stranger.*stage cast"));
             await director.ShowAsync("stranger", NamedSprite("neutral"), CancellationToken.None);
 
-            Assert.Contains("show:0:stranger:neutral", view.Calls);
+            Assert.Contains("show:0:neutral", view.Calls);
         });
 
         // Stage 未宣言で portrait が呼ばれたら暗黙 single レイアウト + SwitchLayout を View に通知 + slot 0 で表示
         [UnityTest]
         public IEnumerator Stage未宣言でportraitが呼ばれると暗黙singleにフォールバック() => UniTask.ToCoroutine(async () =>
         {
-            var view = new RecordingPortraitView();
+            var view = new RecordingPortraitChannel();
             var director = new DefaultPortraitDirector(view);
 
             LogAssert.Expect(UnityEngine.LogType.Warning, new System.Text.RegularExpressions.Regex("stage 宣言なし"));
@@ -149,7 +149,7 @@ namespace Novel.Tests
 
             // View にも SwitchLayout(single) が伝わってから ShowAsync が走ることを順序込みで担保 (single の slot が未確保のまま Show される不整合を防ぐ)
             var switchIdx = view.Calls.IndexOf("switch:single");
-            var showIdx = view.Calls.IndexOf("show:0:taylor:smile");
+            var showIdx = view.Calls.IndexOf("show:0:smile");
             Assert.GreaterOrEqual(switchIdx, 0, "SwitchLayout(single) が発火していない");
             Assert.GreaterOrEqual(showIdx, 0, "ShowAsync が発火していない");
             Assert.Less(switchIdx, showIdx, "SwitchLayout は ShowAsync より前に呼ばれるべき");
@@ -161,7 +161,7 @@ namespace Novel.Tests
         public IEnumerator 同一slotへの同一キー再表示はViewを呼ばない() => UniTask.ToCoroutine(async () =>
         {
             // say ごとに既定立ち絵が来るため、 表示時にフェードする View で演出が毎行再発火してしまう
-            var view = new RecordingPortraitView();
+            var view = new RecordingPortraitChannel();
             var director = new DefaultPortraitDirector(view);
 
             await director.StageAsync(PortraitLayout.Single, new[] { "taylor" }, CancellationToken.None);
@@ -172,13 +172,13 @@ namespace Novel.Tests
             await director.ShowAsync("taylor", portrait, CancellationToken.None);
 
             Assert.That(view.Calls, Is.Empty);
-            Assert.IsTrue(director.IsShowing("taylor", portrait.Key));
+            Assert.IsTrue(director.IsShowing("taylor", "smile"));
         });
 
         [UnityTest]
         public IEnumerator stage再宣言で退場したキャラは同じ立ち絵で戻ると再表示される() => UniTask.ToCoroutine(async () =>
         {
-            var view = new RecordingPortraitView();
+            var view = new RecordingPortraitChannel();
             var director = new DefaultPortraitDirector(view);
             var portrait = NamedSprite("smile");
 
@@ -192,13 +192,13 @@ namespace Novel.Tests
 
             await director.ShowAsync("taylor", portrait, CancellationToken.None);
 
-            Assert.That(view.Calls, Is.EqualTo(new[] { "show:0:taylor:smile" }));
+            Assert.That(view.Calls, Is.EqualTo(new[] { "show:0:smile" }));
         });
 
         [UnityTest]
         public IEnumerator 別キーへの差し替えは再表示される() => UniTask.ToCoroutine(async () =>
         {
-            var view = new RecordingPortraitView();
+            var view = new RecordingPortraitChannel();
             var director = new DefaultPortraitDirector(view);
 
             await director.StageAsync(PortraitLayout.Single, new[] { "taylor" }, CancellationToken.None);
@@ -207,13 +207,13 @@ namespace Novel.Tests
 
             await director.ShowAsync("taylor", NamedSprite("angry"), CancellationToken.None);
 
-            Assert.That(view.Calls, Is.EqualTo(new[] { "show:0:taylor:angry" }));
+            Assert.That(view.Calls, Is.EqualTo(new[] { "show:0:angry" }));
         });
 
         [UnityTest]
         public IEnumerator Stage切替で残留キャラのslot変更時に旧slotHideと新slot再Showが走る() => UniTask.ToCoroutine(async () =>
         {
-            var view = new RecordingPortraitView();
+            var view = new RecordingPortraitChannel();
             var director = new DefaultPortraitDirector(view);
 
             await director.StageAsync(PortraitLayout.Pair, new[] { "taylor", "kii" }, CancellationToken.None);
@@ -227,7 +227,7 @@ namespace Novel.Tests
             // taylor は旧 slot 0 を Hide してから SwitchLayout 後に新 slot 1 で smile を再 Show
             var hideIdx = view.Calls.IndexOf("hide:0");
             var switchIdx = view.Calls.IndexOf("switch:pair");
-            var reshowIdx = view.Calls.IndexOf("show:1:taylor:smile");
+            var reshowIdx = view.Calls.IndexOf("show:1:smile");
             Assert.GreaterOrEqual(hideIdx, 0, "旧 slot Hide が発火していない");
             Assert.GreaterOrEqual(switchIdx, 0, "SwitchLayout が発火していない");
             Assert.GreaterOrEqual(reshowIdx, 0, "新 slot での再 Show が発火していない");
@@ -239,7 +239,7 @@ namespace Novel.Tests
         [UnityTest]
         public IEnumerator Exit指定キャラがHideされcastから外れる() => UniTask.ToCoroutine(async () =>
         {
-            var view = new RecordingPortraitView();
+            var view = new RecordingPortraitChannel();
             var director = new DefaultPortraitDirector(view);
 
             await director.StageAsync(PortraitLayout.Trio, new[] { "taylor", "kii", "protagonist" }, CancellationToken.None);
@@ -254,7 +254,7 @@ namespace Novel.Tests
         [UnityTest]
         public IEnumerator ClearStageで全castがHideされ空になる() => UniTask.ToCoroutine(async () =>
         {
-            var view = new RecordingPortraitView();
+            var view = new RecordingPortraitChannel();
             var director = new DefaultPortraitDirector(view);
 
             await director.StageAsync(PortraitLayout.Pair, new[] { "taylor", "kii" }, CancellationToken.None);
