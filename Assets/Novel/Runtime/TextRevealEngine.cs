@@ -93,6 +93,13 @@ namespace Novel.Runtime
         // 事前に Build を呼んでおくこと。
         public async UniTask RevealAsync(bool alreadyRead, Action<int> onVisible, CancellationToken ct)
         {
+            await RevealOnlyAsync(alreadyRead, onVisible, ct);
+            await WaitForAdvanceAsync(alreadyRead, ct);
+        }
+
+        // 送り待ちを含めず全文表示までで返す。打鍵音のように打ち終わりで止める演出は WaitForAdvanceAsync との境目に挟む
+        public async UniTask RevealOnlyAsync(bool alreadyRead, Action<int> onVisible, CancellationToken ct)
+        {
             bool skipThisLine = _skip && (_settings.SkipUnread || alreadyRead);
             int lastNotified = -1;   // 可視文字数が変化したフレームだけ通知する（無変化フレームの View 更新を避ける）
 
@@ -160,7 +167,6 @@ namespace Novel.Runtime
             }
 
             if (_total != lastNotified) onVisible(_total);
-            await WaitForAdvanceAsync(alreadyRead, ct);
         }
 
         // 行末の送り待ち。待機中の auto/skip 切り替えにも毎フレーム反応する
