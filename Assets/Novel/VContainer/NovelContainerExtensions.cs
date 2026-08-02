@@ -23,7 +23,7 @@ namespace Novel.Integration
             // 省略可能ファセット/サービスの no-op 既定（silent）。dev 警告版/ログ版は View ヘルパが上書きする
             builder.Register<IPortraitChannel, NullPortraitChannel>(Lifetime.Singleton);
             // IPortraitDirector の既定は IPortraitChannel を内部で参照する DefaultPortraitDirector。
-            // game 側が IPortraitChannel を差し替えれば Director も自動的に新 View を使う。
+            // game 側が IPortraitChannel を差し替えれば Director も自動的に差し替え後の実装を使う。
             builder.Register<IPortraitDirector, DefaultPortraitDirector>(Lifetime.Singleton);
             builder.Register<IBackgroundChannel, NullBackgroundChannel>(Lifetime.Singleton);
             builder.Register<IStillChannel, NullStillChannel>(Lifetime.Singleton);

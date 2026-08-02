@@ -16,21 +16,21 @@ namespace Novel.View
         public UniTask SwitchLayoutAsync(PortraitLayout layout, CancellationToken ct) { Warn(); return UniTask.CompletedTask; }
         public UniTask ShowAsync(int slotIndex, ResolvedSprite portrait, CancellationToken ct) { Warn(); return UniTask.CompletedTask; }
         public UniTask HideAsync(int slotIndex, CancellationToken ct) { Warn(); return UniTask.CompletedTask; }
-        private void Warn() => FacetWarning.Once(ref _warned, "portrait/stage", "IPortraitChannel");
+        private void Warn() => FacetWarning.Once(ref _warned, "portrait/stage", nameof(IPortraitChannel));
     }
 
     public sealed class WarningBackgroundChannel : IBackgroundChannel
     {
         private bool _warned;
         public UniTask ShowAsync(ResolvedSprite background, CancellationToken ct) { Warn(); return UniTask.CompletedTask; }
-        private void Warn() => FacetWarning.Once(ref _warned, "bg", "IBackgroundChannel");
+        private void Warn() => FacetWarning.Once(ref _warned, "bg", nameof(IBackgroundChannel));
     }
 
     public sealed class WarningStillChannel : IStillChannel
     {
         private bool _warned;
         public UniTask ShowAsync(ResolvedSprite still, CancellationToken ct) { Warn(); return UniTask.CompletedTask; }
-        private void Warn() => FacetWarning.Once(ref _warned, "still", "IStillChannel");
+        private void Warn() => FacetWarning.Once(ref _warned, "still", nameof(IStillChannel));
     }
 
     public sealed class WarningAudioChannel : IAudioChannel
@@ -40,7 +40,7 @@ namespace Novel.View
         public UniTask PlaySeLoopAsync(string seKey, float interval, int count, CancellationToken ct) { Warn(); return UniTask.CompletedTask; }
         public void PlayBgm(string bgmKey) => Warn();
         public void StopBgm() => Warn();
-        private void Warn() => FacetWarning.Once(ref _warned, "se/bgm", "IAudioChannel");
+        private void Warn() => FacetWarning.Once(ref _warned, "se/bgm", nameof(IAudioChannel));
     }
 
     internal static class FacetWarning

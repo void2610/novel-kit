@@ -73,7 +73,7 @@ namespace Novel.Tests
             public void ClearMessage() { }
         }
 
-        // image / hide_image が ICenterImageChannel へ届くかを記録する fake
+        // 解決したスプライトにキー名を付けて返す fake (どのキーが届いたかを name で検証できるように)
         private sealed class KeyNamedSpriteLoader : ISpriteLoader
         {
             public UniTask<UnityEngine.Sprite?> LoadAsync(string key, CancellationToken ct)
@@ -87,6 +87,7 @@ namespace Novel.Tests
             public void ReleaseAll() { }
         }
 
+        // image / hide_image が ICenterImageChannel へ届くかを記録する fake
         private sealed class FakeCenterImageChannel : ICenterImageChannel
         {
             public readonly List<string> Calls = new();
