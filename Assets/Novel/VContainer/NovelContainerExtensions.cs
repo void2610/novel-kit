@@ -1,6 +1,7 @@
 #nullable enable
 using Novel.Assets;
 using Novel.Runtime;
+using System;
 using VContainer;
 using VitalRouter;
 
@@ -14,10 +15,15 @@ namespace Novel.Integration
     public static class NovelContainerExtensions
     {
         /// <param name="lifetime">
-        /// 生成単位。シーンごとに独立させたい game は、親スコープで一度登録して <see cref="Lifetime.Scoped"/> を指定する
+        /// 生成単位。シーンごとに独立させたい game は、親スコープで一度登録して <see cref="Lifetime.Scoped"/> を指定する。
+        /// <see cref="Lifetime.Transient"/> は未対応
         /// </param>
         public static void RegisterNovelKitCore(this IContainerBuilder builder, Lifetime lifetime = Lifetime.Singleton)
         {
+            // Transient は注入点ごとに Router と runner (と MRubyState) が分裂し、進行と CaptureState が無言で食い違う
+            if (lifetime == Lifetime.Transient)
+                throw new ArgumentOutOfRangeException(nameof(lifetime), "Transient は未対応。Singleton か Scoped を指定する");
+
             builder.Register(_ => new Router(), lifetime);
 
             builder.Register<ITextResolver, IdentityTextResolver>(lifetime);
@@ -48,6 +54,7 @@ namespace Novel.Integration
         // game 独自コマンドモジュール（[Routes] + INovelCommandModule）を登録する。runner が
         // IEnumerable<INovelCommandModule> として集約注入し、語彙束縛とハンドラ写像を行う。
         // 糖衣の .rb は別途 IPreambleSource として追加登録する（RegisterNovelKit() の後勝ち登録）。
+        // コアを Scoped で登録した場合、状態を持つモジュールを既定の Singleton のままにすると runner 間で共有される。
         public static void RegisterNovelCommand<TModule>(this IContainerBuilder builder, Lifetime lifetime = Lifetime.Singleton)
             where TModule : INovelCommandModule
         {

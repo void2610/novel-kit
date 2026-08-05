@@ -12,6 +12,10 @@ namespace Novel.Integration
     // INovelView と ICharacterCatalog は game 固有のため、いずれの場合も別途 game が登録する前提。
     public static class NovelViewContainerExtensions
     {
+        /// <param name="lifetime">
+        /// 生成単位。シーンごとに独立させたい game は、親スコープで一度登録して <see cref="Lifetime.Scoped"/> を指定する。
+        /// <see cref="Lifetime.Transient"/> は未対応
+        /// </param>
         public static void RegisterNovelKit(this IContainerBuilder builder, string scenarioRoot = "Scenarios/",
             string rubyResourcePath = RubyDictionary.DefaultKey, Lifetime lifetime = Lifetime.Singleton)
         {
