@@ -1,6 +1,7 @@
 #nullable enable
 using Novel.Assets;
 using Novel.Runtime;
+using System;
 using VContainer;
 using VitalRouter;
 
@@ -13,42 +14,51 @@ namespace Novel.Integration
     // Novel.View.VContainer の RegisterNovelKit() を使う（こちらは本 Core を内部で呼ぶ）。
     public static class NovelContainerExtensions
     {
-        public static void RegisterNovelKitCore(this IContainerBuilder builder)
+        /// <param name="lifetime">
+        /// 生成単位。シーンごとに独立させたい game は、親スコープで一度登録して <see cref="Lifetime.Scoped"/> を指定する。
+        /// <see cref="Lifetime.Transient"/> は未対応
+        /// </param>
+        public static void RegisterNovelKitCore(this IContainerBuilder builder, Lifetime lifetime = Lifetime.Singleton)
         {
-            builder.RegisterInstance(new Router());
+            // Transient は注入点ごとに Router と runner (と MRubyState) が分裂し、進行と CaptureState が無言で食い違う
+            if (lifetime == Lifetime.Transient)
+                throw new ArgumentOutOfRangeException(nameof(lifetime), "Transient は未対応。Singleton か Scoped を指定する");
 
-            builder.Register<ITextResolver, IdentityTextResolver>(Lifetime.Singleton);
-            builder.Register<INovelPlaybackSettings, DefaultNovelPlaybackSettings>(Lifetime.Singleton);
+            builder.Register(_ => new Router(), lifetime);
+
+            builder.Register<ITextResolver, IdentityTextResolver>(lifetime);
+            builder.Register<INovelPlaybackSettings, DefaultNovelPlaybackSettings>(lifetime);
 
             // 省略可能ファセット/サービスの no-op 既定（silent）。dev 警告版/ログ版は View ヘルパが上書きする
-            builder.Register<IPortraitChannel, NullPortraitChannel>(Lifetime.Singleton);
+            builder.Register<IPortraitChannel, NullPortraitChannel>(lifetime);
             // IPortraitDirector の既定は IPortraitChannel を内部で参照する DefaultPortraitDirector。
             // game 側が IPortraitChannel を差し替えれば Director も自動的に差し替え後の実装を使う。
-            builder.Register<IPortraitDirector, DefaultPortraitDirector>(Lifetime.Singleton);
-            builder.Register<IBackgroundChannel, NullBackgroundChannel>(Lifetime.Singleton);
-            builder.Register<IStillChannel, NullStillChannel>(Lifetime.Singleton);
-            builder.Register<ICenterImageChannel, NullCenterImageChannel>(Lifetime.Singleton);
-            builder.Register<IAudioChannel, NullAudioChannel>(Lifetime.Singleton);
-            builder.Register<IWorldEffectSink, NullWorldEffectSink>(Lifetime.Singleton);
+            builder.Register<IPortraitDirector, DefaultPortraitDirector>(lifetime);
+            builder.Register<IBackgroundChannel, NullBackgroundChannel>(lifetime);
+            builder.Register<IStillChannel, NullStillChannel>(lifetime);
+            builder.Register<ICenterImageChannel, NullCenterImageChannel>(lifetime);
+            builder.Register<IAudioChannel, NullAudioChannel>(lifetime);
+            builder.Register<IWorldEffectSink, NullWorldEffectSink>(lifetime);
             // スプライト解決の no-op 既定 (常に null)。Resources/Addressables 実装は game か View ヘルパが上書きする
-            builder.Register<ISpriteLoader, NullSpriteLoader>(Lifetime.Singleton);
-            builder.Register<INovelErrorHandler, NullErrorHandler>(Lifetime.Singleton);
+            builder.Register<ISpriteLoader, NullSpriteLoader>(lifetime);
+            builder.Register<INovelErrorHandler, NullErrorHandler>(lifetime);
             // ルビ辞書の no-op 既定 (本文をそのまま返す)。Resources ベース実装は View ヘルパが上書きする
-            builder.Register<IRubyDictionary, NullRubyDictionary>(Lifetime.Singleton);
+            builder.Register<IRubyDictionary, NullRubyDictionary>(lifetime);
             // RingBufferBacklog(int maxLines=200) の既定引数を VContainer は解決できない (int 未登録で Build が落ちる)。
-            // インスタンス登録で既定容量を使う (容量を変えたい game は後勝ちで RegisterInstance<IBacklog> すればよい)。
-            builder.RegisterInstance<IBacklog>(new RingBufferBacklog());
+            // ファクトリ登録で既定容量を使う (容量を変えたい game は後勝ちで登録すればよい)。
+            builder.Register<IBacklog>(_ => new RingBufferBacklog(), lifetime);
 
-            builder.Register<INovelScenarioRunner, NovelScenarioRunner>(Lifetime.Singleton);
+            builder.Register<INovelScenarioRunner, NovelScenarioRunner>(lifetime);
         }
 
         // game 独自コマンドモジュール（[Routes] + INovelCommandModule）を登録する。runner が
         // IEnumerable<INovelCommandModule> として集約注入し、語彙束縛とハンドラ写像を行う。
         // 糖衣の .rb は別途 IPreambleSource として追加登録する（RegisterNovelKit() の後勝ち登録）。
-        public static void RegisterNovelCommand<TModule>(this IContainerBuilder builder)
+        // コアを Scoped で登録した場合、状態を持つモジュールを既定の Singleton のままにすると runner 間で共有される。
+        public static void RegisterNovelCommand<TModule>(this IContainerBuilder builder, Lifetime lifetime = Lifetime.Singleton)
             where TModule : INovelCommandModule
         {
-            builder.Register<TModule>(Lifetime.Singleton).As<INovelCommandModule>();
+            builder.Register<TModule>(lifetime).As<INovelCommandModule>();
         }
     }
 }

@@ -1,4 +1,5 @@
 #nullable enable
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
@@ -49,6 +50,53 @@ namespace Novel.Tests
 
             Assert.IsInstanceOf<NovelScenarioRunner>(container.Resolve<INovelScenarioRunner>());
             Assert.IsInstanceOf<RingBufferBacklog>(container.Resolve<IBacklog>());
+        }
+
+        // 親スコープに Scoped で一度登録し、シーン相当の子スコープごとに独立したインスタンスを得る契約を固定する。
+        // runner は解決したスコープが生成するため、インスタンスが分かれることは各 runner が
+        // その子スコープ側の INovelView / ファセットに束縛されることと同義。
+        [Test]
+        public void Scopedなら子スコープごとに別のrunnerとbacklogを得る()
+        {
+            var builder = new ContainerBuilder();
+            builder.RegisterNovelKitCore(Lifetime.Scoped);
+            builder.RegisterInstance<ICharacterCatalog>(new StubCatalog());
+            builder.RegisterInstance<IScenarioSource>(new StubSource());
+
+            using var root = builder.Build();
+            var viewA = new StubView();
+            var viewB = new StubView();
+            using var scopeA = root.CreateScope(b => b.RegisterInstance<INovelView>(viewA));
+            using var scopeB = root.CreateScope(b => b.RegisterInstance<INovelView>(viewB));
+
+            Assert.That(scopeA.Resolve<INovelView>(), Is.SameAs(viewA));
+            Assert.That(scopeB.Resolve<INovelView>(), Is.SameAs(viewB));
+            Assert.That(scopeA.Resolve<INovelScenarioRunner>(),
+                Is.Not.SameAs(scopeB.Resolve<INovelScenarioRunner>()));
+            Assert.That(scopeA.Resolve<IBacklog>(), Is.Not.SameAs(scopeB.Resolve<IBacklog>()));
+        }
+
+        [Test]
+        public void Scopedでも同じスコープ内では同じインスタンスを返す()
+        {
+            var builder = new ContainerBuilder();
+            builder.RegisterNovelKitCore(Lifetime.Scoped);
+            builder.RegisterInstance<ICharacterCatalog>(new StubCatalog());
+            builder.RegisterInstance<IScenarioSource>(new StubSource());
+
+            using var root = builder.Build();
+            using var scope = root.CreateScope(b => b.RegisterInstance<INovelView>(new StubView()));
+
+            Assert.That(scope.Resolve<INovelScenarioRunner>(),
+                Is.SameAs(scope.Resolve<INovelScenarioRunner>()));
+        }
+
+        [Test]
+        public void Transientは受け付けない()
+        {
+            var builder = new ContainerBuilder();
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => builder.RegisterNovelKitCore(Lifetime.Transient));
         }
     }
 }

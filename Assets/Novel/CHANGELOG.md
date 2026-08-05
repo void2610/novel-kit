@@ -5,6 +5,13 @@
 
 ## [Unreleased]
 
+### Added
+- DI 登録ヘルパー (`RegisterNovelKitCore` / `RegisterNovelKit` / `RegisterNovelCommand`) に `Lifetime` 引数を追加。
+  既定は従来どおり `Lifetime.Singleton`。親スコープで一度登録してシーンごとに独立したインスタンスを持たせたい
+  game は `Lifetime.Scoped` を指定する。あわせて `Router` / `IBacklog` の登録をインスタンス登録から
+  ファクトリ登録へ変更した (共有インスタンスのままでは lifetime 指定が効かないため)。
+  `Lifetime.Transient` は Router と runner が注入点ごとに分裂して進行と `CaptureState` が無言で食い違うため受け付けない
+
 ### Changed
 - **破壊的**: スプライトを扱うファセットを整理した。
   - `IPortraitView` / `IBackgroundView` / `ICenterImageView` を `IPortraitChannel` / `IBackgroundChannel` /
