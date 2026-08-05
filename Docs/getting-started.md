@@ -159,6 +159,10 @@ public sealed class NovelLifetimeScope : LifetimeScope
 > `Novel.VContainer` の `builder.RegisterNovelKitCore()` を使います。これは純 `Novel.Runtime` だけに依存し、
 > `IScenarioSource` / `IPreambleSource` は game が登録します（`RegisterNovelKit()` は内部でこの Core を呼んでいます）。
 
+> **シーンごとに独立させたい場合**は `Lifetime.Scoped` を渡します。親（root）の LifetimeScope で一度
+> `RegisterNovelKit(lifetime: Lifetime.Scoped)` を呼んでおくと、解決したシーンのスコープが自分用のインスタンスを
+> 作り、そのスコープの破棄と一緒に片付きます。既定の `Lifetime.Singleton` はアプリ全体で 1 つになります。
+
 > **ファセット/サービスの差し替えは `RegisterNovelKit()` の後に登録**してください（後勝ち）。立ち絵・背景・音声・
 > セーブ・世界エフェクトを供給するときは `builder.Register<IPortraitView, MyPortraitView>(...)` 等を後に書きます。
 > 未供給のまま `portrait`/`bg`/`se` 等を `.rb` が呼ぶと、dev ビルドでは一度だけ警告が出ます（本番は無音 no-op）。

@@ -13,33 +13,36 @@ namespace Novel.Integration
     public static class NovelViewContainerExtensions
     {
         public static void RegisterNovelKit(this IContainerBuilder builder, string scenarioRoot = "Scenarios/",
-            string rubyResourcePath = RubyDictionary.DefaultKey)
+            string rubyResourcePath = RubyDictionary.DefaultKey, Lifetime lifetime = Lifetime.Singleton)
         {
-            builder.RegisterNovelKitCore();
+            builder.RegisterNovelKitCore(lifetime);
 
             // 参考 Resources ローダ（シナリオ / 同梱 preamble の .mrb を Resources から読む）
             var loader = new ResourcesTextAssetLoader();
-            builder.RegisterInstance<IScenarioSource>(new ScenarioSource(loader, scenarioRoot));
-            builder.RegisterInstance<IPreambleSource>(new PreambleSource(loader));
+            builder.Register<IScenarioSource>(_ => new ScenarioSource(loader, scenarioRoot), lifetime);
+            builder.Register<IPreambleSource>(_ => new PreambleSource(loader), lifetime);
 
-            // Configure は PlayerLoop 停止中に走るため、async UniTask (LoadFromAsync) の完了は待てない。
-            // Resources ローダーの同期 API から直接読み込む
-            var ruby = new RubyDictionary();
-            var rubyText = loader.LoadText(rubyResourcePath);
-            if (rubyText != null) ruby.Load(rubyText);
-            builder.RegisterInstance<IRubyDictionary>(ruby);
+            builder.Register<IRubyDictionary>(_ =>
+            {
+                // Configure は PlayerLoop 停止中に走るため、async UniTask (LoadFromAsync) の完了は待てない。
+                // Resources ローダーの同期 API から直接読み込む
+                var ruby = new RubyDictionary();
+                var rubyText = loader.LoadText(rubyResourcePath);
+                if (rubyText != null) ruby.Load(rubyText);
+                return ruby;
+            }, lifetime);
 
             // スプライトも Resources から。root なしなのでキーは Resources 相対パスそのもの
             // (プレフィックスを付けたい / Addressables にしたい game は ISpriteLoader を後勝ち登録する)
-            builder.RegisterInstance<ISpriteLoader>(new ResourcesSpriteLoader());
+            builder.Register<ISpriteLoader>(_ => new ResourcesSpriteLoader(), lifetime);
 
             // dev ビルドで未供給コマンドを一度だけ警告する no-op ファセット（コアの silent 既定を上書き）
-            builder.Register<IPortraitChannel, WarningPortraitChannel>(Lifetime.Singleton);
-            builder.Register<IBackgroundChannel, WarningBackgroundChannel>(Lifetime.Singleton);
-            builder.Register<IStillChannel, WarningStillChannel>(Lifetime.Singleton);
-            builder.Register<IAudioChannel, WarningAudioChannel>(Lifetime.Singleton);
+            builder.Register<IPortraitChannel, WarningPortraitChannel>(lifetime);
+            builder.Register<IBackgroundChannel, WarningBackgroundChannel>(lifetime);
+            builder.Register<IStillChannel, WarningStillChannel>(lifetime);
+            builder.Register<IAudioChannel, WarningAudioChannel>(lifetime);
             // エラーは無音にしない（シナリオ名 + Ruby backtrace をログ。コアの NullErrorHandler を上書き）
-            builder.Register<INovelErrorHandler, DebugNovelErrorHandler>(Lifetime.Singleton);
+            builder.Register<INovelErrorHandler, DebugNovelErrorHandler>(lifetime);
         }
     }
 }

@@ -2,6 +2,9 @@
 
 更新履歴を新しい順に記録する。日付は `YYYY-MM-DD`。
 
+## 2026-08-05
+* **Update**: DI 登録ヘルパーに `Lifetime` 引数を追加。従来は `Lifetime.Singleton` 固定で、「親スコープで一度登録し、シーンごとに独立したインスタンスを持たせる」構成が取れなかった (root に置くと `INovelScenarioRunner` が root 側で解決した View に束縛され、シーンの UI と繋がらない)。`RegisterNovelKitCore` / `RegisterNovelKit` / `RegisterNovelCommand` が `Lifetime` を受け、内部登録すべてに反映する。`Router` と `IBacklog` はインスタンス登録では lifetime が効かないためファクトリ登録へ変更。既定は据え置きなので既存 game に影響はない。EditMode 104/104 (バッチモード実測)。
+
 ## 2026-07-30
 * **Update**: 辞書ルビの適用を `NovelCommandHandler` に集約。従来は `IRubyDictionary` を DI で受けても「いつ ApplyTo するか」が game 側 View の裁量で、呼び忘れれば無言で効かず、呼ぶ位置を誤ると既読 ID/バックログにふりがなが混入した (CR が View 側適用にしていたのは混入回避の逃げ場)。既読 ID とバックログを確定した**後**に表示用テキストへだけ適用することで、裁量の排除と混入回避を両立。契約はテストで固定 (表示に付く / 既読 ID 不変 / バックログ不変 / 未供給ならそのまま / 早送り行も初出を消費 / 選択肢にも付く)。「初出のみ」の周回リセット (`ResetShown`) は game 所有のまま (runner が呼ぶとシナリオ単位リセットになりセマンティクスが壊れる)。二重適用の壊れ方 (noparse 内への markup 再注入で TMP タグがリテラル表示) を CHANGELOG の移行手順に明記。
 * **Update**: スプライト解決を runtime 側へ集約。`IPortraitView`/`IBackgroundView`/`ICenterImageView` の引数を論理キー (`string`) から解決済み `Sprite?` へ変え、`NovelCommandHandler` が `ISpriteLoader` でキーを引いてから View を呼ぶ形にした（従来は `ISpriteLoader` を novel-kit に置きながら使うのは game 側 View だけで、抽象を持つ意味が半減していた）。`IPortraitDirector` も Sprite ベースにし、slot 変更時の再表示キャッシュを Sprite 保持へ。ファセットと `PortraitLayout` は `Novel.Assets` へ移設（Runtime → Novel.Assets の一方向依存。当初 `PortraitLayout` を Runtime に残したままファセットだけ移して**循環依存**を作り、Unity が全アセンブリのコンパイルを中断してエラー 0 なのに新規テストが DLL に入らない症状を踏んだ）。`NullSpriteLoader` を Core 既定に、`RegisterNovelKit` は `ResourcesSpriteLoader` を登録。解放契機は `NovelScenarioRunner.Dispose()` が `ReleaseAll()` を呼ぶ形に決着 (ロードが kit に移った以上解放も kit が持つ。シナリオ単位で解放したい game は自分で呼べる)。フォルダは `AssetLoaders` → `Presentation` (ローダー以外も入るため)。EditMode 79/79 (バッチモード実測・leaked objects 0。`-runTests` と `-quit` は併用不可で results.xml が生成されない点も判明)。
