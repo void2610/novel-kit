@@ -2,6 +2,9 @@
 
 更新履歴を新しい順に記録する。日付は `YYYY-MM-DD`。
 
+## 2026-08-06
+* **Creation**: [プロジェクトリファレンス](/design/decisions/project-reference.md) ADR を新規作成。ライターズガイド整備で判明した「プロジェクトの資料で確認」13 箇所（名前・構図・独自命令・配線）のうち、名前と構図の一覧をエディタウィンドウで提供する。列挙の契約は別 provider interface ではなく `IAudioChannel`/`IPortraitChannel` 自身に default 実装付きメンバーとして統合（再生実装がキーを知っているのは自明・既存実装は無改修）し、編集モードへのインスタンス供給は InitializeOnLoad の明示登録で行う（型走査・アセット形式の仮定を持たない。未登録は「未登録」表示で配線可視化を兼ねる）。参考実装として `ScriptableAudioCatalog` + 最小 `NovelAudioPlayer` を `Novel.View` に追加する。Markdown 書き出し・独自命令一覧・Validate 突き合わせはスコープ外（次フェーズ候補）。
+
 ## 2026-08-05
 * **Update**: DI 登録ヘルパーに `Lifetime` 引数を追加。従来は `Lifetime.Singleton` 固定で、「親スコープで一度登録し、シーンごとに独立したインスタンスを持たせる」構成が取れなかった (root に置くと `INovelScenarioRunner` が root 側で解決した View に束縛され、シーンの UI と繋がらない)。`RegisterNovelKitCore` / `RegisterNovelKit` / `RegisterNovelCommand` が `Lifetime` を受け、内部登録すべてに反映する。`Router` と `IBacklog` はインスタンス登録では lifetime が効かないためファクトリ登録へ変更。既定は据え置きなので既存 game に影響はない。`Transient` は注入点ごとに Router / runner (と MRubyState) が分裂し進行と `CaptureState` が無言で食い違うため例外で弾く。契約 (子スコープごとに別 runner / 同一スコープ内は同一 / Transient 拒否) をテストで固定。EditMode 107/107 (バッチモード実測)。
 
