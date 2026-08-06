@@ -4,6 +4,8 @@
     "references": [
         "Novel.Runtime",
         "Novel.Commands",
+        "Novel.Assets",
+        "Novel.View",
         "MRubyCS.Compiler"
     ],
     "includePlatforms": [

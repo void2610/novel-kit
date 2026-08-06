@@ -4,7 +4,7 @@
 各ファイルは `type: Decision`。ステータスは `確定` / `暫定` / `保留`。
 
 ## 確定済み（2026-08-06・ユーザーとの議論で合意）
-* [プロジェクトリファレンス](/design/decisions/project-reference.md) - ライター向け「名前と構図」一覧のエディタウィンドウ。列挙契約は `IAudioChannel`/`IPortraitChannel` に default 実装付きで統合・編集モードへは InitializeOnLoad 明示登録・参考 ScriptableAudioCatalog + NovelAudioPlayer を追加
+* [プロジェクトリファレンス](/design/decisions/project-reference.md) - ライター向け「名前と構図」一覧のエディタウィンドウ。列挙契約は `IAudioChannel`/`IPortraitChannel` に default 実装付きで統合・実行時実体は `RegisterNovelKitCore` の DI ビルド時キャプチャで取得（game 追加記述ゼロ）・参考 ScriptableAudioCatalog + NovelAudioPlayer を追加
 
 ## 確定済み（2026-06-13・ユーザーとの議論で合意）
 * [実行モデル: 前進専用 + チェックポイント割り切り](/design/decisions/execution-model.md) - セーブは `PlayAsync` 境界のみ。履歴記録/save-anywhere/ロールバックは持たない（2026-06-14 にリプレイ前提から格下げ）

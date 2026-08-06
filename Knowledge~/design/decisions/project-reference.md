@@ -1,9 +1,9 @@
 ---
 type: Decision
-title: プロジェクトリファレンス — キー列挙はチャンネル契約に統合・編集モードへは明示登録
-description: ライター向けに「使える名前と構図」を一覧するエディタウィンドウを追加する。列挙の契約は IAudioChannel / IPortraitChannel 自身に default 実装付きで統合し、編集モードへのインスタンス供給は InitializeOnLoad の明示登録で行う。参考実装として ScriptableAudioCatalog + NovelAudioPlayer を追加する。
+title: プロジェクトリファレンス — キー列挙はチャンネル契約に統合・実体は DI ビルド時にキャプチャ
+description: ライター向けに「使える名前と構図」を一覧するエディタウィンドウを追加する。列挙の契約は IAudioChannel / IPortraitChannel 自身に default 実装付きで統合し、実行時にしか実体がない情報は RegisterNovelKitCore が DI ビルド時にキャプチャしてエディタ側キャッシュへ渡す（game 側の追加記述ゼロ）。参考実装として ScriptableAudioCatalog + NovelAudioPlayer を追加する。
 tags: [decision, editor, tooling, audio, portrait, layout, catalog, writer]
-timestamp: 2026-08-06T05:01:56Z
+timestamp: 2026-08-06T05:20:00Z
 status: 確定
 ---
 
@@ -63,27 +63,26 @@ public interface IPortraitChannel
 - `AudioKeyInfo` は key / 種別（BGM/SE）/ ライター向けメモ（任意）、`StageLayoutInfo` は
   layout id / スロット数 / メモ（任意）を持つ軽量構造体。
 
-## 3. 編集モードへの供給は InitializeOnLoad の明示登録
+## 3. 実行時にしか実体がない情報は DI ビルド時にキャプチャする
 
 エディタウィンドウは編集モードで動くが、チャンネルは実行時 DI でしか実体化しない。
-このギャップは **game（および novel-kit 参考実装）が editor アセンブリで明示登録**して埋める。
+このギャップは編集モード側で埋めない。**実際にコンテナが組み上がる瞬間に novel-kit 自身が吸い上げる**。
 
-```csharp
-#if UNITY_EDITOR
-[InitializeOnLoad]
-static class MyNovelEditorHooks
-{
-    static MyNovelEditorHooks() =>
-        NovelProjectReference.RegisterAudio(() => new MyAudioChannel(/* editor-safe に構築 */));
-        // RegisterPortrait(...) も同様
-}
-#endif
-```
+`RegisterNovelKitCore()`（game が既に呼んでいる）にエディタ実行時のみ有効な
+`RegisterBuildCallback` を仕込み、構築済みコンテナから `IAudioChannel` / `IPortraitChannel` を
+解決して列挙結果をエディタ側キャッシュ（`Library/` 配下・ドメインリロード/再起動を跨いで保持）へ書き出す。
+ウィンドウはキャッシュを取得時刻つきで表示する。
 
-- ウィンドウは登録済みファクトリを呼んで列挙するだけ。**リフレクション走査・アセット形式の仮定
-  （SO/MonoBehaviour/plain class）は一切持たない**。データがどこにあるか（SO・enum・JSON・シーン上の
-  コンポーネント）はファクトリを書く game の自由。
-- 未登録セクションはウィンドウに「未登録」と表示する。これがそのまま配線状況の簡易可視化を兼ねる。
+- **game 側の追加記述はゼロ。** チャンネル実装 + 列挙オーバーライド + いつもの DI 登録だけで
+  ウィンドウに載る。チャンネルの実体が plain class か MonoBehaviour か等の入手問題は、
+  DI が解決できている時点で存在しない。
+- **忠実度が最高。** 後勝ち差し替え・スコープ構成まで含めた「実際に鳴らす配線」から取るため、
+  編集モードでの再構築のような本番との乖離が原理的にない。
+- トレードオフとしてデータは「最後に再生した時点」のもの。未キャプチャ時はウィンドウが
+  「一度再生してください」と案内する。ただしアセットとして静的に読めるもの
+  （キャラカタログ・Resources の画像キー・参考 ScriptableAudioCatalog）は再生不要でライブ表示し、
+  キャッシュ頼みになるのは実行時にしか実体がない部分（自前音響等）に限る。
+- キャプチャは try/catch で保護し、失敗しても game の起動を妨げない（警告ログのみ）。
 
 ## 4. 参考実装: ScriptableAudioCatalog + NovelAudioPlayer
 
@@ -101,19 +100,23 @@ static class MyNovelEditorHooks
 
 - 列挙をチャンネル契約に統合すると、契約が 1 つで済み、「鳴らせるのに一覧に出ない」という
   実装とカタログの乖離が構造的に起きない。
-- 明示登録は決定的で、発見の失敗が「未登録」として見える。型走査より単純で説明可能。
+- DI ビルド時キャプチャは、game が既に書いている配線（interface 実装 + DI 登録）以外の
+  記述を一切要求しない。配線の知識を二重に書かせる案（マニフェスト・editor フック）は
+  すべて同型の陳腐化リスクを持つため退けた。
 - default 実装により後方互換が保たれ、既存 6 プロジェクトのチャンネル実装に影響しない。
 
 # 帰結
 
 - `IAudioChannel` / `IPortraitChannel` にメンバー追加（default 実装付き・非破壊）。
   `AudioKeyInfo` / `StageLayoutInfo` を追加。
-- `Novel.Editor` に登録レジストリ（`NovelProjectReference`）とウィンドウを追加。
-- game 側の導入作業は「editor アセンブリに InitializeOnLoad の登録 1 クラス」+
-  「チャンネルの列挙オーバーライド」。
+- `Novel.VContainer` の `RegisterNovelKitCore()` にエディタ限定のキャプチャコールバックを追加。
+  受け口（キャプチャハブ）は `Novel.Runtime` に `#if UNITY_EDITOR` で置き、
+  `Novel.Editor` が購読して `Library/` 配下へ永続化 + ウィンドウ表示する。
+- game 側の導入作業は「チャンネルの列挙オーバーライド」のみ。
 - 列挙契約は将来の Validate Scenarios 突き合わせ（シナリオ中の未定義キー検出）の
   正解データをそのまま兼ねる（次フェーズ候補、本 ADR のスコープ外）。
-- シーン上のインスタンス有無に依存しない（登録ファクトリが editor-safe に構築する責務を持つ）。
+- `EnumerateKeys()` / `EnumerateLayouts()` は起動負荷を避けるため軽量であること
+  （キー列挙のみ。アセットの実ロードを伴わないこと）を契約ドキュメントに明記する。
 
 # 検討した代替案
 
@@ -122,7 +125,10 @@ static class MyNovelEditorHooks
 - **別 interface（IAudioKeyProvider）+ 型走査で発見**: TypeCache で実装型を列挙し、
   SO はアセット検索・MonoBehaviour はシーン/プレハブ検索・plain class は引数なし生成、と
   入手経路が型ごとに分岐する。暗黙的で説明困難、シーンを開いているかに挙動が依存する、
-  発見失敗が沈黙する、と複雑さの割に堅牢でないため不採用。チャンネル統合 + 明示登録が
-  同じ範囲をより単純に覆う。
+  発見失敗が沈黙する、と複雑さの割に堅牢でないため不採用。
+- **InitializeOnLoad の明示登録（editor フックでファクトリ登録）**: 発見は決定的になるが、
+  game が DI に書いた配線と同じ知識を editor 用にもう一度（しかも MonoBehaviour では
+  入手経路の選択込みで）書かせる二重記述になるため不採用。DI ビルド時キャプチャが
+  同じ情報を追加記述ゼロで得る。
 - **Markdown 書き出し先行**: Unity を開かないライターへの配布には有効だが、ユーザー判断で
   最初からエディタウィンドウに一本化。エクスポートは必要になれば後付けできる。
