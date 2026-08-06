@@ -15,7 +15,8 @@ EditMode テスト・サンプルシーンで全パイプラインの動作を�
   - `Novel.View` — 参考 TMP View・`UnityFrameClock`・`RubyMarkup`（`<ruby>` 展開）・Resources ローダ・SO カタログ・dev 警告ファセット/`DebugNovelErrorHandler`（省略可）。
   - `Novel.VContainer` — `RegisterNovelKitCore()` 一括登録ヘルパ（純 `Novel.Runtime` 依存・View/Resources 非依存）。独自コマンドは `RegisterNovelCommand<TModule>()`（`INovelCommandModule`）で差し込む。
   - `Novel.View.VContainer` — `RegisterNovelKit()` 箱出し登録ヘルパ（Core + Resources ローダ + 警告ファセット + Debug エラーログ）。
-  - `Novel.Editor` — シナリオ検証メニュー（`Novel/Validate Scenarios`）。
+  - `Novel.Editor` — シナリオ検証メニュー（`Novel/Validate Scenarios`）・プロジェクトリファレンス
+    （`Novel/Project Reference`。使える名前/構図の一覧。実行時実体は DI ビルド時キャプチャ）。
   - `Novel.Samples` / `Novel.Tests.EditMode` — 動作確認シーンと EditMode テスト。
 - 利用手順は `Docs/getting-started.md`。シナリオライター向け DSL リファレンスは `Docs/scenario/`
   （命令・タグ・preamble 糖衣を変更したら追随して更新すること）。

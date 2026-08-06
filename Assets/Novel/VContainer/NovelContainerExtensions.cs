@@ -49,6 +49,27 @@ namespace Novel.Integration
             builder.Register<IBacklog>(_ => new RingBufferBacklog(), lifetime);
 
             builder.Register<INovelScenarioRunner, NovelScenarioRunner>(lifetime);
+
+#if UNITY_EDITOR
+            // 実際に配線されたチャンネル (後勝ち差し替え込み) から音キー/構図の目録を吸い上げ、
+            // エディタのプロジェクトリファレンスへ渡す (project-reference ADR)。失敗しても起動は妨げない
+            builder.RegisterBuildCallback(container =>
+            {
+                try
+                {
+                    var audio = container.Resolve<IAudioChannel>();
+                    var portrait = container.Resolve<IPortraitChannel>();
+                    NovelProjectCapture.Publish(new NovelProjectCapture.Snapshot(
+                        new System.Collections.Generic.List<AudioKeyInfo>(audio.EnumerateKeys()),
+                        new System.Collections.Generic.List<StageLayoutInfo>(portrait.EnumerateLayouts()),
+                        audio.GetType().Name, portrait.GetType().Name, DateTime.Now));
+                }
+                catch (Exception e)
+                {
+                    UnityEngine.Debug.LogWarning($"[Novel] プロジェクトリファレンスのキャプチャに失敗: {e}");
+                }
+            });
+#endif
         }
 
         // game 独自コマンドモジュール（[Routes] + INovelCommandModule）を登録する。runner が

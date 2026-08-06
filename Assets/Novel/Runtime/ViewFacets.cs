@@ -12,5 +12,12 @@ namespace Novel.Runtime
         UniTask PlaySeLoopAsync(string seKey, float interval, int count, CancellationToken ct);
         void PlayBgm(string bgmKey);
         void StopBgm();
+
+        /// <summary>
+        /// この実装が解決できる音キーの目録 (project-reference ADR)。エディタのプロジェクトリファレンスが
+        /// DI ビルド時に読む。キーの列挙のみで、実アセットのロード等の重い処理を伴わないこと。
+        /// 一覧を提供しない実装は既定 (空) のままでよい。
+        /// </summary>
+        IEnumerable<AudioKeyInfo> EnumerateKeys() => System.Array.Empty<AudioKeyInfo>();
     }
 }

@@ -173,6 +173,15 @@ public sealed class NovelLifetimeScope : LifetimeScope
 > セーブ・世界エフェクトを供給するときは `builder.Register<IPortraitView, MyPortraitView>(...)` 等を後に書きます。
 > 未供給のまま `portrait`/`bg`/`se` 等を `.rb` が呼ぶと、dev ビルドでは一度だけ警告が出ます（本番は無音 no-op）。
 
+### ライター向け一覧: Novel > Project Reference
+
+使える名前（キャラ・画像・BGM/SE）と構図を一覧するエディタウィンドウです。キャラカタログと Resources の
+画像キーはアセットから常時表示され、音キーと構図は **一度再生したときの実際の DI 配線からキャプチャ**されて
+表示されます（game 側の登録作業は不要）。
+自前実装を一覧に載せるには `IAudioChannel.EnumerateKeys()` / `IPortraitChannel.EnumerateLayouts()` を
+オーバーライドしてください（default 実装があるため未対応でもコンパイルは通ります。既定は空 / 標準 5 構図）。
+列挙はキーの一覧を返すだけの軽量な実装にし、アセットの実ロードを伴わないようにします。
+
 `NovelMessageView`（参考 View）は TMP のメッセージ窓・選択肢ボタンを serialized 参照で持ちます。
 送り入力（クリック/決定）は `view.Advance()` を呼んで進めます（入力方式に依存しないため）。
 

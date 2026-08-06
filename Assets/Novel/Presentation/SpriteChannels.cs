@@ -1,4 +1,5 @@
 #nullable enable
+using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 
@@ -19,6 +20,13 @@ namespace Novel.Assets
         UniTask ShowAsync(int slotIndex, ResolvedSprite portrait, CancellationToken ct);
 
         UniTask HideAsync(int slotIndex, CancellationToken ct);
+
+        /// <summary>
+        /// この実装が扱える構図の目録 (project-reference ADR)。エディタのプロジェクトリファレンスが
+        /// DI ビルド時に読む。既定は標準 5 構図 (single〜penta)。独自構図を持つ実装はオーバーライドして返す
+        /// (キーの列挙のみで、副作用や重い処理を伴わないこと)。
+        /// </summary>
+        IEnumerable<StageLayoutInfo> EnumerateLayouts() => StageLayoutInfo.Defaults;
     }
 
     /// <summary>背景 (全画面・場面)。</summary>
