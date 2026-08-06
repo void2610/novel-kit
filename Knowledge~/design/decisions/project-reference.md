@@ -3,7 +3,7 @@ type: Decision
 title: プロジェクトリファレンス — キー列挙はチャンネル契約に統合・実体は DI ビルド時にキャプチャ
 description: ライター向けに「使える名前と構図」を一覧するエディタウィンドウを追加する。列挙の契約は IAudioChannel / IPortraitChannel 自身に default 実装付きで統合し、実行時にしか実体がない情報は RegisterNovelKitCore が DI ビルド時にキャプチャしてエディタ側キャッシュへ渡す（game 側の追加記述ゼロ）。音の参考実装は追加しない。
 tags: [decision, editor, tooling, audio, portrait, layout, catalog, writer]
-timestamp: 2026-08-06T05:45:00Z
+timestamp: 2026-08-06T07:40:00Z
 status: 確定
 ---
 
@@ -107,10 +107,23 @@ public interface IPortraitChannel
   受け口（キャプチャハブ）は `Novel.Runtime` に `#if UNITY_EDITOR` で置き、
   `Novel.Editor` が購読して `Library/` 配下へ永続化 + ウィンドウ表示する。
 - game 側の導入作業は「チャンネルの列挙オーバーライド」のみ。
-- 列挙契約は将来の Validate Scenarios 突き合わせ（シナリオ中の未定義キー検出）の
-  正解データをそのまま兼ねる（次フェーズ候補、本 ADR のスコープ外）。
+- 列挙契約は Validate Scenarios 突き合わせ（シナリオ中の未定義キー検出）の
+  正解データをそのまま兼ねる（下記「実装で確定」参照）。
 - `EnumerateKeys()` / `EnumerateLayouts()` は起動負荷を避けるため軽量であること
   （キー列挙のみ。アセットの実ロードを伴わないこと）を契約ドキュメントに明記する。
+
+# 実装で確定
+
+- **Validate Scenarios 突き合わせは次フェーズ候補から昇格して実装**（2026-08-06）。
+  `Novel/Validate Scenarios` がコンパイル検証に加え、全 `.rb` からキー使用箇所
+  （キャラ/立ち絵/画像/音/構図）を正規表現で抽出し、正解データ
+  （キャラ = カタログ SO・画像 = Resources スプライト・音/構図 = DI ビルド時キャプチャ）と
+  突き合わせて未定義キーをファイル:行つきで警告する。
+- 誤検知より見逃しに倒す: 情報源が無い種別（カタログ 0 個・スプライト 0 枚・未キャプチャ）は
+  スキップ、画像キーはローダの root プレフィックスを知らないため後方一致で照合、
+  `#{...}` で組み立てるキーと空キー（`bgm ""` = 停止）は対象外。
+- Ruby は実行せず行単位の正規表現で拾う（`say` の第 3 引数立ち絵キーは対象外。
+  必要になったら追加する）。
 
 # 検討した代替案
 

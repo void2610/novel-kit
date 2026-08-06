@@ -3,6 +3,7 @@
 更新履歴を新しい順に記録する。日付は `YYYY-MM-DD`。
 
 ## 2026-08-06
+* **Update**: [プロジェクトリファレンス](/design/decisions/project-reference.md) の次フェーズ候補だった Validate Scenarios 突き合わせを実装（ADR「実装で確定」節に追認）。`Novel/Validate Scenarios` がコンパイル検証に加え、全 `.rb` のキー使用箇所（キャラ/立ち絵/画像/音/構図）を正規表現で抽出し、カタログ SO・Resources スプライト・DI ビルド時キャプチャと突き合わせて未定義キーをファイル:行つきで警告する。誤検知より見逃しに倒す（情報源が無い種別はスキップ・画像は後方一致・`#{}` と空キーは対象外）。スキャナと突き合わせの契約は EditMode テストで固定。ライターズガイド（1 章・7 章）に導線追記。
 * **Update**: [プロジェクトリファレンス](/design/decisions/project-reference.md) を実装。`IAudioChannel.EnumerateKeys()` / `IPortraitChannel.EnumerateLayouts()`（default 実装付き・既存実装無改修）、`RegisterNovelKitCore` のエディタ限定 build callback → `NovelProjectCapture`（Runtime・`#if UNITY_EDITOR`）→ `ProjectReferenceCaptureStore`（Novel.Editor・`Library/NovelKit/` へ JSON 永続化）の経路、`Novel/Project Reference` ウィンドウ（キャラ = SO カタログ検索・画像キー = Resources スプライトスキャン・構図/音 = キャプチャ表示）。音の参考実装（SO カタログ + プレイヤー）は一度実装したがレビューで不要と判断し除去（ADR に「追加しない」を追記。一覧の情報源は `EnumerateKeys()` で足り、対象プロジェクトは音響実装を既に持つ）。キャプチャ契約は EditMode テストで固定（後勝ち差し替えの反映・既定は空/標準 5 構図）。ライターズガイド・getting-started に導線追記。
 * **Creation**: [プロジェクトリファレンス](/design/decisions/project-reference.md) ADR を新規作成。ライターズガイド整備で判明した「プロジェクトの資料で確認」13 箇所（名前・構図・独自命令・配線）のうち、名前と構図の一覧をエディタウィンドウで提供する。列挙の契約は別 provider interface ではなく `IAudioChannel`/`IPortraitChannel` 自身に default 実装付きメンバーとして統合（再生実装がキーを知っているのは自明・既存実装は無改修）し、実行時にしか実体がない情報は `RegisterNovelKitCore` の DI ビルド時コールバックが本物の配線からキャプチャしてエディタ側キャッシュに永続化する（game 側の追加記述ゼロ。型走査・editor フック・マニフェスト SO は配線知識の二重記述になるため不採用）。アセットとして読めるもの（キャラカタログ・Resources 画像キー）は再生不要でライブ表示。Markdown 書き出し・独自命令一覧・Validate 突き合わせはスコープ外（次フェーズ候補）。
 
