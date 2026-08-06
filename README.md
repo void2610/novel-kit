@@ -13,8 +13,10 @@ apocalyptic-apartment-hunting ほか）で個別実装されていたノベル�
 
 ## 使い方
 
-最小チュートリアル → [`Docs/getting-started.md`](./Docs/getting-started.md)
-（セットアップ・シナリオの書き方・シーン配線・再生・自前 View 差し替え）。
+- 最小チュートリアル → [`Docs/getting-started.md`](./Docs/getting-started.md)
+  （セットアップ・シーン配線・再生・自前 View 差し替え）
+- シナリオの書き方（ライター向け） → [`Docs/scenario/`](./Docs/scenario/index.md)
+  （全命令・インラインタグ・分岐とフラグ・制約と落とし穴）
 
 ## 前提スタック
 

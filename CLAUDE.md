@@ -17,7 +17,8 @@ EditMode テスト・サンプルシーンで全パイプラインの動作を�
   - `Novel.View.VContainer` — `RegisterNovelKit()` 箱出し登録ヘルパ（Core + Resources ローダ + 警告ファセット + Debug エラーログ）。
   - `Novel.Editor` — シナリオ検証メニュー（`Novel/Validate Scenarios`）。
   - `Novel.Samples` / `Novel.Tests.EditMode` — 動作確認シーンと EditMode テスト。
-- 利用手順は `Docs/getting-started.md`。
+- 利用手順は `Docs/getting-started.md`。シナリオライター向け DSL リファレンスは `Docs/scenario/`
+  （命令・タグ・preamble 糖衣を変更したら追随して更新すること）。
 
 ## 前提
 
