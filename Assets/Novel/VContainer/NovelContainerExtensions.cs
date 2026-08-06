@@ -66,7 +66,7 @@ namespace Novel.Integration
                 }
                 catch (Exception e)
                 {
-                    UnityEngine.Debug.LogWarning($"[Novel] プロジェクトリファレンスのキャプチャに失敗: {e.Message}");
+                    UnityEngine.Debug.LogWarning($"[Novel] プロジェクトリファレンスのキャプチャに失敗: {e}");
                 }
             });
 #endif

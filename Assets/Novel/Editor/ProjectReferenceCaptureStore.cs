@@ -25,10 +25,23 @@ namespace Novel.Editor
             NovelProjectCapture.Captured += Save;
         }
 
+        // ディスクからの読込結果のドメイン内キャッシュ (OnGUI 等の高頻度呼び出しで毎回 I/O しないため)。
+        // 新しいキャプチャは Latest が優先されるので、ドメイン中にディスク側を読み直す必要はない
+        private static NovelProjectCapture.Snapshot? _fromDisk;
+        private static bool _diskLoaded;
+
         /// <summary>ドメイン内の最新キャプチャ、無ければ永続化済みファイルを返す (どちらも無ければ null)。</summary>
         public static NovelProjectCapture.Snapshot? LoadOrLatest()
         {
             if (NovelProjectCapture.Latest != null) return NovelProjectCapture.Latest;
+            if (_diskLoaded) return _fromDisk;
+            _diskLoaded = true;
+            _fromDisk = LoadFromDisk();
+            return _fromDisk;
+        }
+
+        private static NovelProjectCapture.Snapshot? LoadFromDisk()
+        {
             if (!File.Exists(FilePath)) return null;
             try
             {
@@ -36,7 +49,7 @@ namespace Novel.Editor
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"[Novel] プロジェクトリファレンスのキャッシュ読み込みに失敗: {e.Message}");
+                Debug.LogWarning($"[Novel] プロジェクトリファレンスのキャッシュ読み込みに失敗: {e}");
                 return null;
             }
         }
@@ -50,7 +63,7 @@ namespace Novel.Editor
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"[Novel] プロジェクトリファレンスのキャッシュ保存に失敗: {e.Message}");
+                Debug.LogWarning($"[Novel] プロジェクトリファレンスのキャッシュ保存に失敗: {e}");
             }
         }
 
