@@ -31,7 +31,6 @@ namespace Novel.Editor
         // スキャン結果キャッシュ。null なら次の描画で再構築
         private List<CharacterCatalogView>? _characters;
         private List<ImageGroup>? _imageGroups;
-        private List<AudioRow>? _audioRows;
 
         private sealed class CharacterCatalogView
         {
@@ -45,14 +44,6 @@ namespace Novel.Editor
             public List<string> Keys = new();
         }
 
-        private sealed class AudioRow
-        {
-            public AudioKeyKind Kind;
-            public string Key = "";
-            public string Note = "";
-            public string Source = "";
-        }
-
         private void OnFocus() => Invalidate();
         private void OnProjectChange() => Invalidate();
 
@@ -60,7 +51,6 @@ namespace Novel.Editor
         {
             _characters = null;
             _imageGroups = null;
-            _audioRows = null;
             Repaint();
         }
 
@@ -213,63 +203,35 @@ namespace Novel.Editor
             }
         }
 
-        // ---- BGM / SE (音カタログのライブ表示 + DI ビルド時キャプチャ) ----
+        // ---- BGM / SE (DI ビルド時キャプチャ) ----
 
         private void DrawAudio()
         {
-            _audioRows ??= ScanAudio();
-            _showAudio = EditorGUILayout.Foldout(_showAudio, $"BGM / SE ({_audioRows.Count})", true);
+            var snapshot = ProjectReferenceCaptureStore.LoadOrLatest();
+            var keys = snapshot?.AudioKeys ?? Array.Empty<AudioKeyInfo>();
+            _showAudio = EditorGUILayout.Foldout(_showAudio, $"BGM / SE ({keys.Count})", true);
             if (!_showAudio) return;
 
             using var _ = new EditorGUI.IndentLevelScope();
-            if (_audioRows.Count == 0)
+            if (keys.Count == 0)
             {
                 EditorGUILayout.HelpBox(
-                    "音キーが見つかりません。参考 ScriptableAudioCatalog を作る (Create > Novel > Audio Catalog) か、" +
-                    "自前 IAudioChannel の EnumerateKeys() を実装して一度再生してください。", MessageType.Info);
+                    "音キーは IAudioChannel.EnumerateKeys() から取得します。自前チャンネルでオーバーライドし、一度再生してください。",
+                    MessageType.Info);
                 return;
             }
+            EditorGUILayout.LabelField($"取得元: {snapshot!.AudioChannelType} ({FormatTime(snapshot.CapturedAt)} の再生時)", EditorStyles.miniLabel);
             foreach (var kind in new[] { AudioKeyKind.Bgm, AudioKeyKind.Se })
             {
-                var rows = _audioRows.Where(r => r.Kind == kind && (Matches(r.Key) || Matches(r.Note))).ToList();
+                var rows = keys
+                    .Where(k => k.Kind == kind && (Matches(k.Key) || Matches(k.Note ?? "")))
+                    .OrderBy(k => k.Key, StringComparer.Ordinal)
+                    .ToList();
                 if (rows.Count == 0) continue;
                 EditorGUILayout.LabelField($"{(kind == AudioKeyKind.Bgm ? "BGM" : "SE")} ({rows.Count})", EditorStyles.miniBoldLabel);
-                foreach (var row in rows)
-                {
-                    var note = string.IsNullOrEmpty(row.Note) ? "" : $"  {row.Note}";
-                    EditorGUILayout.LabelField(row.Key, $"{note}  [{row.Source}]");
-                }
+                foreach (var key in rows)
+                    EditorGUILayout.LabelField(key.Key, key.Note ?? "");
             }
-        }
-
-        private static List<AudioRow> ScanAudio()
-        {
-            var rows = new List<AudioRow>();
-            var seen = new HashSet<(AudioKeyKind, string)>();
-
-            // 参考カタログのアセットは再生不要でライブ表示できる
-            foreach (var guid in AssetDatabase.FindAssets("t:ScriptableAudioCatalog"))
-            {
-                var path = AssetDatabase.GUIDToAssetPath(guid);
-                var asset = AssetDatabase.LoadAssetAtPath<ScriptableAudioCatalog>(path);
-                if (asset == null) continue;
-                foreach (var key in asset.EnumerateKeys())
-                    if (seen.Add((key.Kind, key.Key)))
-                        rows.Add(new AudioRow { Kind = key.Kind, Key = key.Key, Note = key.Note ?? "", Source = System.IO.Path.GetFileNameWithoutExtension(path) });
-            }
-
-            // 自前チャンネル等、実行時にしか実体がないものはキャプチャから
-            var snapshot = ProjectReferenceCaptureStore.LoadOrLatest();
-            if (snapshot != null)
-            {
-                var source = $"{snapshot.AudioChannelType} ({FormatTime(snapshot.CapturedAt)} の再生時)";
-                foreach (var key in snapshot.AudioKeys)
-                    if (seen.Add((key.Kind, key.Key)))
-                        rows.Add(new AudioRow { Kind = key.Kind, Key = key.Key, Note = key.Note ?? "", Source = source });
-            }
-
-            rows.Sort((a, b) => a.Kind != b.Kind ? a.Kind.CompareTo(b.Kind) : string.CompareOrdinal(a.Key, b.Key));
-            return rows;
         }
 
         private static string FormatTime(DateTime time) =>

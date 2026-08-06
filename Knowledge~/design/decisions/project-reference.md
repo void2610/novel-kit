@@ -1,9 +1,9 @@
 ---
 type: Decision
 title: プロジェクトリファレンス — キー列挙はチャンネル契約に統合・実体は DI ビルド時にキャプチャ
-description: ライター向けに「使える名前と構図」を一覧するエディタウィンドウを追加する。列挙の契約は IAudioChannel / IPortraitChannel 自身に default 実装付きで統合し、実行時にしか実体がない情報は RegisterNovelKitCore が DI ビルド時にキャプチャしてエディタ側キャッシュへ渡す（game 側の追加記述ゼロ）。参考実装として ScriptableAudioCatalog + NovelAudioPlayer を追加する。
+description: ライター向けに「使える名前と構図」を一覧するエディタウィンドウを追加する。列挙の契約は IAudioChannel / IPortraitChannel 自身に default 実装付きで統合し、実行時にしか実体がない情報は RegisterNovelKitCore が DI ビルド時にキャプチャしてエディタ側キャッシュへ渡す（game 側の追加記述ゼロ）。音の参考実装は追加しない。
 tags: [decision, editor, tooling, audio, portrait, layout, catalog, writer]
-timestamp: 2026-08-06T05:20:00Z
+timestamp: 2026-08-06T05:45:00Z
 status: 確定
 ---
 
@@ -80,21 +80,15 @@ public interface IPortraitChannel
   編集モードでの再構築のような本番との乖離が原理的にない。
 - トレードオフとしてデータは「最後に再生した時点」のもの。未キャプチャ時はウィンドウが
   「一度再生してください」と案内する。ただしアセットとして静的に読めるもの
-  （キャラカタログ・Resources の画像キー・参考 ScriptableAudioCatalog）は再生不要でライブ表示し、
-  キャッシュ頼みになるのは実行時にしか実体がない部分（自前音響等）に限る。
+  （キャラカタログ・Resources の画像キー）は再生不要でライブ表示し、
+  キャッシュ頼みになるのは実行時にしか実体がない部分（音キー・構図）に限る。
 - キャプチャは try/catch で保護し、失敗しても game の起動を妨げない（警告ログのみ）。
 
-## 4. 参考実装: ScriptableAudioCatalog + NovelAudioPlayer
+## 4. 音の参考実装は追加しない
 
-音は現状 interface のみで参考実装が無く、キーの実体がライブラリのどこにも無い。
-既存パターン（参考 View / SO カタログ / 後勝ち差し替え / 未配線警告）に揃え、`Novel.View` に追加する。
-
-- `ScriptableAudioCatalog`（SO）: キー → AudioClip（BGM/SE 区分・メモ付き）。
-- `NovelAudioPlayer`: `IAudioChannel` の参考実装。カタログでキー解決して AudioSource で再生。
-  v1 は最小限 — BGM 再生/切替/停止、SE ワンショット、`se_loop` 対応。クロスフェード・
-  ミキサー連携・音量設定連動は持たない（必要な game が差し替える）。
-- 参考実装も 3 の登録経路で自分を登録する、ただの一利用者。自前音響の game はこれを使わず、
-  自分のチャンネルに `EnumerateKeys()` をオーバーライドすればよい。
+`IAudioChannel` の参考実装（SO カタログ + プレイヤー）は同梱しない（ユーザー判断・2026-08-06）。
+対象プロジェクトは音響実装を既に持っており、一覧の情報源としては `EnumerateKeys()` の
+オーバーライドで足りる。音は従来どおり interface のみ提供・実装は game 所有のまま。
 
 # 理由
 

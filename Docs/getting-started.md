@@ -173,15 +173,11 @@ public sealed class NovelLifetimeScope : LifetimeScope
 > セーブ・世界エフェクトを供給するときは `builder.Register<IPortraitView, MyPortraitView>(...)` 等を後に書きます。
 > 未供給のまま `portrait`/`bg`/`se` 等を `.rb` が呼ぶと、dev ビルドでは一度だけ警告が出ます（本番は無音 no-op）。
 
-> **音を箱出しで鳴らすには**、`ScriptableAudioCatalog`（Create > Novel > Audio Catalog）にキーとクリップを登録し、
-> シーンに `NovelAudioPlayer` を置いて `builder.RegisterComponent(player).As<IAudioChannel>()` を後勝ちで書きます
-> （最小機能: BGM 再生/切替/停止・SE 単発/`se_loop`。凝った音響が要る game は従来どおり自前実装を登録）。
-
 ### ライター向け一覧: Novel > Project Reference
 
-使える名前（キャラ・画像・BGM/SE）と構図を一覧するエディタウィンドウです。キャラカタログ・Resources の
-画像キー・`ScriptableAudioCatalog` はアセットから常時表示され、自前チャンネルの音キー/構図は
-**一度再生したときの実際の DI 配線からキャプチャ**されて表示されます（game 側の登録作業は不要）。
+使える名前（キャラ・画像・BGM/SE）と構図を一覧するエディタウィンドウです。キャラカタログと Resources の
+画像キーはアセットから常時表示され、音キーと構図は **一度再生したときの実際の DI 配線からキャプチャ**されて
+表示されます（game 側の登録作業は不要）。
 自前実装を一覧に載せるには `IAudioChannel.EnumerateKeys()` / `IPortraitChannel.EnumerateLayouts()` を
 オーバーライドしてください（default 実装があるため未対応でもコンパイルは通ります。既定は空 / 標準 5 構図）。
 列挙はキーの一覧を返すだけの軽量な実装にし、アセットの実ロードを伴わないようにします。

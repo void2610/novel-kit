@@ -12,7 +12,7 @@ EditMode テスト・サンプルシーンで全パイプラインの動作を�
 - 本体は `Assets/Novel/` 配下。アセンブリ:
   - `Novel.Commands` — コマンド語彙（`SayCommand` ほか `NovelVocabulary`、`[MRubyObject] record struct : ICommand`）。
   - `Novel.Runtime` — 純 C# コア（`NovelScenarioRunner` / `NovelCommandHandler` / `NovelTagLexer` / `IBacklog`+`RingBufferBacklog` / 各 interface）。MonoBehaviour 非依存。
-  - `Novel.View` — 参考 TMP View・`UnityFrameClock`・`RubyMarkup`（`<ruby>` 展開）・Resources ローダ・SO カタログ（キャラ/オーディオ）・参考 `NovelAudioPlayer`・dev 警告ファセット/`DebugNovelErrorHandler`（省略可）。
+  - `Novel.View` — 参考 TMP View・`UnityFrameClock`・`RubyMarkup`（`<ruby>` 展開）・Resources ローダ・SO カタログ・dev 警告ファセット/`DebugNovelErrorHandler`（省略可）。
   - `Novel.VContainer` — `RegisterNovelKitCore()` 一括登録ヘルパ（純 `Novel.Runtime` 依存・View/Resources 非依存）。独自コマンドは `RegisterNovelCommand<TModule>()`（`INovelCommandModule`）で差し込む。
   - `Novel.View.VContainer` — `RegisterNovelKit()` 箱出し登録ヘルパ（Core + Resources ローダ + 警告ファセット + Debug エラーログ）。
   - `Novel.Editor` — シナリオ検証メニュー（`Novel/Validate Scenarios`）・プロジェクトリファレンス
