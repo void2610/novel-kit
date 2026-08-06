@@ -23,6 +23,9 @@ Unity 6000.3 / 以下のパッケージが導入済みであること（リポ�
 `Resources/Scenarios/` に `.rb` を置くと自動で `.mrb`（バイトコード）にコンパイルされます。
 糖衣（`say` 等）は同梱の `Resources/Novel/Preamble.rb` が定義済みなので、そのまま関数として書けます。
 
+> ✍️ シナリオの書き方の体系的な解説（全命令・全タグ・分岐・落とし穴）は
+> **[シナリオライターズガイド](./scenario/index.md)** にあります。本節は最小限の紹介です。
+
 ```ruby
 # Assets/.../Resources/Scenarios/intro.rb
 chara :alice            # 登場キャラの分だけ糖衣を生やす（プロジェクト固有のキャラ差はここで吸収）
@@ -242,5 +245,6 @@ async UniTask INovelView.ShowMessageAsync(NovelLine line, CancellationToken ct)
 
 ## さらに詳しく
 
+シナリオ記述（DSL）のリファレンスは [`Docs/scenario/`](./scenario/index.md)（シナリオライターズガイド）を参照。
 設計の意図・意思決定の理由は [`Knowledge~/design/`](../Knowledge~/design/index.md)（OKF 知識ベース）に
 記録しています。公開 API の集約は [`Knowledge~/design/api-surface.md`](../Knowledge~/design/api-surface.md) を参照。
