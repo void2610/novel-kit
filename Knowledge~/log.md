@@ -2,6 +2,9 @@
 
 更新履歴を新しい順に記録する。日付は `YYYY-MM-DD`。
 
+## 2026-08-08
+* **Update**: [プロジェクトリファレンス](/design/decisions/project-reference.md) のキャラ情報源を拡張。キャラは「アセット (SO カタログ) の静的スキャンのみ」だったが、利用側 (color-recollection) のカタログがコード実装 (`ICharacterCatalog` 直実装) でウィンドウ/検証の両方から見えない隘路が判明。音/構図と同じ列挙統合方針で `ICharacterCatalog.EnumerateEntries()` (default 空) を追加し、DI ビルド時キャプチャに `Characters` を追加。ウィンドウはアセットが無いときキャプチャを表示、検証はアセットとキャプチャの和集合を正とする。契約は EditMode テストで固定。
+
 ## 2026-08-06
 * **Update**: [プロジェクトリファレンス](/design/decisions/project-reference.md) の次フェーズ候補だった Validate Scenarios 突き合わせを実装（ADR「実装で確定」節に追認）。キーの抽出は正規表現パースではなく**スタブ実行**: コンパイル済み `.mrb` を実 preamble 込みで早送り実行（`NovelResumePoint.End`・wait の実時間消費なし）し、Router に流れる型付きコマンドから記録する（レビュー指摘で正規表現案から転換。パースの正確さを mruby 本体に委ね、糖衣追加への追従も不要。`say` 第 3 引数の立ち絵キーも自然に対象化）。choose は回答を変えて選択肢数ぶん再実行し単一回答で到達できる分岐を網羅（組合せ分岐は既知の割り切り）。正解データはカタログ SO・Resources スプライト（後方一致）・DI ビルド時キャプチャで、情報源が無い種別はスキップ。独自コマンド使用シナリオは途中停止を警告しつつ収集分は検証。収集と突き合わせの契約は EditMode テストで固定（分岐網羅・種別記録・Faulted 報告）。ライターズガイド（1 章・7 章）に導線追記。
 * **Update**: [プロジェクトリファレンス](/design/decisions/project-reference.md) を実装。`IAudioChannel.EnumerateKeys()` / `IPortraitChannel.EnumerateLayouts()`（default 実装付き・既存実装無改修）、`RegisterNovelKitCore` のエディタ限定 build callback → `NovelProjectCapture`（Runtime・`#if UNITY_EDITOR`）→ `ProjectReferenceCaptureStore`（Novel.Editor・`Library/NovelKit/` へ JSON 永続化）の経路、`Novel/Project Reference` ウィンドウ（キャラ = SO カタログ検索・画像キー = Resources スプライトスキャン・構図/音 = キャプチャ表示）。音の参考実装（SO カタログ + プレイヤー）は一度実装したがレビューで不要と判断し除去（ADR に「追加しない」を追記。一覧の情報源は `EnumerateKeys()` で足り、対象プロジェクトは音響実装を既に持つ）。キャプチャ契約は EditMode テストで固定（後勝ち差し替えの反映・既定は空/標準 5 構図）。ライターズガイド・getting-started に導線追記。

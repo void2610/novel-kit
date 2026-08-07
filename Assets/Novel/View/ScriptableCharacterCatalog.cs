@@ -28,6 +28,17 @@ namespace Novel.View
             return _map.TryGetValue(speakerId, out entry);
         }
 
+        public IEnumerable<CharacterKeyInfo> EnumerateEntries()
+        {
+            foreach (var e in entries)
+            {
+                if (string.IsNullOrEmpty(e.speakerId)) continue;
+                yield return new CharacterKeyInfo(e.speakerId,
+                    string.IsNullOrEmpty(e.displayName) ? e.speakerId : e.displayName,
+                    string.IsNullOrEmpty(e.defaultPortraitKey) ? null : e.defaultPortraitKey);
+            }
+        }
+
         private Dictionary<string, CharacterEntry> Build()
         {
             var map = new Dictionary<string, CharacterEntry>(entries.Count);

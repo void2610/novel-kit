@@ -179,6 +179,13 @@ namespace Novel.Editor
                 var layouts = new HashSet<string>();
                 foreach (var layout in snapshot.Layouts) layouts.Add(layout.Id);
                 known.Layouts = layouts.Count > 0 ? layouts : null;
+
+                // コード実装のカタログ (EnumerateEntries) もキャラの情報源に加える (アセットカタログとの和集合)
+                if (snapshot.Characters.Count > 0)
+                {
+                    known.Speakers ??= new HashSet<string>();
+                    foreach (var c in snapshot.Characters) known.Speakers.Add(c.Id);
+                }
             }
             return known;
         }

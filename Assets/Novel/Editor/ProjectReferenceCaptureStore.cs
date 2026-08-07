@@ -74,9 +74,19 @@ namespace Novel.Editor
         {
             public AudioDto[] audio = Array.Empty<AudioDto>();
             public LayoutDto[] layouts = Array.Empty<LayoutDto>();
+            public CharacterDto[] characters = Array.Empty<CharacterDto>();
             public string audioChannelType = "";
             public string portraitChannelType = "";
+            public string characterCatalogType = "";
             public string capturedAt = "";
+        }
+
+        [Serializable]
+        private class CharacterDto
+        {
+            public string id = "";
+            public string displayName = "";
+            public string defaultPortraitKey = "";
         }
 
         [Serializable]
@@ -101,8 +111,10 @@ namespace Novel.Editor
             {
                 audio = new AudioDto[s.AudioKeys.Count],
                 layouts = new LayoutDto[s.Layouts.Count],
+                characters = new CharacterDto[s.Characters.Count],
                 audioChannelType = s.AudioChannelType,
                 portraitChannelType = s.PortraitChannelType,
+                characterCatalogType = s.CharacterCatalogType,
                 capturedAt = s.CapturedAt.ToString("o", CultureInfo.InvariantCulture),
             };
             for (var i = 0; i < s.AudioKeys.Count; i++)
@@ -114,6 +126,11 @@ namespace Novel.Editor
             {
                 var l = s.Layouts[i];
                 dto.layouts[i] = new LayoutDto { id = l.Id, slotCount = l.SlotCount, note = l.Note ?? "" };
+            }
+            for (var i = 0; i < s.Characters.Count; i++)
+            {
+                var c = s.Characters[i];
+                dto.characters[i] = new CharacterDto { id = c.Id, displayName = c.DisplayName, defaultPortraitKey = c.DefaultPortraitKey ?? "" };
             }
             return dto;
         }
@@ -128,8 +145,12 @@ namespace Novel.Editor
             foreach (var l in dto.layouts)
                 layouts.Add(new StageLayoutInfo(l.id, l.slotCount, string.IsNullOrEmpty(l.note) ? null : l.note));
 
+            var characters = new List<CharacterKeyInfo>(dto.characters.Length);
+            foreach (var c in dto.characters)
+                characters.Add(new CharacterKeyInfo(c.id, c.displayName, string.IsNullOrEmpty(c.defaultPortraitKey) ? null : c.defaultPortraitKey));
+
             DateTime.TryParse(dto.capturedAt, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var capturedAt);
-            return new NovelProjectCapture.Snapshot(audio, layouts, dto.audioChannelType, dto.portraitChannelType, capturedAt);
+            return new NovelProjectCapture.Snapshot(audio, layouts, characters, dto.audioChannelType, dto.portraitChannelType, dto.characterCatalogType, capturedAt);
         }
     }
 }
