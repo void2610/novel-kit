@@ -5,6 +5,11 @@
 
 ## [Unreleased]
 
+### Changed
+- Validate Scenarios: 未登録コマンドで NoMethodError で停止する代わりに、`method_missing` で
+  名前だけ記録して読み飛ばし、以降の行も検証を続けるようにした。読み飛ばした名前は
+  「game 独自コマンドなら正常。誤記でないか確認」として警告に列挙する
+
 ### Added
 - `AudioKeyInfo` に `Asset` (任意・エディタ試聴用) を追加。`IAudioChannel.EnumerateKeys()` が保持済みの
   AudioClip を渡すと、プロジェクトリファレンスの試聴がキー体系に依存せず効く (エディタ側で GUID 永続化)。
