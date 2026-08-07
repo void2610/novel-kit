@@ -161,7 +161,7 @@ namespace Novel.Editor
             {
                 EditorGUILayout.HelpBox(
                     "ScriptableCharacterCatalog が見つかりません (Create > Novel > Character Catalog)。" +
-                    "コード実装のカタログは ICharacterCatalog.EnumerateEntries() をオーバーライドし、一度再生してください。",
+                    "コード実装のカタログは ICharacterCatalog.EnumerateEntries() で目録を返し、一度再生してください。",
                     MessageType.Info);
                 return;
             }
@@ -333,7 +333,7 @@ namespace Novel.Editor
             if (keys.Count == 0)
             {
                 EditorGUILayout.HelpBox(
-                    "音キーは IAudioChannel.EnumerateKeys() から取得します。自前チャンネルでオーバーライドし、一度再生してください。",
+                    "音キーは IAudioChannel.EnumerateKeys() から取得します。自前チャンネルで目録を返し、一度再生してください。",
                     MessageType.Info);
                 return;
             }

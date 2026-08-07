@@ -97,6 +97,8 @@ namespace Novel.Tests
                 entry = default;
                 return false;
             }
+
+            public IEnumerable<CharacterKeyInfo> EnumerateEntries() => System.Array.Empty<CharacterKeyInfo>();
         }
 
         private static NovelCommandHandler MakeHandler(ISpriteLoader loader, IBackgroundChannel background,

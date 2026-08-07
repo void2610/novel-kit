@@ -164,7 +164,7 @@ namespace Novel.Editor
             var known = new KnownKeys { Speakers = ScanSpeakers(), ImageKeys = ScanImageKeySuffixes() };
 
             // 音と構図は実行時にしか実体がないため、キャプチャがあるときだけ検証する。
-            // キャプチャがあっても種別のキーが 0 件なら「列挙未提供 (EnumerateKeys 既定の空)」とみなし
+            // キャプチャがあっても種別のキーが 0 件なら「列挙未提供 (EnumerateKeys が空)」とみなし
             // null = スキップに倒す (空集合として扱うと全キーが未定義の大量誤警告になる)
             var snapshot = ProjectReferenceCaptureStore.LoadOrLatest();
             if (snapshot != null)

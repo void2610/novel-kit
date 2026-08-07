@@ -182,9 +182,13 @@ Resources の画像キーはアセットから常時表示され、音キーと�
 その場で試聴できます。試聴対象のクリップは、`EnumerateKeys()` が `AudioKeyInfo` の `asset` 引数に AudioClip を
 渡していればそれを使い（推奨。キー体系に依存せず GUID で永続化）、無ければキーを Resources 相対パスとして
 照合します。どちらでも特定できないキーは試聴ボタンが無効になります。
-自前実装を一覧に載せるには `IAudioChannel.EnumerateKeys()` / `IPortraitChannel.EnumerateLayouts()` を
-オーバーライドしてください（default 実装があるため未対応でもコンパイルは通ります。既定は空 / 標準 5 構図）。
+自前実装を一覧に載せるには `IAudioChannel.EnumerateKeys()` / `ICharacterCatalog.EnumerateEntries()` で
+目録を返してください。この 2 つは default 実装を持ちません（実装忘れが「再生しても一覧に出ない」という
+沈黙の空目録になるため明示実装が必須です。一覧を持てない実装は空を返します）。構図は
+`IPortraitChannel.EnumerateLayouts()` をオーバーライドします（default は標準 5 構図）。
 列挙はキーの一覧を返すだけの軽量な実装にし、アセットの実ロードを伴わないようにします。
+キャプチャは種別ごとに保持・更新されます。タイトル画面など novel を配線しないシーンのビルドが走っても、
+空の列挙は「未提供」とみなされ、キャプチャ済みの音キー・キャラ・構図は消えません。
 
 `NovelMessageView`（参考 View）は TMP のメッセージ窓・選択肢ボタンを serialized 参照で持ちます。
 送り入力（クリック/決定）は `view.Advance()` を呼んで進めます（入力方式に依存しないため）。
