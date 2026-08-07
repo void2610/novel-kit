@@ -18,6 +18,8 @@ namespace Novel.Runtime
         /// この実装が解決できる音キーの目録 (project-reference ADR)。エディタのプロジェクトリファレンスが
         /// DI ビルド時に読む。キーの列挙のみで、実アセットのロード等の重い処理を伴わないこと。
         /// 一覧を提供しない実装は既定 (空) のままでよい。
+        /// 既に保持している AudioClip 参照を <see cref="AudioKeyInfo.Asset"/> に渡すと (任意)、
+        /// プロジェクトリファレンスの試聴がキー体系に依存せず効く。
         /// </summary>
         IEnumerable<AudioKeyInfo> EnumerateKeys() => System.Array.Empty<AudioKeyInfo>();
     }

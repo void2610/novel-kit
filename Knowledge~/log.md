@@ -3,7 +3,11 @@
 更新履歴を新しい順に記録する。日付は `YYYY-MM-DD`。
 
 ## 2026-08-08
+* **Update**: [プロジェクトリファレンス](/design/decisions/project-reference.md) の試聴クリップをアセット参照キャプチャ方式へ（ユーザー要望「GUID を記録すればいい」・ADR「実装で確定」に追認）。パス照合だけでは自前キー体系のチャンネルで一切試聴できないため、`AudioKeyInfo` に任意の `Asset`（保持済み AudioClip・型は Runtime 方針により `object`）を追加し、`ProjectReferenceCaptureStore` が GUID で永続化・読込時に実体へ復元。ウィンドウは参照を最優先し、無いキーのみ Resources パス照合へフォールバック。`AudioUtil` の再生 API が見つからない場合は無言 no-op をやめ警告を出す。CHANGELOG・getting-started 追随（本環境は Unity 起動不可のためコンパイル未実測）。
 * **Update**: [プロジェクトリファレンス](/design/decisions/project-reference.md) のキャラ情報源を拡張。キャラは「アセット (SO カタログ) の静的スキャンのみ」だったが、利用側 (color-recollection) のカタログがコード実装 (`ICharacterCatalog` 直実装) でウィンドウ/検証の両方から見えない隘路が判明。音/構図と同じ列挙統合方針で `ICharacterCatalog.EnumerateEntries()` (default 空) を追加し、DI ビルド時キャプチャに `Characters` を追加。ウィンドウはアセットが無いときキャプチャを表示、検証はアセットとキャプチャの和集合を正とする。契約は EditMode テストで固定。
+
+## 2026-08-07
+* **Update**: [プロジェクトリファレンス](/design/decisions/project-reference.md) のウィンドウ UI を刷新（ユーザー要望・ADR「実装で確定」に追認）。折りたたみ縦積み → 種別ごとのタブ（キャラ / 画像 / 構図 / BGM・SE）。画像キー・既定立ち絵はサムネイル付き（サイズスライダー・行クリックでアセット ping・スクロール外は AssetPreview 要求を抑制）、構図はスロット配置のミニ図、音キーは Resources 上の AudioClip へ best-effort 解決（完全一致 → 後方一致・曖昧なら不解決。ScenarioKeyValidator と同じ割り切り）できた場合のみ `UnityEditor.AudioUtil` リフレクション経由でエディタ試聴（▶/■・解決不能キーは無効ボタン）。CHANGELOG・getting-started 追随（本環境は Unity 起動不可のためコンパイル未実測）。
 
 ## 2026-08-06
 * **Update**: [プロジェクトリファレンス](/design/decisions/project-reference.md) の次フェーズ候補だった Validate Scenarios 突き合わせを実装（ADR「実装で確定」節に追認）。キーの抽出は正規表現パースではなく**スタブ実行**: コンパイル済み `.mrb` を実 preamble 込みで早送り実行（`NovelResumePoint.End`・wait の実時間消費なし）し、Router に流れる型付きコマンドから記録する（レビュー指摘で正規表現案から転換。パースの正確さを mruby 本体に委ね、糖衣追加への追従も不要。`say` 第 3 引数の立ち絵キーも自然に対象化）。choose は回答を変えて選択肢数ぶん再実行し単一回答で到達できる分岐を網羅（組合せ分岐は既知の割り切り）。正解データはカタログ SO・Resources スプライト（後方一致）・DI ビルド時キャプチャで、情報源が無い種別はスキップ。独自コマンド使用シナリオは途中停止を警告しつつ収集分は検証。収集と突き合わせの契約は EditMode テストで固定（分岐網羅・種別記録・Faulted 報告）。ライターズガイド（1 章・7 章）に導線追記。
