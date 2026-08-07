@@ -7,6 +7,7 @@
         "Novel.Runtime",
         "Novel.Commands",
         "Novel.View",
+        "Novel.Editor",
         "Novel.VContainer",
         "VContainer",
         "UniTask",

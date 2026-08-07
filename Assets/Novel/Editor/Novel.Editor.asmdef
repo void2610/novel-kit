@@ -6,6 +6,7 @@
         "Novel.Commands",
         "Novel.Assets",
         "Novel.View",
+        "UniTask",
         "MRubyCS.Compiler"
     ],
     "includePlatforms": [
