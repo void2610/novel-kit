@@ -86,6 +86,9 @@ namespace Novel.Editor
 
             // 完走できなかったパスのエラー (独自コマンド未登録・書き間違い等)。null = 全パス完走
             public string? ExecutionError { get; set; }
+
+            // 選択肢数が実行上限を超え、回さなかった回答の分岐が残っている場合の選択肢数 (0 = 全回答を実行済み)
+            public int UncoveredChoiceOptions { get; set; }
         }
 
         // 正解データ。null はその種別の検証をスキップ (情報源が無い = 白黒つけられない)
@@ -123,6 +126,7 @@ namespace Novel.Editor
                 maxOptions = Math.Max(maxOptions, recorder.MaxChoiceOptions);
                 result.ExecutionError ??= errors.Error;
             }
+            if (maxOptions > MaxPasses) result.UncoveredChoiceOptions = maxOptions;
             return result;
         }
 
@@ -131,6 +135,8 @@ namespace Novel.Editor
         {
             if (collected.ExecutionError != null)
                 Debug.LogWarning($"[Novel] {path} スタブ実行が完走しませんでした（独自コマンド使用か書き間違い。以降の行は未検証）:\n{collected.ExecutionError}");
+            if (collected.UncoveredChoiceOptions > 0)
+                Debug.LogWarning($"[Novel] {path} 選択肢が {collected.UncoveredChoiceOptions} 個あり実行上限（{MaxPasses} 回答）を超えたため、{MaxPasses + 1} 個目以降の回答でしか到達しない分岐は未検証");
 
             var count = 0;
             foreach (var (kind, key) in collected.Keys)
