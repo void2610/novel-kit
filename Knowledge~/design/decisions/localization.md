@@ -3,7 +3,7 @@ type: Decision
 title: ローカライズは日本語のみ + 抽出フック
 description: .rb にプロセ直書きを維持しつつ、ITextResolver で say テキストを差し替え可能にし、多言語は非破壊で後付けする。
 tags: [decision, localization, i18n, dsl, text]
-timestamp: 2026-06-13T00:00:00Z
+timestamp: 2026-08-07T00:00:00Z
 status: 確定
 ---
 
@@ -37,6 +37,12 @@ v1 は日本語のみ / 多言語は非破壊後付け
 - `say` ハンドラはテキストを直接使わず `ITextResolver` を通す（既定は恒等変換）。
 - 将来のキー外部化やロケール別解決は `ITextResolver` 実装の差し替えで実現する。
 - ルビ（ふりがな）は JP テキストのスタイリングであり、ローカライズ機構とは別扱い（任意モジュール）。
+
+# 後続（2026-08-07）
+
+約束していた「非破壊後付け」の具体方策を
+[多言語化は原文キー + Unity Localization 統合](/design/decisions/localization-unity-package.md)（暫定）として起案。
+本 ADR の決定（日本語直書き維持・`ITextResolver` seam）は不変のまま、その上に載せる。
 
 # 検討した代替案
 

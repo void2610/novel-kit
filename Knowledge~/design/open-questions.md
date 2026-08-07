@@ -3,7 +3,7 @@ type: Design
 title: 残論点（未決の設計判断）
 description: ランナー API 凍結前に解消すべき未決事項と、後続で詰める設計トピック。
 tags: [open-questions, todo, design]
-timestamp: 2026-06-14T23:59:00Z
+timestamp: 2026-08-07T00:00:00Z
 status: 保留
 ---
 
@@ -63,6 +63,12 @@ lipsync は対象外）で確定。残るのは `se`/`bgm` コマンドの引数
   永続は runner の `CaptureState`/`RestoreState` + 自前 serde（`ISaveStore` は撤去）。→ [状態モデル](/design/decisions/state-model.md)「実装で確定」に追認。
 - **preamble ロード ✅**: Runtime を純 C# に保つため `IPreambleSource` 抽象に留め、Resources 実装（`ResourcesPreambleSource`）は
   `Novel.View` に配置。配布形態は Resources 既定（game は `IPreambleSource` 差し替えで変更可）。
+
+# 提案中（ユーザー合意待ち）
+
+- 多言語化: [原文キー + Unity Localization 統合](/design/decisions/localization-unity-package.md)（暫定・2026-08-07）。
+  `ITextResolver` seam に原文キーの String Table resolve を差し込む opt-in 方式。合意後の実装順は
+  ①既読 ID の raw 基準化（挙動不変のコア変更）→ ②`Novel.Localization` resolver → ③Editor 抽出ツール。
 
 # 機能バックログ（v1 スコープ外だが将来検討）
 
