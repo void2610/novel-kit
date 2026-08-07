@@ -157,16 +157,22 @@ namespace Novel.Editor
         {
             var known = new KnownKeys { Speakers = ScanSpeakers(), ImageKeys = ScanImageKeySuffixes() };
 
-            // 音と構図は実行時にしか実体がないため、キャプチャがあるときだけ検証する
+            // 音と構図は実行時にしか実体がないため、キャプチャがあるときだけ検証する。
+            // キャプチャがあっても種別のキーが 0 件なら「列挙未提供 (EnumerateKeys 既定の空)」とみなし
+            // null = スキップに倒す (空集合として扱うと全キーが未定義の大量誤警告になる)
             var snapshot = ProjectReferenceCaptureStore.LoadOrLatest();
             if (snapshot != null)
             {
-                known.SeKeys = new HashSet<string>();
-                known.BgmKeys = new HashSet<string>();
+                var se = new HashSet<string>();
+                var bgm = new HashSet<string>();
                 foreach (var key in snapshot.AudioKeys)
-                    (key.Kind == AudioKeyKind.Bgm ? known.BgmKeys : known.SeKeys).Add(key.Key);
-                known.Layouts = new HashSet<string>();
-                foreach (var layout in snapshot.Layouts) known.Layouts.Add(layout.Id);
+                    (key.Kind == AudioKeyKind.Bgm ? bgm : se).Add(key.Key);
+                known.SeKeys = se.Count > 0 ? se : null;
+                known.BgmKeys = bgm.Count > 0 ? bgm : null;
+
+                var layouts = new HashSet<string>();
+                foreach (var layout in snapshot.Layouts) layouts.Add(layout.Id);
+                known.Layouts = layouts.Count > 0 ? layouts : null;
             }
             return known;
         }
@@ -203,7 +209,8 @@ namespace Novel.Editor
 
         // Resources のスプライトキーを「/ 区切りの全サフィックス」で持つ。ローダに root プレフィックスが
         // 設定されていてもシナリオ側のキーが後方一致すれば正とみなす (誤検知を避ける方向に倒す)。
-        // スプライトが 1 枚も無ければ null (独自ローダ運用とみなし検証スキップ)
+        // スプライトが 1 枚も無ければ null (独自ローダ運用とみなし検証スキップ)。
+        // Tests / Editor 配下はプレイヤービルドに含まれず実行時に解決できないため正解に含めない
         private static HashSet<string>? ScanImageKeySuffixes()
         {
             const string marker = "/Resources/";
@@ -212,7 +219,7 @@ namespace Novel.Editor
             {
                 var path = AssetDatabase.GUIDToAssetPath(guid);
                 var at = path.IndexOf(marker, StringComparison.Ordinal);
-                if (at < 0 || path.Contains("/Tests/")) continue;
+                if (at < 0 || path.Contains("/Tests/") || path.Contains("/Editor/")) continue;
                 var key = path.Substring(at + marker.Length);
                 var dot = key.LastIndexOf('.');
                 if (dot >= 0) key = key.Substring(0, dot);

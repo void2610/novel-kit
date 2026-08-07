@@ -48,8 +48,17 @@ namespace Novel.Editor
                 keyIssues += ScenarioKeyValidator.Report(path, System.IO.File.ReadAllText(path), collected, known);
             }
 
-            var audioNote = known.SeKeys == null ? "（音/構図は未キャプチャのためスキップ。一度再生すると検証対象になる）" : "";
-            Debug.Log($"[Novel] シナリオ検証完了: {total} 件中 {failed} 件が未コンパイル・未定義キー {keyIssues} 件{audioNote}");
+            // 情報源が無く検証をスキップした種別を明示する (「警告 0 = 全部確認済み」と誤読させない)
+            var skipped = new System.Collections.Generic.List<string>();
+            if (known.Speakers == null) skipped.Add("キャラ(カタログなし)");
+            if (known.ImageKeys == null) skipped.Add("画像(スプライトなし)");
+            if (known.SeKeys == null) skipped.Add("SE");
+            if (known.BgmKeys == null) skipped.Add("BGM");
+            if (known.Layouts == null) skipped.Add("構図");
+            var note = skipped.Count > 0
+                ? $"（情報源が無いためスキップ: {string.Join("・", skipped)}。SE/BGM/構図は列挙を実装して一度再生すると検証対象になる）"
+                : "";
+            Debug.Log($"[Novel] シナリオ検証完了: {total} 件中 {failed} 件が未コンパイル・未定義キー {keyIssues} 件{note}");
         }
 
         // 検証対象ファイルの .mrb サブアセットをそのまま返す IScenarioSource

@@ -26,7 +26,7 @@ namespace Novel.Tests
             {
                 (ScenarioKeyKind.Speaker, "alice"),          // chara 糖衣の say
                 (ScenarioKeyKind.Speaker, "bob"),            // stage の cast
-                (ScenarioKeyKind.Speaker, "carol"),          // say の直接指定
+                (ScenarioKeyKind.Speaker, "carol"),          // say のシンボル話者指定 (say :carol, ...)
                 (ScenarioKeyKind.PortraitKey, "alice/smile"),
                 (ScenarioKeyKind.PortraitKey, "carol/wave"), // say の第 3 引数
                 (ScenarioKeyKind.Image, "ev_test"),
