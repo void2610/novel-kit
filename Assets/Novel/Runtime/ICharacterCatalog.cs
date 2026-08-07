@@ -24,8 +24,9 @@ namespace Novel.Runtime
         /// <summary>
         /// この実装が解決できる話者の目録 (project-reference ADR)。エディタのプロジェクトリファレンスと
         /// シナリオ検証が DI ビルド時に読む。id の列挙のみで、重い処理を伴わないこと。
-        /// 一覧を提供しない実装は既定 (空) のままでよい。
+        /// 既定実装は置かない — 実装忘れが「再生してもキャラ情報が出ない」という沈黙の空目録になるため、
+        /// 明示実装をコンパイルエラーで要求する。一覧を持てない実装は空を明示的に返す。
         /// </summary>
-        IEnumerable<CharacterKeyInfo> EnumerateEntries() => System.Array.Empty<CharacterKeyInfo>();
+        IEnumerable<CharacterKeyInfo> EnumerateEntries();
     }
 }
