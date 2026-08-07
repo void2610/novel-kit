@@ -2,6 +2,9 @@
 
 更新履歴を新しい順に記録する。日付は `YYYY-MM-DD`。
 
+## 2026-08-07
+* **Update**: [プロジェクトリファレンス](/design/decisions/project-reference.md) のウィンドウ UI を刷新（ユーザー要望・ADR「実装で確定」に追認）。折りたたみ縦積み → 種別ごとのタブ（キャラ / 画像 / 構図 / BGM・SE）。画像キー・既定立ち絵はサムネイル付き（サイズスライダー・行クリックでアセット ping・スクロール外は AssetPreview 要求を抑制）、構図はスロット配置のミニ図、音キーは Resources 上の AudioClip へ best-effort 解決（完全一致 → 後方一致・曖昧なら不解決。ScenarioKeyValidator と同じ割り切り）できた場合のみ `UnityEditor.AudioUtil` リフレクション経由でエディタ試聴（▶/■・解決不能キーは無効ボタン）。CHANGELOG・getting-started 追随（本環境は Unity 起動不可のためコンパイル未実測）。
+
 ## 2026-08-06
 * **Update**: [プロジェクトリファレンス](/design/decisions/project-reference.md) の次フェーズ候補だった Validate Scenarios 突き合わせを実装（ADR「実装で確定」節に追認）。キーの抽出は正規表現パースではなく**スタブ実行**: コンパイル済み `.mrb` を実 preamble 込みで早送り実行（`NovelResumePoint.End`・wait の実時間消費なし）し、Router に流れる型付きコマンドから記録する（レビュー指摘で正規表現案から転換。パースの正確さを mruby 本体に委ね、糖衣追加への追従も不要。`say` 第 3 引数の立ち絵キーも自然に対象化）。choose は回答を変えて選択肢数ぶん再実行し単一回答で到達できる分岐を網羅（組合せ分岐は既知の割り切り）。正解データはカタログ SO・Resources スプライト（後方一致）・DI ビルド時キャプチャで、情報源が無い種別はスキップ。独自コマンド使用シナリオは途中停止を警告しつつ収集分は検証。収集と突き合わせの契約は EditMode テストで固定（分岐網羅・種別記録・Faulted 報告）。ライターズガイド（1 章・7 章）に導線追記。
 * **Update**: [プロジェクトリファレンス](/design/decisions/project-reference.md) を実装。`IAudioChannel.EnumerateKeys()` / `IPortraitChannel.EnumerateLayouts()`（default 実装付き・既存実装無改修）、`RegisterNovelKitCore` のエディタ限定 build callback → `NovelProjectCapture`（Runtime・`#if UNITY_EDITOR`）→ `ProjectReferenceCaptureStore`（Novel.Editor・`Library/NovelKit/` へ JSON 永続化）の経路、`Novel/Project Reference` ウィンドウ（キャラ = SO カタログ検索・画像キー = Resources スプライトスキャン・構図/音 = キャプチャ表示）。音の参考実装（SO カタログ + プレイヤー）は一度実装したがレビューで不要と判断し除去（ADR に「追加しない」を追記。一覧の情報源は `EnumerateKeys()` で足り、対象プロジェクトは音響実装を既に持つ）。キャプチャ契約は EditMode テストで固定（後勝ち差し替えの反映・既定は空/標準 5 構図）。ライターズガイド・getting-started に導線追記。

@@ -3,7 +3,7 @@ type: Decision
 title: プロジェクトリファレンス — キー列挙はチャンネル契約に統合・実体は DI ビルド時にキャプチャ
 description: ライター向けに「使える名前と構図」を一覧するエディタウィンドウを追加する。列挙の契約は IAudioChannel / IPortraitChannel 自身に default 実装付きで統合し、実行時にしか実体がない情報は RegisterNovelKitCore が DI ビルド時にキャプチャしてエディタ側キャッシュへ渡す（game 側の追加記述ゼロ）。音の参考実装は追加しない。
 tags: [decision, editor, tooling, audio, portrait, layout, catalog, writer]
-timestamp: 2026-08-06T07:40:00Z
+timestamp: 2026-08-07T15:30:00Z
 status: 確定
 ---
 
@@ -133,6 +133,14 @@ public interface IPortraitChannel
   空キー（`bgm ""` = 停止）は対象外。独自コマンドを使うシナリオは語彙が無いため途中で
   止まり、そこまでのキーを検証したうえで「完走しなかった」旨を警告する。
   ライブラリ同梱の preamble / ルビ辞書 `.rb` は実行検証の対象外。
+
+- **ウィンドウ UI は種別ごとのタブ + プレビュー付き**（2026-08-07・ユーザー要望）。
+  折りたたみ縦積みからタブ（キャラ / 画像 / 構図 / BGM・SE）へ変更。画像キーと既定立ち絵は
+  サムネイル付き・行クリックでアセット ping、構図はスロット配置のミニ図、音キーは Resources 上の
+  AudioClip へ best-effort 解決（完全一致 → 後方一致。ScenarioKeyValidator と同じ割り切りで、
+  曖昧なら解決しない）できた場合のみエディタ試聴（`UnityEditor.AudioUtil` リフレクション・
+  無ければ no-op）を提供する。キー体系が Resources と対応しない自前チャンネルでは試聴不可のまま
+  一覧は従来どおり表示する（一覧の情報源はあくまで列挙契約で、プレビューは追加の便宜）。
 
 # 検討した代替案
 

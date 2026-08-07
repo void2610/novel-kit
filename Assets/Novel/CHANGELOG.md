@@ -13,6 +13,10 @@
   `Lifetime.Transient` は Router と runner が注入点ごとに分裂して進行と `CaptureState` が無言で食い違うため受け付けない
 
 ### Changed
+- `Novel/Project Reference` ウィンドウを見やすくした。折りたたみ縦積みから種別ごとのタブ (キャラ / 画像 / 構図 / BGM・SE) へ変更。
+  画像キーと既定立ち絵はサムネイル付き (サイズはツールバーのスライダーで変更・行クリックでアセットを ping)、
+  構図はスロット配置のミニ図付き、音キーは Resources 上の AudioClip へ解決できれば ▶ でその場で試聴できる
+  (キーの照合は完全一致 → 後方一致。曖昧・解決不能なら試聴ボタンは無効のまま)
 - **破壊的**: スプライトを扱うファセットを整理した。
   - `IPortraitView` / `IBackgroundView` / `ICenterImageView` を `IPortraitChannel` / `IBackgroundChannel` /
     `ICenterImageChannel` へ改名 (`Null*` / `Warning*` 実装も同様)。実装は MonoBehaviour の View とは限らないため、
