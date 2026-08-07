@@ -5,6 +5,7 @@ using System.Threading;
 using Cysharp.Threading.Tasks;
 using MRubyCS;
 using Novel.Commands;
+using VitalRouter.MRuby;
 using Novel.Runtime;
 using Novel.View;
 using UnityEditor;
@@ -163,7 +164,7 @@ namespace Novel.Editor
                 "def method_missing(name, *args, **kwargs, &block)\n" +
                 "  __nk_unknown_command name.to_s\n" +
                 "end\n";
-            using var state = MRubyState.Create();
+            var state = MRubyState.Create();   // MRubyState は IDisposable でない (コンパイル専用の一時 state)
             using var compiler = MRubyCS.Compiler.MRubyCompiler.Create(state);
             using var compiled = compiler.CompileToBinaryFormat(System.Text.Encoding.UTF8.GetBytes(source));
             return _unknownCommandPreamble = compiled.AsSpan().ToArray();
