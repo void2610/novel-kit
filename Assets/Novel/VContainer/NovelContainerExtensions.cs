@@ -59,10 +59,14 @@ namespace Novel.Integration
                 {
                     var audio = container.Resolve<IAudioChannel>();
                     var portrait = container.Resolve<IPortraitChannel>();
+                    // ICharacterCatalog は game 側登録の契約だが、未登録構成でもキャプチャ全体を落とさない
+                    container.TryResolve<ICharacterCatalog>(out var catalog);
                     NovelProjectCapture.Publish(new NovelProjectCapture.Snapshot(
                         new System.Collections.Generic.List<AudioKeyInfo>(audio.EnumerateKeys()),
                         new System.Collections.Generic.List<StageLayoutInfo>(portrait.EnumerateLayouts()),
-                        audio.GetType().Name, portrait.GetType().Name, DateTime.Now));
+                        new System.Collections.Generic.List<CharacterKeyInfo>(
+                            catalog?.EnumerateEntries() ?? System.Array.Empty<CharacterKeyInfo>()),
+                        audio.GetType().Name, portrait.GetType().Name, catalog?.GetType().Name ?? "", DateTime.Now));
                 }
                 catch (Exception e)
                 {

@@ -2,6 +2,9 @@
 
 更新履歴を新しい順に記録する。日付は `YYYY-MM-DD`。
 
+## 2026-08-08
+* **Update**: [プロジェクトリファレンス](/design/decisions/project-reference.md) のキャラ情報源を拡張。キャラは「アセット (SO カタログ) の静的スキャンのみ」だったが、利用側 (color-recollection) のカタログがコード実装 (`ICharacterCatalog` 直実装) でウィンドウ/検証の両方から見えない隘路が判明。音/構図と同じ列挙統合方針で `ICharacterCatalog.EnumerateEntries()` (default 空) を追加し、DI ビルド時キャプチャに `Characters` を追加。ウィンドウはアセットが無いときキャプチャを表示、検証はアセットとキャプチャの和集合を正とする。契約は EditMode テストで固定。
+
 ## 2026-08-07
 * **Update**: [プロジェクトリファレンス](/design/decisions/project-reference.md) のウィンドウ UI を刷新（ユーザー要望・ADR「実装で確定」に追認）。折りたたみ縦積み → 種別ごとのタブ（キャラ / 画像 / 構図 / BGM・SE）。画像キー・既定立ち絵はサムネイル付き（サイズスライダー・行クリックでアセット ping・スクロール外は AssetPreview 要求を抑制）、構図はスロット配置のミニ図、音キーは Resources 上の AudioClip へ best-effort 解決（完全一致 → 後方一致・曖昧なら不解決。ScenarioKeyValidator と同じ割り切り）できた場合のみ `UnityEditor.AudioUtil` リフレクション経由でエディタ試聴（▶/■・解決不能キーは無効ボタン）。CHANGELOG・getting-started 追随（本環境は Unity 起動不可のためコンパイル未実測）。
 

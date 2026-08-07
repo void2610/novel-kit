@@ -6,6 +6,10 @@
 ## [Unreleased]
 
 ### Added
+- `ICharacterCatalog.EnumerateEntries()` (default 実装付き) を追加。コード実装のカタログも
+  プロジェクトリファレンス / シナリオ検証のキャラ情報源になる (DI ビルド時キャプチャに `Characters` を追加。
+  `ScriptableCharacterCatalog` は実装済み)。アセットカタログが無い場合、ウィンドウはキャプチャを表示し、
+  検証はアセットとキャプチャの和集合を正とする
 - DI 登録ヘルパー (`RegisterNovelKitCore` / `RegisterNovelKit` / `RegisterNovelCommand`) に `Lifetime` 引数を追加。
   既定は従来どおり `Lifetime.Singleton`。親スコープで一度登録してシーンごとに独立したインスタンスを持たせたい
   game は `Lifetime.Scoped` を指定する。あわせて `Router` / `IBacklog` の登録をインスタンス登録から

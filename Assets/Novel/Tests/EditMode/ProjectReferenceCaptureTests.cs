@@ -64,6 +64,21 @@ namespace Novel.Tests
             }
         }
 
+        private sealed class EnumeratingCatalog : ICharacterCatalog
+        {
+            public bool TryGet(string speakerId, out CharacterEntry entry)
+            {
+                entry = default;
+                return false;
+            }
+
+            public IEnumerable<CharacterKeyInfo> EnumerateEntries()
+            {
+                yield return new CharacterKeyInfo("aria", "アリア", "Characters/aria/default");
+                yield return new CharacterKeyInfo("noise", "ノイズ");
+            }
+        }
+
         private static ContainerBuilder MakeBuilder()
         {
             var builder = new ContainerBuilder();
@@ -99,6 +114,26 @@ namespace Novel.Tests
         }
 
         [Test]
+        public void Build時にコード実装カタログのキャラ目録をキャプチャする()
+        {
+            var builder = new ContainerBuilder();
+            builder.RegisterNovelKitCore();
+            builder.RegisterInstance<INovelView>(new StubView());
+            builder.RegisterInstance<ICharacterCatalog>(new EnumeratingCatalog());
+            builder.RegisterInstance<IScenarioSource>(new StubSource());
+
+            using var container = builder.Build();
+
+            var snapshot = NovelProjectCapture.Latest;
+            Assert.That(snapshot, Is.Not.Null);
+            Assert.That(snapshot!.CharacterCatalogType, Is.EqualTo(nameof(EnumeratingCatalog)));
+            var aria = snapshot.Characters.Single(c => c.Id == "aria");
+            Assert.That(aria.DisplayName, Is.EqualTo("アリア"));
+            Assert.That(aria.DefaultPortraitKey, Is.EqualTo("Characters/aria/default"));
+            Assert.That(snapshot.Characters.Single(c => c.Id == "noise").DefaultPortraitKey, Is.Null);
+        }
+
+        [Test]
         public void 列挙をオーバーライドしない既定実装は空キーと標準構図をキャプチャする()
         {
             var builder = MakeBuilder();   // IAudioChannel は NullAudioChannel / IPortraitChannel は NullPortraitChannel のまま
@@ -108,6 +143,7 @@ namespace Novel.Tests
             var snapshot = NovelProjectCapture.Latest;
             Assert.That(snapshot, Is.Not.Null);
             Assert.That(snapshot!.AudioKeys, Is.Empty);
+            Assert.That(snapshot.Characters, Is.Empty);   // StubCatalog は EnumerateEntries 未オーバーライド
             Assert.That(snapshot.Layouts.Select(l => l.Id),
                 Is.EqualTo(new[] { "single", "pair", "trio", "quad", "penta" }));
             Assert.That(snapshot.Layouts.Select(l => l.SlotCount), Is.EqualTo(new[] { 1, 2, 3, 4, 5 }));

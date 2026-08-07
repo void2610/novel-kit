@@ -103,9 +103,13 @@ namespace Novel.Editor
             var layouts = snapshot?.Layouts ?? StageLayoutInfo.Defaults;
             var audioKeys = snapshot?.AudioKeys ?? Array.Empty<AudioKeyInfo>();
 
+            // アセットカタログが無いときはキャプチャ済みキャラが情報源になる (DrawCharacters と同じ優先順)
+            var characterCount = _characters.Count == 0
+                ? snapshot?.Characters.Count ?? 0
+                : _characters.Sum(c => c.Entries.Count);
             var labels = new[]
             {
-                $"キャラ ({_characters.Sum(c => c.Entries.Count)})",
+                $"キャラ ({characterCount})",
                 $"画像 ({_imageGroups.Sum(g => g.Keys.Count)})",
                 $"構図 ({layouts.Count})",
                 $"BGM / SE ({audioKeys.Count})",
@@ -121,7 +125,7 @@ namespace Novel.Editor
             _scroll = EditorGUILayout.BeginScrollView(_scroll);
             switch (_tab)
             {
-                case Tab.Characters: DrawCharacters(); break;
+                case Tab.Characters: DrawCharacters(snapshot); break;
                 case Tab.Images: DrawImages(); break;
                 case Tab.Layouts: DrawLayouts(snapshot, layouts); break;
                 case Tab.Audio: DrawAudio(snapshot, audioKeys); break;
@@ -136,13 +140,29 @@ namespace Novel.Editor
         private bool IsRowVisible(Rect rect) =>
             rect.yMax >= _scroll.y - 100f && rect.y <= _scroll.y + position.height + 100f;
 
-        // ---- キャラ (ScriptableCharacterCatalog をライブ表示) ----
+        // ---- キャラ (ScriptableCharacterCatalog をライブ表示。無ければ DI ビルド時キャプチャ) ----
 
-        private void DrawCharacters()
+        private void DrawCharacters(NovelProjectCapture.Snapshot? snapshot)
         {
-            if (_characters!.Count == 0)
+            var captured = _characters!.Count == 0 ? snapshot?.Characters : null;
+            if (captured is { Count: > 0 })
             {
-                EditorGUILayout.HelpBox("ScriptableCharacterCatalog が見つかりません (Create > Novel > Character Catalog)。", MessageType.Info);
+                EditorGUILayout.LabelField(
+                    $"取得元: {snapshot!.CharacterCatalogType} ({FormatTime(snapshot.CapturedAt)} の再生時)", EditorStyles.miniLabel);
+                foreach (var c in captured)
+                {
+                    if (!Matches(c.Id) && !Matches(c.DisplayName)) continue;
+                    var portrait = string.IsNullOrEmpty(c.DefaultPortraitKey) ? "" : $"  既定立ち絵: {c.DefaultPortraitKey}";
+                    DrawThumbnailRow(ResolveSpritePath(c.DefaultPortraitKey ?? ""), c.Id, $"表示名: {c.DisplayName}{portrait}");
+                }
+                return;
+            }
+            if (_characters.Count == 0)
+            {
+                EditorGUILayout.HelpBox(
+                    "ScriptableCharacterCatalog が見つかりません (Create > Novel > Character Catalog)。" +
+                    "コード実装のカタログは ICharacterCatalog.EnumerateEntries() をオーバーライドし、一度再生してください。",
+                    MessageType.Info);
                 return;
             }
             foreach (var catalog in _characters)

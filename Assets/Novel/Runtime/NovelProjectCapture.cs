@@ -18,17 +18,22 @@ namespace Novel.Runtime
         {
             public IReadOnlyList<AudioKeyInfo> AudioKeys { get; }
             public IReadOnlyList<StageLayoutInfo> Layouts { get; }
+            public IReadOnlyList<CharacterKeyInfo> Characters { get; }
             public string AudioChannelType { get; }
             public string PortraitChannelType { get; }
+            public string CharacterCatalogType { get; }
             public DateTime CapturedAt { get; }
 
             public Snapshot(IReadOnlyList<AudioKeyInfo> audioKeys, IReadOnlyList<StageLayoutInfo> layouts,
-                string audioChannelType, string portraitChannelType, DateTime capturedAt)
+                IReadOnlyList<CharacterKeyInfo> characters,
+                string audioChannelType, string portraitChannelType, string characterCatalogType, DateTime capturedAt)
             {
                 AudioKeys = audioKeys;
                 Layouts = layouts;
+                Characters = characters;
                 AudioChannelType = audioChannelType;
                 PortraitChannelType = portraitChannelType;
+                CharacterCatalogType = characterCatalogType;
                 CapturedAt = capturedAt;
             }
         }
