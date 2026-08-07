@@ -95,6 +95,7 @@ namespace Novel.Editor
             public string key = "";
             public int kind;
             public string note = "";
+            public string guid = "";   // AudioKeyInfo.Asset の GUID (試聴用・無ければ空)
         }
 
         [Serializable]
@@ -120,7 +121,7 @@ namespace Novel.Editor
             for (var i = 0; i < s.AudioKeys.Count; i++)
             {
                 var k = s.AudioKeys[i];
-                dto.audio[i] = new AudioDto { key = k.Key, kind = (int)k.Kind, note = k.Note ?? "" };
+                dto.audio[i] = new AudioDto { key = k.Key, kind = (int)k.Kind, note = k.Note ?? "", guid = GuidOf(k.Asset) };
             }
             for (var i = 0; i < s.Layouts.Count; i++)
             {
@@ -139,7 +140,7 @@ namespace Novel.Editor
         {
             var audio = new List<AudioKeyInfo>(dto.audio.Length);
             foreach (var a in dto.audio)
-                audio.Add(new AudioKeyInfo(a.key, (AudioKeyKind)a.kind, string.IsNullOrEmpty(a.note) ? null : a.note));
+                audio.Add(new AudioKeyInfo(a.key, (AudioKeyKind)a.kind, string.IsNullOrEmpty(a.note) ? null : a.note, LoadByGuid(a.guid)));
 
             var layouts = new List<StageLayoutInfo>(dto.layouts.Length);
             foreach (var l in dto.layouts)
@@ -151,6 +152,22 @@ namespace Novel.Editor
 
             DateTime.TryParse(dto.capturedAt, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var capturedAt);
             return new NovelProjectCapture.Snapshot(audio, layouts, characters, dto.audioChannelType, dto.portraitChannelType, dto.characterCatalogType, capturedAt);
+        }
+
+        // AudioKeyInfo.Asset (試聴用のアセット参照) は JSON に GUID として永続化し、読み込み時に実体へ戻す
+
+        private static string GuidOf(object? asset)
+        {
+            if (asset is not UnityEngine.Object obj || obj == null) return "";
+            var path = AssetDatabase.GetAssetPath(obj);
+            return string.IsNullOrEmpty(path) ? "" : AssetDatabase.AssetPathToGUID(path);
+        }
+
+        private static UnityEngine.Object? LoadByGuid(string guid)
+        {
+            if (string.IsNullOrEmpty(guid)) return null;
+            var path = AssetDatabase.GUIDToAssetPath(guid);
+            return string.IsNullOrEmpty(path) ? null : AssetDatabase.LoadMainAssetAtPath(path);
         }
     }
 }

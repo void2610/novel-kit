@@ -178,9 +178,10 @@ public sealed class NovelLifetimeScope : LifetimeScope
 使える名前（キャラ・画像・BGM/SE）と構図を種別ごとのタブで一覧するエディタウィンドウです。キャラカタログと
 Resources の画像キーはアセットから常時表示され、音キーと構図は **一度再生したときの実際の DI 配線からキャプチャ**
 されて表示されます（game 側の登録作業は不要）。
-画像・既定立ち絵はサムネイル付きで、行クリックで Project 内のアセットを ping します。音キーは Resources 上の
-AudioClip へ解決できるものなら ▶ ボタンでその場で試聴できます（キー体系が Resources パスと対応しない
-自前チャンネルでは試聴ボタンは無効のままです）。
+画像・既定立ち絵はサムネイル付きで、行クリックで Project 内のアセットを ping します。音キーは ▶ ボタンで
+その場で試聴できます。試聴対象のクリップは、`EnumerateKeys()` が `AudioKeyInfo` の `asset` 引数に AudioClip を
+渡していればそれを使い（推奨。キー体系に依存せず GUID で永続化）、無ければキーを Resources 相対パスとして
+照合します。どちらでも特定できないキーは試聴ボタンが無効になります。
 自前実装を一覧に載せるには `IAudioChannel.EnumerateKeys()` / `IPortraitChannel.EnumerateLayouts()` を
 オーバーライドしてください（default 実装があるため未対応でもコンパイルは通ります。既定は空 / 標準 5 構図）。
 列挙はキーの一覧を返すだけの軽量な実装にし、アセットの実ロードを伴わないようにします。

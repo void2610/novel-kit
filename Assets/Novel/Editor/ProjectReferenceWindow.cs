@@ -353,8 +353,14 @@ namespace Novel.Editor
 
         private void DrawAudioRow(AudioKeyInfo key)
         {
-            var clipPath = ResolveAudioPath(key.Key);
-            var clip = clipPath == null ? null : AssetDatabase.LoadAssetAtPath<AudioClip>(clipPath);
+            // キャプチャ済みのアセット参照 (EnumerateKeys が渡した AudioClip・GUID 永続化) が最優先。
+            // 無ければ Resources 相対パスとしての照合に落とす
+            var clip = key.Asset as AudioClip;
+            if (clip == null)
+            {
+                var clipPath = ResolveAudioPath(key.Key);
+                clip = clipPath == null ? null : AssetDatabase.LoadAssetAtPath<AudioClip>(clipPath);
+            }
             using (new EditorGUILayout.HorizontalScope())
             {
                 if (clip != null)
@@ -373,9 +379,11 @@ namespace Novel.Editor
                 }
                 else
                 {
-                    // キーが Resources 上のクリップへ解決できない場合は試聴不可 (自前チャンネルのキー体系は編集モードでは分からない)
+                    // アセット参照もパス照合も無ければ試聴不可 (自前チャンネルのキー体系は編集モードでは分からない)
                     using (new EditorGUI.DisabledScope(true))
-                        GUILayout.Button(new GUIContent("▶", "Resources 上に対応する AudioClip が見つからないため試聴できません"), GUILayout.Width(28f));
+                        GUILayout.Button(new GUIContent("▶",
+                            "キーに対応する AudioClip が見つからないため試聴できません。" +
+                            "EnumerateKeys() で AudioKeyInfo に AudioClip を渡す (推奨) か、キーを Resources 相対パスに合わせると試聴できます"), GUILayout.Width(28f));
                 }
 
                 var duration = clip == null ? "" : $"  {(int)(clip.length / 60)}:{clip.length % 60:00.0}";
@@ -493,15 +501,20 @@ namespace Novel.Editor
 
             public static void Play(AudioClip clip)
             {
-                if (PlayMethod == null) return;
-                var args = PlayMethod.GetParameters().Length switch
+                var args = PlayMethod?.GetParameters().Length switch
                 {
                     1 => new object[] { clip },
                     2 => new object[] { clip, 0 },
                     3 => new object[] { clip, 0, false },
                     _ => null,
                 };
-                if (args != null) PlayMethod.Invoke(null, args);
+                if (args == null)
+                {
+                    // 無言の no-op だと「押しても鳴らない」の原因が分からないため理由を出す
+                    Debug.LogWarning("[Novel] UnityEditor.AudioUtil の再生 API が見つからないため試聴できません (Unity バージョン差異の可能性)。");
+                    return;
+                }
+                PlayMethod!.Invoke(null, args);
             }
 
             public static void StopAll() => StopMethod?.Invoke(null, null);

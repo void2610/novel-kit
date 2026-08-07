@@ -6,6 +6,9 @@
 ## [Unreleased]
 
 ### Added
+- `AudioKeyInfo` に `Asset` (任意・エディタ試聴用) を追加。`IAudioChannel.EnumerateKeys()` が保持済みの
+  AudioClip を渡すと、プロジェクトリファレンスの試聴がキー体系に依存せず効く (エディタ側で GUID 永続化)。
+  Novel.Runtime にアセット型を持ち込まないため型は `object`
 - `ICharacterCatalog.EnumerateEntries()` (default 実装付き) を追加。コード実装のカタログも
   プロジェクトリファレンス / シナリオ検証のキャラ情報源になる (DI ビルド時キャプチャに `Characters` を追加。
   `ScriptableCharacterCatalog` は実装済み)。アセットカタログが無い場合、ウィンドウはキャプチャを表示し、
@@ -19,8 +22,8 @@
 ### Changed
 - `Novel/Project Reference` ウィンドウを見やすくした。折りたたみ縦積みから種別ごとのタブ (キャラ / 画像 / 構図 / BGM・SE) へ変更。
   画像キーと既定立ち絵はサムネイル付き (サイズはツールバーのスライダーで変更・行クリックでアセットを ping)、
-  構図はスロット配置のミニ図付き、音キーは Resources 上の AudioClip へ解決できれば ▶ でその場で試聴できる
-  (キーの照合は完全一致 → 後方一致。曖昧・解決不能なら試聴ボタンは無効のまま)
+  構図はスロット配置のミニ図付き、音キーは ▶ でその場で試聴できる (`AudioKeyInfo.Asset` のキャプチャ参照が
+  最優先。無ければ Resources 相対パスとして完全一致 → 後方一致で照合し、曖昧・解決不能なら試聴ボタンは無効のまま)
 - **破壊的**: スプライトを扱うファセットを整理した。
   - `IPortraitView` / `IBackgroundView` / `ICenterImageView` を `IPortraitChannel` / `IBackgroundChannel` /
     `ICenterImageChannel` へ改名 (`Null*` / `Warning*` 実装も同様)。実装は MonoBehaviour の View とは限らないため、

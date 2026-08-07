@@ -3,6 +3,7 @@
 更新履歴を新しい順に記録する。日付は `YYYY-MM-DD`。
 
 ## 2026-08-08
+* **Update**: [プロジェクトリファレンス](/design/decisions/project-reference.md) の試聴クリップをアセット参照キャプチャ方式へ（ユーザー要望「GUID を記録すればいい」・ADR「実装で確定」に追認）。パス照合だけでは自前キー体系のチャンネルで一切試聴できないため、`AudioKeyInfo` に任意の `Asset`（保持済み AudioClip・型は Runtime 方針により `object`）を追加し、`ProjectReferenceCaptureStore` が GUID で永続化・読込時に実体へ復元。ウィンドウは参照を最優先し、無いキーのみ Resources パス照合へフォールバック。`AudioUtil` の再生 API が見つからない場合は無言 no-op をやめ警告を出す。CHANGELOG・getting-started 追随（本環境は Unity 起動不可のためコンパイル未実測）。
 * **Update**: [プロジェクトリファレンス](/design/decisions/project-reference.md) のキャラ情報源を拡張。キャラは「アセット (SO カタログ) の静的スキャンのみ」だったが、利用側 (color-recollection) のカタログがコード実装 (`ICharacterCatalog` 直実装) でウィンドウ/検証の両方から見えない隘路が判明。音/構図と同じ列挙統合方針で `ICharacterCatalog.EnumerateEntries()` (default 空) を追加し、DI ビルド時キャプチャに `Characters` を追加。ウィンドウはアセットが無いときキャプチャを表示、検証はアセットとキャプチャの和集合を正とする。契約は EditMode テストで固定。
 
 ## 2026-08-07
