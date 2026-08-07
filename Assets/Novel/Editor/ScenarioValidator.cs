@@ -1,5 +1,8 @@
 #nullable enable
 using System.Linq;
+using System.Threading;
+using Cysharp.Threading.Tasks;
+using Novel.Runtime;
 using UnityEditor;
 using UnityEngine;
 
@@ -7,12 +10,14 @@ namespace Novel.Editor
 {
     // 全 .rb シナリオを検証する:
     //   1. .mrb バイトコード（mrubycs-compiler のサブアセット）を生成できているか（構文エラーの洗い出し）
-    //   2. 使っているキー（キャラ/立ち絵/画像/音/構図）が実在するか（ScenarioKeyValidator。
+    //   2. 使っているキー（キャラ/立ち絵/画像/音/構図）が実在するか（ScenarioKeyValidator のスタブ実行。
     //      未配線・キー間違いは実行時に無音 no-op で流れる設計のため、ここで編集時に警告する）
     public static class ScenarioValidator
     {
         [MenuItem("Novel/Validate Scenarios")]
-        public static void Validate()
+        public static void Validate() => ValidateAsync().Forget();
+
+        private static async UniTask ValidateAsync()
         {
             int total = 0;
             int failed = 0;
@@ -23,21 +28,37 @@ namespace Novel.Editor
             {
                 var path = AssetDatabase.GUIDToAssetPath(guid);
                 if (!path.EndsWith(".rb")) continue;
+                // ライブラリ同梱の preamble / ルビ辞書・テスト用シナリオは実行検証の対象外
+                if (path.Contains("/Resources/Novel/") || path.Contains("/Tests/")) continue;
 
                 total++;
-                var hasBytecode = AssetDatabase.LoadAllAssetsAtPath(path)
-                    .Any(a => a != null && a.name.EndsWith(".mrb"));
-                if (!hasBytecode)
+                var bytecode = AssetDatabase.LoadAllAssetsAtPath(path)
+                    .OfType<TextAsset>()
+                    .FirstOrDefault(a => a.name.EndsWith(".mrb"))?.bytes;
+                if (bytecode == null || bytecode.Length == 0)
                 {
                     failed++;
                     Debug.LogError($"[Novel] バイトコード未生成（コンパイル失敗の可能性）: {path}");
+                    continue;
                 }
 
-                keyIssues += ScenarioKeyValidator.Validate(path, System.IO.File.ReadAllText(path), known);
+                var collected = await ScenarioKeyValidator.CollectAsync(
+                    new PrecompiledScenarioSource(bytecode),
+                    System.IO.Path.GetFileNameWithoutExtension(path));
+                keyIssues += ScenarioKeyValidator.Report(path, System.IO.File.ReadAllText(path), collected, known);
             }
 
             var audioNote = known.SeKeys == null ? "（音/構図は未キャプチャのためスキップ。一度再生すると検証対象になる）" : "";
             Debug.Log($"[Novel] シナリオ検証完了: {total} 件中 {failed} 件が未コンパイル・未定義キー {keyIssues} 件{audioNote}");
+        }
+
+        // 検証対象ファイルの .mrb サブアセットをそのまま返す IScenarioSource
+        private sealed class PrecompiledScenarioSource : IScenarioSource
+        {
+            private readonly byte[] _bytecode;
+            public PrecompiledScenarioSource(byte[] bytecode) => _bytecode = bytecode;
+            public UniTask<byte[]?> LoadBytecodeAsync(string scenarioKey, CancellationToken ct)
+                => UniTask.FromResult<byte[]?>(_bytecode);
         }
     }
 }

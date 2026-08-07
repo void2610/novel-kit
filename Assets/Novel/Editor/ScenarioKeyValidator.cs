@@ -1,101 +1,93 @@
 #nullable enable
+using System;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
+using System.Threading;
+using Cysharp.Threading.Tasks;
+using Novel.Commands;
 using Novel.Runtime;
+using Novel.View;
 using UnityEditor;
 using UnityEngine;
+using VitalRouter;
 
 namespace Novel.Editor
 {
-    // .rb シナリオが使うキー (キャラ/立ち絵/画像/音/構図) が実在するかの突き合わせ (project-reference ADR)。
-    // 正解データ: キャラ = ScriptableCharacterCatalog、画像 = Resources のスプライト、
-    // 音/構図 = DI ビルド時キャプチャ (未キャプチャならその項目はスキップ)。
-    // 未配線・キー間違いは実行時に無音 no-op で流れる設計のため、ここで編集時に警告する。
+    // シナリオが使うキー (キャラ/立ち絵/画像/音/構図) が実在するかの突き合わせ (project-reference ADR)。
+    //
+    // キーの抽出は正規表現パースではなく「スタブ実行」で行う: コンパイル済み .mrb を実 preamble 込みで
+    // 早送り実行し、Router に流れる型付きコマンド (BackgroundCommand 等) からキーを記録する。
+    // パースの正確さ (コメント/クォート/複数行/#{} 補間) を mruby 本体に委ね、糖衣の追加にも追従不要。
+    // choose は回答を変えて選択肢数ぶん再実行し、単一の回答で到達できる分岐を全て通す
+    // (複数の choose の組合せでしか到達しない行は対象外。独自コマンドを使うシナリオは
+    // その語彙が無いため途中で止まり、そこまでのキーだけ検証して警告する)。
 
     internal enum ScenarioKeyKind
     {
-        Speaker,   // chara 宣言 / say・portrait の話者 id
-        Portrait,  // portrait の立ち絵キー (画像キー)
-        Image,     // bg / still / image
+        Speaker,      // say / portrait / stage / exit のキャラ id
+        PortraitKey,  // 立ち絵キー (画像キー)
+        Image,        // bg / still / image
         Se,
         Bgm,
-        Layout,    // stage の構図 id
+        Layout,       // stage の構図 id
     }
 
-    internal readonly struct ScenarioKeyUsage
+    // 実行中に Router へ流れたコマンドからキーを拾う購読者 (ハンドラと並んで購読するだけの受動的な記録係)
+    [Routes]
+    internal sealed partial class ScenarioKeyRecorder
     {
-        public ScenarioKeyKind Kind { get; }
-        public string Key { get; }
-        public int Line { get; }
+        public readonly HashSet<(ScenarioKeyKind Kind, string Key)> Keys = new();
+        public int MaxChoiceOptions { get; private set; }
 
-        public ScenarioKeyUsage(ScenarioKeyKind kind, string key, int line)
+        public void On(SayCommand cmd)
         {
-            Kind = kind;
-            Key = key;
-            Line = line;
-        }
-    }
-
-    // Ruby を実行せず正規表現で拾う。変数・式で組み立てたキー (#{...}) は対象外
-    internal static class ScenarioKeyScanner
-    {
-        private const string Q = @"[""']([^""']+)[""']";
-        private static readonly Regex Chara = new(@"(?<![\w.])chara[\s(]+:?[""']?(\w+)", RegexOptions.Compiled);
-        private static readonly Regex Say = new(@"(?<![\w.])say[\s(]+" + Q + @"\s*,", RegexOptions.Compiled);
-        private static readonly Regex Portrait = new(@"(?<![\w.])portrait[\s(]+:?[""']?(\w+)[""']?\s*,\s*" + Q, RegexOptions.Compiled);
-        private static readonly Regex Image = new(@"(?<![\w.])(?:bg|still|image)[\s(]+" + Q, RegexOptions.Compiled);
-        private static readonly Regex Audio = new(@"(?<![\w.])(se_loop|se|bgm)[\s(]+" + Q, RegexOptions.Compiled);
-        private static readonly Regex Stage = new(@"(?<![\w.])stage[\s(]+:?[""']?(\w+)", RegexOptions.Compiled);
-
-        public static List<ScenarioKeyUsage> Scan(string rubySource)
-        {
-            var result = new List<ScenarioKeyUsage>();
-            var lines = rubySource.Split('\n');
-            for (var i = 0; i < lines.Length; i++)
-            {
-                var line = StripComment(lines[i]);
-                var no = i + 1;
-                foreach (Match m in Chara.Matches(line)) Add(result, ScenarioKeyKind.Speaker, m.Groups[1].Value, no);
-                foreach (Match m in Say.Matches(line)) Add(result, ScenarioKeyKind.Speaker, m.Groups[1].Value, no);
-                foreach (Match m in Portrait.Matches(line))
-                {
-                    Add(result, ScenarioKeyKind.Speaker, m.Groups[1].Value, no);
-                    Add(result, ScenarioKeyKind.Portrait, m.Groups[2].Value, no);
-                }
-                foreach (Match m in Image.Matches(line)) Add(result, ScenarioKeyKind.Image, m.Groups[1].Value, no);
-                foreach (Match m in Audio.Matches(line))
-                    Add(result, m.Groups[1].Value == "bgm" ? ScenarioKeyKind.Bgm : ScenarioKeyKind.Se, m.Groups[2].Value, no);
-                foreach (Match m in Stage.Matches(line)) Add(result, ScenarioKeyKind.Layout, m.Groups[1].Value, no);
-            }
-            return result;
+            Add(ScenarioKeyKind.Speaker, cmd.SpeakerId);            // "" = ナレーションは対象外
+            Add(ScenarioKeyKind.PortraitKey, cmd.PortraitKey);      // say の第 3 引数 (同時立ち絵)
         }
 
-        private static void Add(List<ScenarioKeyUsage> result, ScenarioKeyKind kind, string key, int line)
+        public void On(ChooseCommand cmd) =>
+            MaxChoiceOptions = Math.Max(MaxChoiceOptions, cmd.Options?.Length ?? 0);
+
+        public void On(PortraitCommand cmd)
         {
-            // 空キー (bgm "" = 停止等) と実行時に組み立てるキーは検証対象外
-            if (string.IsNullOrEmpty(key) || key.Contains("#{")) return;
-            result.Add(new ScenarioKeyUsage(kind, key, line));
+            Add(ScenarioKeyKind.Speaker, cmd.Character);
+            Add(ScenarioKeyKind.PortraitKey, cmd.PortraitKey);
         }
 
-        // クォート内でない # から行末を落とす
-        internal static string StripComment(string line)
+        public void On(StageCommand cmd)
         {
-            var inSingle = false;
-            var inDouble = false;
-            for (var i = 0; i < line.Length; i++)
-            {
-                var c = line[i];
-                if (c == '\\') { i++; continue; }
-                if (c == '\'' && !inDouble) inSingle = !inSingle;
-                else if (c == '"' && !inSingle) inDouble = !inDouble;
-                else if (c == '#' && !inSingle && !inDouble) return line.Substring(0, i);
-            }
-            return line;
+            Add(ScenarioKeyKind.Layout, cmd.LayoutId);
+            var pairs = cmd.CastPairs ?? Array.Empty<string>();
+            for (var i = 0; i + 1 < pairs.Length; i += 2)
+                Add(ScenarioKeyKind.Speaker, pairs[i]);
+        }
+
+        public void On(ExitCommand cmd) => Add(ScenarioKeyKind.Speaker, cmd.Character);
+        public void On(BackgroundCommand cmd) => Add(ScenarioKeyKind.Image, cmd.BackgroundKey);
+        public void On(StillCommand cmd) => Add(ScenarioKeyKind.Image, cmd.StillKey);
+        public void On(CenterImageCommand cmd) => Add(ScenarioKeyKind.Image, cmd.ImageKey);
+        public void On(SeCommand cmd) => Add(ScenarioKeyKind.Se, cmd.SeKey);
+        public void On(SeLoopCommand cmd) => Add(ScenarioKeyKind.Se, cmd.SeKey);
+        public void On(BgmCommand cmd) => Add(ScenarioKeyKind.Bgm, cmd.BgmKey);   // "" = 停止は Add が弾く
+
+        private void Add(ScenarioKeyKind kind, string? key)
+        {
+            if (!string.IsNullOrEmpty(key)) Keys.Add((kind, key!));
         }
     }
 
     internal static class ScenarioKeyValidator
     {
+        // 実行の上限。choose の選択肢数がこれを超える分は回さない (通常 2〜4)
+        private const int MaxPasses = 8;
+
+        internal sealed class CollectResult
+        {
+            public HashSet<(ScenarioKeyKind Kind, string Key)> Keys { get; } = new();
+
+            // 完走できなかったパスのエラー (独自コマンド未登録・書き間違い等)。null = 全パス完走
+            public string? ExecutionError { get; set; }
+        }
+
         // 正解データ。null はその種別の検証をスキップ (情報源が無い = 白黒つけられない)
         internal sealed class KnownKeys
         {
@@ -106,24 +98,57 @@ namespace Novel.Editor
             public HashSet<string>? Layouts;
         }
 
-        /// <summary>検出した問題数を返す (問題ごとに Debug.LogWarning 済み)。</summary>
-        public static int Validate(string path, string rubySource, KnownKeys known)
+        /// <summary>
+        /// シナリオを choose の回答を変えながらスタブ実行し、Router に流れた全キーの和集合を返す。
+        /// 早送り (NovelResumePoint.End) で実行するため wait 等の実時間は消費しない。
+        /// </summary>
+        internal static async UniTask<CollectResult> CollectAsync(IScenarioSource source, string scenarioKey)
         {
-            var count = 0;
-            foreach (var usage in ScenarioKeyScanner.Scan(rubySource))
+            var result = new CollectResult();
+            var maxOptions = 1;
+            for (var answer = 0; answer < maxOptions && answer < MaxPasses; answer++)
             {
-                var (set, label) = usage.Kind switch
+                var recorder = new ScenarioKeyRecorder();
+                var errors = new CaptureErrorHandler();
+                var router = new Router();
+                using var subscription = recorder.MapTo(router);
+                using var runner = new NovelScenarioRunner(source, router,
+                    new AnswerView(answer), new IdentityTextResolver(), new EmptyCatalog(),
+                    errorHandler: errors,
+                    preambleSources: new IPreambleSource[] { new PreambleSource(new ResourcesTextAssetLoader()) });
+
+                await runner.PlayAsync(scenarioKey, NovelResumePoint.End, CancellationToken.None);
+
+                result.Keys.UnionWith(recorder.Keys);
+                maxOptions = Math.Max(maxOptions, recorder.MaxChoiceOptions);
+                result.ExecutionError ??= errors.Error;
+            }
+            return result;
+        }
+
+        /// <summary>集めたキーを正解データと突き合わせ、問題数を返す (問題ごとに Debug.LogWarning 済み)。</summary>
+        internal static int Report(string path, string? rubySource, CollectResult collected, KnownKeys known)
+        {
+            if (collected.ExecutionError != null)
+                Debug.LogWarning($"[Novel] {path} スタブ実行が完走しませんでした（独自コマンド使用か書き間違い。以降の行は未検証）:\n{collected.ExecutionError}");
+
+            var count = 0;
+            foreach (var (kind, key) in collected.Keys)
+            {
+                var (set, label) = kind switch
                 {
                     ScenarioKeyKind.Speaker => (known.Speakers, "キャラ id"),
-                    ScenarioKeyKind.Portrait => (known.ImageKeys, "立ち絵キー"),
+                    ScenarioKeyKind.PortraitKey => (known.ImageKeys, "立ち絵キー"),
                     ScenarioKeyKind.Image => (known.ImageKeys, "画像キー"),
                     ScenarioKeyKind.Se => (known.SeKeys, "SE キー"),
                     ScenarioKeyKind.Bgm => (known.BgmKeys, "BGM キー"),
                     _ => (known.Layouts, "構図"),
                 };
-                if (set == null || set.Contains(usage.Key)) continue;
+                if (set == null || set.Contains(key)) continue;
                 count++;
-                Debug.LogWarning($"[Novel] {path}:{usage.Line} 未定義の{label} '{usage.Key}'");
+                var line = FindLine(rubySource, key);
+                var at = line > 0 ? $"{path}:{line}" : path;
+                Debug.LogWarning($"[Novel] {at} 未定義の{label} '{key}'");
             }
             return count;
         }
@@ -146,13 +171,24 @@ namespace Novel.Editor
             return known;
         }
 
+        // 警告に行番号を添える best-effort (キー文字列を含む最初の行。実行ベースの収集は行情報を持たないため)
+        private static int FindLine(string? rubySource, string key)
+        {
+            if (string.IsNullOrEmpty(rubySource)) return 0;
+            var lines = rubySource!.Split('\n');
+            for (var i = 0; i < lines.Length; i++)
+                if (lines[i].IndexOf(key, StringComparison.Ordinal) >= 0)
+                    return i + 1;
+            return 0;
+        }
+
         // 全 ScriptableCharacterCatalog の id の和集合。カタログが 1 つも無ければ null (検証スキップ)
         private static HashSet<string>? ScanSpeakers()
         {
             HashSet<string>? ids = null;
             foreach (var guid in AssetDatabase.FindAssets("t:ScriptableCharacterCatalog"))
             {
-                var asset = AssetDatabase.LoadAssetAtPath<View.ScriptableCharacterCatalog>(AssetDatabase.GUIDToAssetPath(guid));
+                var asset = AssetDatabase.LoadAssetAtPath<ScriptableCharacterCatalog>(AssetDatabase.GUIDToAssetPath(guid));
                 if (asset == null) continue;
                 ids ??= new HashSet<string>();
                 var entries = new SerializedObject(asset).FindProperty("entries");
@@ -175,7 +211,7 @@ namespace Novel.Editor
             foreach (var guid in AssetDatabase.FindAssets("t:Sprite"))
             {
                 var path = AssetDatabase.GUIDToAssetPath(guid);
-                var at = path.IndexOf(marker, System.StringComparison.Ordinal);
+                var at = path.IndexOf(marker, StringComparison.Ordinal);
                 if (at < 0 || path.Contains("/Tests/")) continue;
                 var key = path.Substring(at + marker.Length);
                 var dot = key.LastIndexOf('.');
@@ -186,6 +222,34 @@ namespace Novel.Editor
                     suffixes.Add(i == 0 ? key : key.Substring(i + 1));
             }
             return suffixes;
+        }
+
+        // choose に固定の回答 (選択肢数を超えたら最後の選択肢) を返すだけの View
+        private sealed class AnswerView : INovelView
+        {
+            private readonly int _answer;
+            public AnswerView(int answer) => _answer = answer;
+
+            public UniTask ShowMessageAsync(NovelLine line, CancellationToken ct) => UniTask.CompletedTask;
+            public UniTask<int> ShowChoicesAsync(IReadOnlyList<string> options, CancellationToken ct)
+                => UniTask.FromResult(Math.Min(_answer, options.Count - 1));
+            public void SetMessageWindowVisible(bool visible) { }
+            public void ClearMessage() { }
+        }
+
+        private sealed class EmptyCatalog : ICharacterCatalog
+        {
+            public bool TryGet(string speakerId, out CharacterEntry entry)
+            {
+                entry = default;
+                return false;
+            }
+        }
+
+        private sealed class CaptureErrorHandler : INovelErrorHandler
+        {
+            public string? Error { get; private set; }
+            public void OnScenarioFaulted(NovelErrorInfo error) => Error ??= $"{error.Message}\n{error.Detail}";
         }
     }
 }
