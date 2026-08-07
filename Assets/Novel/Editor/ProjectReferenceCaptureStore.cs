@@ -57,12 +57,24 @@ namespace Novel.Editor
 
         private static void OnCaptured(NovelProjectCapture.Snapshot snapshot)
         {
-            if (!EditorApplication.isPlayingOrWillChangePlaymode) return;
+            if (!(PlayModeGateForTest ?? EditorApplication.isPlayingOrWillChangePlaymode)) return;
             EnsureLoaded();
             // ToDto はアセット参照が生きているこの時点で GUID を確定させる
             _dto = Merge(_dto, ToDto(snapshot));
             _snapshot = ToSnapshot(_dto);
             Save(_dto);
+        }
+
+        // ---- テスト用シーム (実プロジェクトの Library キャッシュを汚さずにキャプチャ経路を検証する) ----
+
+        internal static bool? PlayModeGateForTest;    // null = 実際の Play Mode 状態を見る
+        internal static string? FilePathForTest;      // null = 既定の Library パス
+
+        internal static void ResetForTest()
+        {
+            _loaded = false;
+            _dto = null;
+            _snapshot = null;
         }
 
         /// <summary>
@@ -118,12 +130,14 @@ namespace Novel.Editor
             return false;
         }
 
+        private static string TargetPath => FilePathForTest ?? FilePath;
+
         private static Dto? LoadFromDisk()
         {
-            if (!File.Exists(FilePath)) return null;
+            if (!File.Exists(TargetPath)) return null;
             try
             {
-                return JsonUtility.FromJson<Dto>(File.ReadAllText(FilePath));
+                return JsonUtility.FromJson<Dto>(File.ReadAllText(TargetPath));
             }
             catch (Exception e)
             {
@@ -136,8 +150,9 @@ namespace Novel.Editor
         {
             try
             {
-                System.IO.Directory.CreateDirectory(CacheDirectory);
-                File.WriteAllText(FilePath, JsonUtility.ToJson(dto));
+                var path = TargetPath;
+                System.IO.Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                File.WriteAllText(path, JsonUtility.ToJson(dto));
             }
             catch (Exception e)
             {

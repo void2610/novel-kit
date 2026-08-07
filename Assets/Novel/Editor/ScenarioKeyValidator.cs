@@ -264,6 +264,8 @@ namespace Novel.Editor
                 entry = default;
                 return false;
             }
+
+            public IEnumerable<CharacterKeyInfo> EnumerateEntries() => Array.Empty<CharacterKeyInfo>();
         }
 
         private sealed class CaptureErrorHandler : INovelErrorHandler

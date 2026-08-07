@@ -1,5 +1,6 @@
 #nullable enable
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using Cysharp.Threading.Tasks;
@@ -220,6 +221,85 @@ namespace Novel.Tests
             Assert.That(merged.AudioKeys, Is.Empty);
             Assert.That(merged.Layouts.Select(l => l.Id),
                 Is.EqualTo(new[] { "single", "pair", "trio", "quad", "penta" }));
+        }
+
+        // ---- キャプチャ経路 (Publish → ストア)。テスト用シームで一時ファイルへ切り替え、実プロジェクトの
+        // Library キャッシュを汚さない ----
+
+        private static readonly string TempCachePath =
+            Path.Combine(Path.GetTempPath(), "novelkit-capture-store-test.json");
+
+        [TearDown]
+        public void ClearStoreOverrides()
+        {
+            ProjectReferenceCaptureStore.PlayModeGateForTest = null;
+            ProjectReferenceCaptureStore.FilePathForTest = null;
+            ProjectReferenceCaptureStore.ResetForTest();
+            if (File.Exists(TempCachePath)) File.Delete(TempCachePath);
+        }
+
+        private static void UseTempStore(bool playModeGate)
+        {
+            ProjectReferenceCaptureStore.PlayModeGateForTest = playModeGate;
+            ProjectReferenceCaptureStore.FilePathForTest = TempCachePath;
+            if (File.Exists(TempCachePath)) File.Delete(TempCachePath);
+            ProjectReferenceCaptureStore.ResetForTest();
+        }
+
+        [Test]
+        public void EditModeのキャプチャはストアに採用されない()
+        {
+            UseTempStore(playModeGate: false);   // Edit Mode のコンテナビルド相当
+
+            NovelProjectCapture.Publish(RealCapture());
+
+            Assert.That(ProjectReferenceCaptureStore.LoadOrLatest(), Is.Null);
+            Assert.That(File.Exists(TempCachePath), Is.False);
+        }
+
+        [Test]
+        public void PlayMode由来のキャプチャは種別マージで永続化されドメインリロード相当後も残る()
+        {
+            UseTempStore(playModeGate: true);
+
+            NovelProjectCapture.Publish(RealCapture());
+            // novel 未配線スコープのビルド相当 (空キー・空キャラ・標準構図) が後から走っても消えない
+            NovelProjectCapture.Publish(Snap(
+                System.Array.Empty<AudioKeyInfo>(), StageLayoutInfo.Defaults.ToArray(),
+                System.Array.Empty<CharacterKeyInfo>(),
+                "NullAudioChannel", "NullPortraitChannel", ""));
+
+            var current = ProjectReferenceCaptureStore.LoadOrLatest();
+            Assert.That(current, Is.Not.Null);
+            Assert.That(current!.AudioKeys.Single().Key, Is.EqualTo("daily"));
+            Assert.That(current.Characters.Single().Id, Is.EqualTo("aria"));
+            Assert.That(current.Layouts.Single().Id, Is.EqualTo("meeting"));
+
+            // ドメインリロード相当 (ドメイン内キャッシュ破棄) 後もディスクから復元される
+            ProjectReferenceCaptureStore.ResetForTest();
+            var reloaded = ProjectReferenceCaptureStore.LoadOrLatest();
+            Assert.That(reloaded, Is.Not.Null);
+            Assert.That(reloaded!.AudioKeys.Single().Key, Is.EqualTo("daily"));
+            Assert.That(reloaded.Characters.Single().Id, Is.EqualTo("aria"));
+        }
+
+        [Test]
+        public void アセット参照はGUID永続化を往復してアセット実体へ復元される()
+        {
+            // ストアは Asset の型を問わない (エディタは UnityEngine.Object として扱う) ため、
+            // リポジトリに必ず存在する MonoScript アセットで GUID → 実体の復元を検証する
+            var asset = UnityEditor.AssetDatabase.LoadMainAssetAtPath(
+                "Assets/Novel/Tests/EditMode/ProjectReferenceCaptureTests.cs");
+            Assert.That(asset, Is.Not.Null);
+
+            var captured = Snap(
+                new[] { new AudioKeyInfo("daily", AudioKeyKind.Bgm, null, asset) },
+                System.Array.Empty<StageLayoutInfo>(), System.Array.Empty<CharacterKeyInfo>(),
+                "GameAudioChannel", "GamePortraitChannel", "");
+
+            var restored = ProjectReferenceCaptureStore.MergeForTest(null, captured);
+
+            Assert.That(restored.AudioKeys.Single().Asset, Is.SameAs(asset));
         }
     }
 }
