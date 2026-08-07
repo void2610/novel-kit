@@ -28,9 +28,8 @@ namespace Novel.Editor
             {
                 var path = AssetDatabase.GUIDToAssetPath(guid);
                 if (!path.EndsWith(".rb")) continue;
-                // ライブラリ同梱の preamble / ルビ辞書・テスト用シナリオは実行検証の対象外
-                if (path.Contains("/Resources/Novel/") || path.Contains("/Tests/")) continue;
 
+                // コンパイル検証は preamble / ルビ辞書 / テスト含む全 .rb が対象
                 total++;
                 var bytecode = AssetDatabase.LoadAllAssetsAtPath(path)
                     .OfType<TextAsset>()
@@ -41,6 +40,13 @@ namespace Novel.Editor
                     Debug.LogError($"[Novel] バイトコード未生成（コンパイル失敗の可能性）: {path}");
                     continue;
                 }
+
+                // 実行 (キー) 検証はシナリオでない .rb を除外する。フォルダ丸ごとではなく規約上の
+                // 既定パス 2 ファイルに絞る (Resources/Novel/ 全体を除外すると、game がそこに置いた
+                // シナリオまで黙って素通りするため)。テスト用シナリオは実行時に存在しないため対象外
+                if (path.EndsWith("/Resources/Novel/Preamble.rb") ||
+                    path.EndsWith("/Resources/Novel/ruby.rb") ||
+                    path.Contains("/Tests/")) continue;
 
                 var collected = await ScenarioKeyValidator.CollectAsync(
                     new PrecompiledScenarioSource(bytecode),
