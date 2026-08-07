@@ -286,10 +286,9 @@ namespace Novel.Tests
         [Test]
         public void アセット参照はGUID永続化を往復してアセット実体へ復元される()
         {
-            // ストアは Asset の型を問わない (エディタは UnityEngine.Object として扱う) ため、
-            // リポジトリに必ず存在する MonoScript アセットで GUID → 実体の復元を検証する
-            var asset = UnityEditor.AssetDatabase.LoadMainAssetAtPath(
-                "Assets/Novel/Tests/EditMode/ProjectReferenceCaptureTests.cs");
+            // 本テスト自身の MonoScript を検索で引く (パス直書きは UPM 取り込み時に Packages/ 配下となり解決できない)
+            var guid = UnityEditor.AssetDatabase.FindAssets("ProjectReferenceCaptureTests t:MonoScript")[0];
+            var asset = UnityEditor.AssetDatabase.LoadMainAssetAtPath(UnityEditor.AssetDatabase.GUIDToAssetPath(guid));
             Assert.That(asset, Is.Not.Null);
 
             var captured = Snap(
