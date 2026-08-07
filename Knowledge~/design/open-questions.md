@@ -67,11 +67,12 @@ lipsync は対象外）で確定。残るのは `se`/`bgm` コマンドの引数
 # 提案中（ユーザー合意待ち）
 
 - 多言語化: [原文キー + 追従抽出](/design/decisions/localization-unity-package.md)（暫定・2026-08-07）。
-  `ITextResolver` seam に原文キーの訳テーブル resolve を差し込む opt-in 方式。同一性は行末 ID コメント
-  （`# t:xxxx`・エンジニアレビュー付き PR 運用が前提・ランタイム影響ゼロ）で決定的に追跡し、
-  原文変更はキーリネーム + fuzzy 分類で訳を追従。バックエンドは中立・第一実装は Unity Localization。
+  `ITextResolver` seam に原文キーの訳テーブル resolve を差し込む opt-in 方式。原文変更の追従は
+  2 層: 追跡エンジン（位置 + 類似度・原稿不変・既定）+ opt-in annotate モード（行末 ID コメントで
+  決定的化。並行翻訳・再構成頻発プロジェクト向け）。バックエンドは中立・第一実装は Unity Localization。
   合意後の実装順は ①既読 ID の raw 基準化（挙動不変のコア変更）→ ②`Novel.Localization` resolver →
-  ③annotate + 追従抽出パイプライン。
+  ③追跡エンジン（annotate は実需要が出た時点で実装）。
+  **残る論点**: 既定モードの選択（プロジェクト群の翻訳ワークフローが後追い型か並行型かで決まる。ユーザー判断待ち）。
 
 # 機能バックログ（v1 スコープ外だが将来検討）
 
