@@ -41,7 +41,7 @@ v1 は日本語のみ / 多言語は非破壊後付け
 # 後続（2026-08-07）
 
 約束していた「非破壊後付け」の具体方策を
-[多言語化は原文キー + Unity Localization 統合](/design/decisions/localization-unity-package.md)（暫定）として起案。
+[多言語化は原文キー + 追従抽出](/design/decisions/localization-unity-package.md)（暫定）として起案。
 本 ADR の決定（日本語直書き維持・`ITextResolver` seam）は不変のまま、その上に載せる。
 
 # 検討した代替案

@@ -66,9 +66,11 @@ lipsync は対象外）で確定。残るのは `se`/`bgm` コマンドの引数
 
 # 提案中（ユーザー合意待ち）
 
-- 多言語化: [原文キー + Unity Localization 統合](/design/decisions/localization-unity-package.md)（暫定・2026-08-07）。
-  `ITextResolver` seam に原文キーの String Table resolve を差し込む opt-in 方式。合意後の実装順は
-  ①既読 ID の raw 基準化（挙動不変のコア変更）→ ②`Novel.Localization` resolver → ③Editor 抽出ツール。
+- 多言語化: [原文キー + 追従抽出](/design/decisions/localization-unity-package.md)（暫定・2026-08-07）。
+  `ITextResolver` seam に原文キーの訳テーブル resolve を差し込む opt-in 方式。原文変更は差分検出で
+  キーリネームへ変換し訳を追従（msgmerge 方式 + 位置アンカー）。バックエンドは中立・第一実装は
+  Unity Localization。合意後の実装順は ①既読 ID の raw 基準化（挙動不変のコア変更）→
+  ②`Novel.Localization` resolver → ③追従抽出パイプライン。
 
 # 機能バックログ（v1 スコープ外だが将来検討）
 

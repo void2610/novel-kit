@@ -4,7 +4,7 @@
 各ファイルは `type: Decision`。ステータスは `確定` / `暫定` / `保留`。
 
 ## 暫定（2026-08-07・提案中、ユーザー合意待ち）
-* [多言語化は原文キー + Unity Localization 統合](/design/decisions/localization-unity-package.md) - `ITextResolver` seam に原文キーの String Table resolve を差し込む opt-in アセンブリ `Novel.Localization`。先行コア変更は既読 ID の raw 基準化のみ
+* [多言語化は原文キー + 追従抽出](/design/decisions/localization-unity-package.md) - `ITextResolver` seam に原文キーの訳テーブル resolve を差し込む。同一性は安定 ID・原文変更は差分検出でキーリネームに変換して訳を追従（msgmerge 方式 + 位置アンカー）。バックエンド中立で第一実装は Unity Localization。先行コア変更は既読 ID の raw 基準化のみ
 
 ## 確定済み（2026-08-06・ユーザーとの議論で合意）
 * [プロジェクトリファレンス](/design/decisions/project-reference.md) - ライター向け「名前と構図」一覧のエディタウィンドウ。列挙契約は `IAudioChannel`/`IPortraitChannel` に default 実装付きで統合・実行時実体は `RegisterNovelKitCore` の DI ビルド時キャプチャで取得（game 追加記述ゼロ）・音の参考実装は同梱しない
