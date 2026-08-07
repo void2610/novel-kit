@@ -85,13 +85,7 @@ namespace Novel.Editor
 
         private void OnGUI()
         {
-            _characters ??= ScanCharacters();
-            _imageGroups ??= ScanImages();
             if (_playingClip != null && !AudioPreviewUtil.IsPlaying(_playingClip)) _playingClip = null;
-
-            var snapshot = ProjectReferenceCaptureStore.LoadOrLatest();
-            var layouts = snapshot?.Layouts ?? StageLayoutInfo.Defaults;
-            var audioKeys = snapshot?.AudioKeys ?? Array.Empty<AudioKeyInfo>();
 
             using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
             {
@@ -100,6 +94,14 @@ namespace Novel.Editor
                 if (_tab is Tab.Characters or Tab.Images)
                     _thumbSize = GUILayout.HorizontalSlider(_thumbSize, 24f, 96f, GUILayout.Width(80));
             }
+
+            // スキャンはツールバーの後で行う (「更新」の Invalidate と同フレームで null を踏まないため)
+            _characters ??= ScanCharacters();
+            _imageGroups ??= ScanImages();
+
+            var snapshot = ProjectReferenceCaptureStore.LoadOrLatest();
+            var layouts = snapshot?.Layouts ?? StageLayoutInfo.Defaults;
+            var audioKeys = snapshot?.AudioKeys ?? Array.Empty<AudioKeyInfo>();
 
             var labels = new[]
             {
@@ -214,8 +216,8 @@ namespace Novel.Editor
             {
                 var path = AssetDatabase.GUIDToAssetPath(guid);
                 var at = path.IndexOf(marker, StringComparison.Ordinal);
-                if (at < 0) continue;
-                if (path.Contains("/Tests/")) continue;   // テスト用アセットは実行時に存在しない
+                // テスト用・Editor 配下のアセットは実行時に存在しない (ScenarioKeyValidator と同じ除外)
+                if (at < 0 || path.Contains("/Tests/") || path.Contains("/Editor/")) continue;
                 var relative = path.Substring(at + marker.Length);
                 var dot = relative.LastIndexOf('.');
                 var key = dot >= 0 ? relative.Substring(0, dot) : relative;
@@ -294,9 +296,11 @@ namespace Novel.Editor
             if (slotCount <= 0) return;
             var slotColor = EditorGUIUtility.isProSkin ? new Color(0.5f, 0.8f, 1f, 0.9f) : new Color(0.15f, 0.4f, 0.7f, 0.9f);
             const float slotWidth = 10f;
-            for (var i = 0; i < slotCount; i++)
+            // SlotCount に契約上の上限はないため、図に収まる数へクランプする (実数は隣のラベルが示す)
+            var drawn = Mathf.Min(slotCount, 8);
+            for (var i = 0; i < drawn; i++)
             {
-                var centerX = rect.x + rect.width * (i + 1) / (slotCount + 1);
+                var centerX = rect.x + rect.width * (i + 1) / (drawn + 1);
                 EditorGUI.DrawRect(new Rect(centerX - slotWidth / 2f, rect.y + 3f, slotWidth, rect.height - 6f), slotColor);
             }
         }
@@ -374,8 +378,8 @@ namespace Novel.Editor
             {
                 var path = AssetDatabase.GUIDToAssetPath(guid);
                 var at = path.IndexOf(marker, StringComparison.Ordinal);
-                if (at < 0) continue;
-                if (path.Contains("/Tests/")) continue;
+                // テスト用・Editor 配下のアセットは実行時に存在しない (ScenarioKeyValidator と同じ除外)
+                if (at < 0 || path.Contains("/Tests/") || path.Contains("/Editor/")) continue;
                 var relative = path.Substring(at + marker.Length);
                 var dot = relative.LastIndexOf('.');
                 pathByKey[dot >= 0 ? relative.Substring(0, dot) : relative] = path;
