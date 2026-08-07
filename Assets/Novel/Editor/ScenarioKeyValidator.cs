@@ -161,8 +161,9 @@ namespace Novel.Editor
         {
             if (_unknownCommandPreamble != null) return _unknownCommandPreamble;
             const string source =
-                "def method_missing(name, *args, **kwargs, &block)\n" +
+                "def method_missing(name, *args)\n" +
                 "  __nk_unknown_command name.to_s\n" +
+                "  nil\n" +
                 "end\n";
             var state = MRubyState.Create();   // MRubyState は IDisposable でない (コンパイル専用の一時 state)
             using var compiler = MRubyCS.Compiler.MRubyCompiler.Create(state);
