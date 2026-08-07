@@ -73,18 +73,36 @@ namespace Novel.Editor
         private bool Matches(string text) =>
             string.IsNullOrEmpty(_search) || text.IndexOf(_search, StringComparison.OrdinalIgnoreCase) >= 0;
 
-        // ---- キャラ (ScriptableCharacterCatalog をライブ表示) ----
+        // ---- キャラ (ScriptableCharacterCatalog をライブ表示。無ければ DI ビルド時キャプチャ) ----
 
         private void DrawCharacters()
         {
             _characters ??= ScanCharacters();
-            _showCharacters = EditorGUILayout.Foldout(_showCharacters, $"キャラ ({_characters.Sum(c => c.Entries.Count)})", true);
+            var snapshot = ProjectReferenceCaptureStore.LoadOrLatest();
+            var captured = _characters.Count == 0 ? snapshot?.Characters : null;
+            var total = captured?.Count ?? _characters.Sum(c => c.Entries.Count);
+            _showCharacters = EditorGUILayout.Foldout(_showCharacters, $"キャラ ({total})", true);
             if (!_showCharacters) return;
 
             using var _ = new EditorGUI.IndentLevelScope();
+            if (captured is { Count: > 0 })
+            {
+                EditorGUILayout.LabelField(
+                    $"取得元: {snapshot!.CharacterCatalogType} ({FormatTime(snapshot.CapturedAt)} の再生時)", EditorStyles.miniLabel);
+                foreach (var c in captured)
+                {
+                    if (!Matches(c.Id) && !Matches(c.DisplayName)) continue;
+                    var portrait = string.IsNullOrEmpty(c.DefaultPortraitKey) ? "" : $"  既定立ち絵: {c.DefaultPortraitKey}";
+                    EditorGUILayout.LabelField($"{c.Id}", $"表示名: {c.DisplayName}{portrait}");
+                }
+                return;
+            }
             if (_characters.Count == 0)
             {
-                EditorGUILayout.HelpBox("ScriptableCharacterCatalog が見つかりません (Create > Novel > Character Catalog)。", MessageType.Info);
+                EditorGUILayout.HelpBox(
+                    "ScriptableCharacterCatalog が見つかりません (Create > Novel > Character Catalog)。" +
+                    "コード実装のカタログは ICharacterCatalog.EnumerateEntries() をオーバーライドし、一度再生してください。",
+                    MessageType.Info);
                 return;
             }
             foreach (var catalog in _characters)

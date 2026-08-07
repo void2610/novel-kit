@@ -28,6 +28,14 @@ namespace Novel.View
             return _map.TryGetValue(speakerId, out entry);
         }
 
+        // Build() の辞書を経由し、speakerId 重複時も TryGet と同じ解決結果 (後勝ち) を返す
+        public IEnumerable<CharacterKeyInfo> EnumerateEntries()
+        {
+            _map ??= Build();
+            foreach (var (id, entry) in _map)
+                yield return new CharacterKeyInfo(id, entry.DisplayName, entry.DefaultPortraitKey);
+        }
+
         private Dictionary<string, CharacterEntry> Build()
         {
             var map = new Dictionary<string, CharacterEntry>(entries.Count);
