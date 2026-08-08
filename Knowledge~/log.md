@@ -88,3 +88,9 @@
 
 ## 2026-08-08
 * **Update**: [多言語化 ADR](/design/decisions/localization-unity-package.md) を**確定**。残っていた既定モードの選択は、プロジェクト群の翻訳ワークフローが**後追い翻訳型**（原稿凍結後に翻訳開始）とユーザー確認されたことで「追跡エンジンのみ（原稿不変）」に決着。annotate モード（行末 ID コメント）は仕様のまま保持し並行翻訳の実需要時に実装。[decisions/index](/design/decisions/index.md) を確定済みへ移動、[残論点](/design/open-questions.md) の提案中セクションを解決済みへ。実装順は ①既読 ID の raw 基準化 → ②`Novel.Localization` resolver → ③追跡エンジン。
+* **Update**: 多言語化 ADR の Phase 1-3 を実装し「実装で確定」節へ追認。
+  - **Phase 1**: 既読 ID を resolve 前の原文基準へ (`NovelCommandHandler`)。恒等 resolver では同一ハッシュでセーブ互換不変。resolver 切替後の既読保持テストを追加。
+  - **Phase 2**: `Novel.Localization` (versionDefines opt-in) に `LocalizedTableTextResolver` (原文キー・未ヒット原文フォールバック・`InitializeAsync` preload・`sourceLocaleCode` 一致時はテーブル不使用・ロケール切替自動追従・`TextMissed` dev 収集イベント)。
+  - **Phase 3**: 追跡エンジン純ロジック (`Novel.Editor/Localization/`: `ScenarioTextScanner` = say/narration/chara 糖衣/choose/as: の出現順抽出・補間は報告 / `TrackedTextDiffer` = LCS アンカー + ギャップ内類似度対応付け・タグのみ/fuzzy≥0.55/リライト≥0.25 分類) + `Novel.Localization.Editor` (計画立案 = 共有原文は分離・消滅は deprecated マークのみ / `SharedTableData.RenameKey` で KeyId を保った適用 / 移行レポートウィンドウ `Novel/Localization/Extract Strings` / 未ヒット一覧メニュー)。追跡状態は `NovelTextSourceMetadata` (出現ごと 1 つ) でテーブル同居。
+  - EditMode テスト (スキャナ 9 件・差分エンジン 7 件・既読 1 件) を追加。[getting-started](/../Docs/getting-started.md) に多言語節、[シナリオガイド 7 章](/../Docs/scenario/07-pitfalls.md) に補間ガイドライン、[アーキテクチャ](/design/architecture.md)/[API 表面](/design/api-surface.md)/CLAUDE.md/CHANGELOG を追随。
+  - **本環境は Unity 未導入のため全テスト未実行・Editor 層の実機確認未了** (次の Unity 起動時に EditMode 実行 + com.unity.localization 導入での Extract 動作確認が必要)。

@@ -6,6 +6,21 @@
 ## [Unreleased]
 
 ### Added
+- 多言語対応 (opt-in・原文キー + 追従抽出。localization-unity-package ADR)。`com.unity.localization` 導入時のみ
+  有効になる `Novel.Localization` / `Novel.Localization.Editor` を追加
+  - `LocalizedTableTextResolver`: 原文 (タグ込み) をキーに String Table を引く `ITextResolver` 実装。
+    未ヒット/未初期化/原文ロケールは原文フォールバック。`InitializeAsync` で preload・ロケール切替に自動追従・
+    抽出漏れ収集用の `TextMissed` イベント
+  - `Novel/Localization/Extract Strings...`: `.rb` の差分抽出。原文変更を LCS + 類似度で検出し、KeyId を保った
+    キーリネームで訳を追従 (タグのみ=訳保持 / 高類似=訳保持+fuzzy / リライト=旧訳退避・未訳化)。
+    共有原文は分離し、消滅キーは削除せず deprecated マーク。適用前に移行レポートで人間が確認する
+  - `MissingTextCollector` + `Novel/Localization/Report Missing Texts`: dev プレイでのテーブルミス回収
+
+### Changed
+- 既読 ID (スキップ判定) を resolve 後テキストから **resolve 前の原文**基準へ変更。ロケールを切り替えても
+  既読が分断しない。既定の恒等 resolver では従来と同一ハッシュのためセーブ互換は不変
+
+### Added
 - `AudioKeyInfo` に `Asset` (任意・エディタ試聴用) を追加。`IAudioChannel.EnumerateKeys()` が保持済みの
   AudioClip を渡すと、プロジェクトリファレンスの試聴がキー体系に依存せず効く (エディタ側で GUID 永続化)。
   Novel.Runtime にアセット型を持ち込まないため型は `object`

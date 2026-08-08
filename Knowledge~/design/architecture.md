@@ -17,6 +17,8 @@ timestamp: 2026-06-14T23:59:00Z
 | `Novel.Runtime` | UniTask, VitalRouter, MRubyCS, Novel.Commands | 純 C# コア。シナリオランナー / `IScenarioSource` / `INovelView` / `[Routes] NovelCommandHandler` / プリアンブルローダ / `ParseSymbol<T>` / タイプライタエンジン / `IStateStore`（フラグ/変数/既読）/ バックログ / `INovelPlaybackSettings` + Default |
 | `Novel.Assets` | UniTask, UnityEngine | スプライトのロード抽象 (`ISpriteLoader` + Resources 実装) と表示ファセット (`IPortraitView` / `IBackgroundView` / `ICenterImageView` / `PortraitLayout`)。Runtime から一方向に参照される末端。実体は `Assets/Novel/Presentation/` |
 | `Novel.Addressables` | Novel.Assets, Novel.Runtime, Addressables | `ITextAssetLoader` / `ISpriteLoader` の Addressables 実装。versionDefines で導入時のみコンパイル |
+| `Novel.Localization` | Novel.Runtime, Unity Localization | `ITextResolver` の原文キー実装 `LocalizedTableTextResolver` + 追跡メタデータ + dev 未ヒット収集。versionDefines (`com.unity.localization`) で導入時のみコンパイル（[多言語化 ADR](/design/decisions/localization-unity-package.md)） |
+| `Novel.Localization.Editor` | Novel.Editor, Novel.Localization, Unity Localization Editor | 追従抽出（`Novel/Localization/Extract Strings`・KeyId を保ったリネームで訳追従・移行レポート）。エンジン純ロジック（走査/LCS diff/類似度分類）は `Novel.Editor/Localization/` に置きテスト可能 |
 | `Novel.View` | Novel.Runtime, Novel.Assets, (任意) LitMotion 等 | 任意の MonoBehaviour 参考 View（メッセージ窓・吹き出し・ナレ・立ち絵・背景・選択 UI）+ アニメツールキット。game は無視して自前 `INovelView` を供給可 |
 | `Novel.Editor` | Novel.Runtime, UnityEditor | カタログ/検証インスペクタ。`.rb`→`.mrb` の ScriptedImporter は **mrubycs-compiler パッケージが提供**するため再実装せず、それに乗る |
 | `Novel.VContainer` | Novel.Runtime, VContainer, UniTask | 任意の DI 統合層（純 `Novel.Runtime` 依存・View/Resources 非依存）。`RegisterNovelKitCore()` でコア実装（runner / no-op 既定ファセット / silent な NullErrorHandler）を一括登録。game が自前 View / 独自ローダを供給する場合に使う |

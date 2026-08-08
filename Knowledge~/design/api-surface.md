@@ -166,6 +166,11 @@ public interface ITextResolver {
 ```
 
 - 適用範囲は `say` 本文に加え、話者の表示名と `choose` 選択肢（多言語化 seam を提示テキスト全体で揃える）。
+- 既読 ID（スキップ判定）は **resolve 前の原文**から算出する（ロケール切替で既読が分断しない。
+  恒等 resolver では従来と同一ハッシュ）。`NovelLine.PlainText` は表示言語（resolve 後）基準のまま。
+- 多言語実装は opt-in の `Novel.Localization`（`LocalizedTableTextResolver`: 原文キーで String Table を引き
+  未ヒットは原文フォールバック・`InitializeAsync` preload 契約・`TextMissed` dev 収集）。
+  [多言語化 ADR](/design/decisions/localization-unity-package.md)。
 
 # 5. ルーター所有権
 

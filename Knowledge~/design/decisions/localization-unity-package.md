@@ -212,6 +212,24 @@ dev ビルドで resolver がテーブルミスした原文を記録し、レポ
    ロケール横断のタグ整合検証（`Novel/Validate Scenarios` 拡張）・AssetTable スプライトローダ・
    locale-aware ルビ・参考 View のフォント切替支援。
 
+# 実装で確定（2026-08-08・Phase 1-3 実装）
+
+- **Phase 1**: 既読 ID を raw 基準へ移行済み（`NovelCommandHandler`。恒等 resolver では
+  `ReferenceEquals` により再計算も増えない）。`NovelLine.PlainText` は表示言語基準のまま。
+- **Phase 2**: `Novel.Localization` に `LocalizedTableTextResolver(tableReference, sourceLocaleCode?)` を実装。
+  `sourceLocaleCode`（例 "ja"）一致中はテーブルを引かず常に原文（原文ロケールのテーブル整備を不要にする）。
+  ロケール切替は event 購読で自動追従（切替直後〜再ロード完了は原文フォールバック）。
+  抽出漏れの dev 収集は resolver の `TextMissed` イベント + `MissingTextCollector` で実装。
+- **Phase 3**: 追跡エンジンは仕様どおりテーブル同居メタデータ（`NovelTextSourceMetadata`＝出現ごとに 1 つ）
+  + LCS + タグ除去平文の類似度分類で実装。分類しきい値は fuzzy ≥ 0.55 / 対化 ≥ 0.25（`TrackedTextDiffer` 定数）。
+  fuzzy/参考退避/deprecated は Unity Localization の Shared エントリメタデータ
+  （`NovelFuzzyMetadata` / `NovelArchivedTranslationMetadata` / `NovelDeprecatedMetadata`）で表現。
+  純ロジック（走査/diff）は `Novel.Editor/Localization/` に置き EditMode テストを持つ。
+  抽出対象は say 本文・`as:`/`display_as:`・choose 選択肢で、**say の話者 id は抽出しない**
+  （カタログ id が普通。その場話者のリテラル表示名は dev 収集で回収）。
+- 検証状況: 実装環境に Unity が無いため、EditMode テストと Unity Localization API を使う
+  Editor 層は**実機（Unity + com.unity.localization 導入）での確認が未了**。
+
 # 既知の制約（v1 として受容）
 
 - **annotate モード導入時の一括 diff**（annotate を有効化する場合のみ）: 全対象行への ID 付与で

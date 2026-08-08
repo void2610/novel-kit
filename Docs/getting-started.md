@@ -256,6 +256,39 @@ async UniTask INovelView.ShowMessageAsync(NovelLine line, CancellationToken ct)
 
 ---
 
+## 6. 多言語対応（opt-in）
+
+日本語のみなら何も要りません（既定の `IdentityTextResolver` が原文をそのまま表示します）。
+多言語化するときは Unity Localization Package（`com.unity.localization`）を導入すると
+`Novel.Localization` / `Novel.Localization.Editor` アセンブリが有効になります。
+`.rb` は日本語直書きのまま変わらず、**原文そのものをキー**に String Table から訳を引きます
+（未ヒットは原文フォールバック）。
+
+1. `Window > Asset Management > Localization Tables` で String Table Collection（例 `NovelText`）と
+   ロケールを作成する。
+2. `Novel/Localization/Extract Strings...` で `.rb` から原文を抽出してテーブルへ登録する
+   （2 回目以降は差分抽出: 原文の誤字修正やタグ変更は訳を保持したまま追従し、リネーム内容は
+   適用前にレポートで確認できる。消えた原文も訳は削除されない）。
+3. resolver を後勝ち登録で差し替え、再生前に初期化する。
+
+```csharp
+// LifetimeScope（RegisterNovelKitCore/RegisterNovelKit の後に登録して上書き）
+builder.Register<ITextResolver>(
+    _ => new LocalizedTableTextResolver("NovelText", sourceLocaleCode: "ja"), Lifetime.Singleton);
+
+// 再生前に一度 await（テーブルの preload。ロケール切替後も確実を期すなら再度呼ぶ）
+await resolver.InitializeAsync(ct);
+```
+
+- 既読/スキップは原文基準なので、言語を切り替えても既読状態は保たれます。
+- ロケール切替は次に表示される行から反映されます（表示中の行・バックログは遡って変わりません）。
+- `#{}` 補間入りのテキストはローカライズできません（[シナリオライターズガイド 7 章](./scenario/07-pitfalls.md)）。
+- 糖衣の間接呼び等で静的抽出から漏れた行は、dev プレイで
+  `resolver.TextMissed += MissingTextCollector.Record;` と配線し
+  `Novel/Localization/Report Missing Texts` で回収できます。
+
+---
+
 ## さらに詳しく
 
 シナリオ記述（DSL）のリファレンスは [`Docs/scenario/`](./scenario/index.md)（シナリオライターズガイド）を参照。
