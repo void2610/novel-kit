@@ -11,7 +11,8 @@ namespace Novel.Runtime
         public string? SpeakerId { get; }
         public string? DisplayName { get; }   // 解決済み表示名。null = ナレーション
         public string Text => _text ?? "";    // ITextResolver 適用後 + 辞書ルビ適用後の表示テキスト（インラインタグ含む）
-        // タグと辞書ルビを除いた平文。既読 ID の算出基準そのもので、View 側の平文検査もこれを使う。
+        // タグと辞書ルビを除いた表示言語 (resolve 後) の平文。View 側の平文検査に使う。
+        // 既読 ID はこれではなく resolve 前の原文から runtime が算出する (ロケール不変・localization ADR)。
         // Text から再計算すると辞書ルビのよみが親文字と連なって残る (ルビは lexer タグではなく TMP markup で重なる) ため、
         // ルビ適用前に算出したものを runtime が渡す
         public string PlainText => _plainText ?? "";
