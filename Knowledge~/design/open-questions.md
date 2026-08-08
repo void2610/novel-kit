@@ -64,15 +64,13 @@ lipsync は対象外）で確定。残るのは `se`/`bgm` コマンドの引数
 - **preamble ロード ✅**: Runtime を純 C# に保つため `IPreambleSource` 抽象に留め、Resources 実装（`ResourcesPreambleSource`）は
   `Novel.View` に配置。配布形態は Resources 既定（game は `IPreambleSource` 差し替えで変更可）。
 
-# 提案中（ユーザー合意待ち）
+# 多言語化 ✅ 解決済み（2026-08-08）
 
-- 多言語化: [原文キー + 追従抽出](/design/decisions/localization-unity-package.md)（暫定・2026-08-07）。
-  `ITextResolver` seam に原文キーの訳テーブル resolve を差し込む opt-in 方式。原文変更の追従は
-  2 層: 追跡エンジン（位置 + 類似度・原稿不変・既定）+ opt-in annotate モード（行末 ID コメントで
-  決定的化。並行翻訳・再構成頻発プロジェクト向け）。バックエンドは中立・第一実装は Unity Localization。
-  合意後の実装順は ①既読 ID の raw 基準化（挙動不変のコア変更）→ ②`Novel.Localization` resolver →
-  ③追跡エンジン（annotate は実需要が出た時点で実装）。
-  **残る論点**: 既定モードの選択（プロジェクト群の翻訳ワークフローが後追い型か並行型かで決まる。ユーザー判断待ち）。
+→ [原文キー + 追従抽出](/design/decisions/localization-unity-package.md)（`ITextResolver` seam に
+原文キーの訳テーブル resolve・追跡エンジンで原文変更に訳を追従・annotate モードは並行翻訳向け opt-in・
+バックエンド中立で第一実装は Unity Localization）で確定。残っていた既定モードの選択は
+**後追い翻訳前提の確認により「追跡エンジンのみ」で確定**。実装順は ①既読 ID の raw 基準化 →
+②`Novel.Localization` resolver → ③追跡エンジン（annotate は実需要が出た時点で実装）。
 
 # 機能バックログ（v1 スコープ外だが将来検討）
 

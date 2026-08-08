@@ -3,8 +3,8 @@ type: Decision
 title: 多言語化は原文キー + 追従抽出（opt-in・第一実装は Unity Localization）
 description: ITextResolver の seam に原文（日本語 raw テキスト）キーの訳テーブル解決を差し込む。同一性は安定 ID で持ち、原文変更は差分検出でキーリネームに変換して訳を追従させる。テーブルバックエンドは中立で、第一実装に Unity Localization を使う。
 tags: [decision, localization, i18n, unity-localization, text, asmdef]
-timestamp: 2026-08-07T00:00:00Z
-status: 暫定
+timestamp: 2026-08-08T00:00:00Z
+status: 確定
 ---
 
 # 状況
@@ -141,6 +141,10 @@ narration "——沈黙が流れた"          # t:k20x
 
 既定をエンジンのみとするのは、v1 ADR の核心「著者体験を変えない」を既定に保ち、逸脱（規約を課す）は
 必要が実証されたときに opt-in する novel-kit の流儀（no-op 既定・opt-in ファセット）に合わせるため。
+
+**2026-08-08 確定**: プロジェクト群の翻訳ワークフローは**後追い翻訳型**（原稿凍結後に翻訳開始）と
+ユーザー確認。採用基準に照らし**既定 = 追跡エンジンのみで確定**。annotate モードは本 ADR の仕様の
+まま保持し、並行翻訳の実需要が出た時点で実装する。
 
 ### 具体的ユースケースと挙動
 
