@@ -1,0 +1,30 @@
+{
+    "name": "Novel.Localization.Editor",
+    "rootNamespace": "Novel.Localization.Editor",
+    "references": [
+        "Novel.Runtime",
+        "Novel.Editor",
+        "Novel.Localization",
+        "Unity.Localization",
+        "Unity.Localization.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "NOVEL_LOCALIZATION"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.unity.localization",
+            "expression": "",
+            "define": "NOVEL_LOCALIZATION"
+        }
+    ],
+    "noEngineReferences": false
+}
