@@ -57,11 +57,12 @@ namespace Novel.Tests
         [UnityTest]
         public IEnumerator 未登録の独自コマンドは名前を記録して読み飛ばし_以降の行も検証する() => UniTask.ToCoroutine(async () =>
         {
-            // test_unknown_command.rb は未登録の mystery_effect の後に bg を呼ぶ
+            // test_unknown_command.rb は未登録コマンド 3 種 (引数付き / 条件式) の後に bg を呼ぶ
             var result = await Collect("test_unknown_command");
 
             Assert.That(result.ExecutionError, Is.Null);
-            Assert.That(result.UnknownCommands, Is.EquivalentTo(new[] { "mystery_effect" }));
+            Assert.That(result.UnknownCommands,
+                Is.EquivalentTo(new[] { "mystery_effect", "mystery_ruby", "mystery_flag?" }));
             Assert.That(result.Keys, Does.Contain((ScenarioKeyKind.Image, "bg_after_unknown")));
         });
 
