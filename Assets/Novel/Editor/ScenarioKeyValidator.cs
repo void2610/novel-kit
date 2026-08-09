@@ -117,7 +117,7 @@ namespace Novel.Editor
             var maxOptions = 1;
             for (var answer = 0; answer < maxOptions && answer < MaxPasses; answer++)
             {
-                for (var retry = 0; retry <= MaxUnknownCommands; retry++)
+                for (var retry = 0; ; retry++)
                 {
                     var recorder = new ScenarioKeyRecorder();
                     var errors = new CaptureErrorHandler();
@@ -140,6 +140,12 @@ namespace Novel.Editor
                     // 未登録コマンドで止まったら、その名前を no-op stub として足して同じ回答で流し直す
                     var unknown = ParseUndefinedMethod(errors.Error);
                     if (unknown == null || !result.UnknownCommands.Add(unknown))
+                    {
+                        result.ExecutionError ??= errors.Error;
+                        break;
+                    }
+                    // 上限に達したら流し直さない。未検証のまま成功扱いにしないようエラーを残す
+                    if (retry >= MaxUnknownCommands)
                     {
                         result.ExecutionError ??= errors.Error;
                         break;
