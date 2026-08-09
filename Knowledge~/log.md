@@ -2,6 +2,9 @@
 
 更新履歴を新しい順に記録する。日付は `YYYY-MM-DD`。
 
+## 2026-08-09
+* **Update**: カタログに載せない単発キャラ用に `speaker` コマンド (+ preamble 糖衣) を追加。未登録話者は runtime が id を表示名にフォールバックする正常動作なのに Validate Scenarios だけが「未定義のキャラ id」と警告し、演出上の単発キャラ (正体伏せの `？？？`・一度だけ出る人物) を出すと必ずノイズが出ていた。単純に警告を止めるとキャラ id の誤記検出を失うため、意図の明示を宣言で受ける形にした。宣言はハンドラが表示名にも使い、検証は宣言済み id を正解側に加える (未宣言・未登録は従来どおり警告)。契約は EditMode テストで固定。
+
 ## 2026-08-08
 * **Update**: [プロジェクトリファレンス](/design/decisions/project-reference.md) の Validate Scenarios を「未登録コマンドで停止」から「読み飛ばして続行」へ。game 独自コマンド (color-recollection の `location` 等) は検証ハーネスに語彙が無く NoMethodError で以降の行が未検証だった。game モジュールの実体化は DI 依存 (Presenter 等) が要るため不可。MRubyCS は `method_missing` 定義自体が NRE になるため使えず、NoMethodError のコマンド名を正規表現で拾って no-op stub (`def name(*args); nil; end`) を検証専用 preamble に足し、同じ回答で流し直す方式にした (MRubyCS.Compiler で実行時コンパイル・stub 上限 32)。読み飛ばした名前は警告に列挙し誤記検出も維持。契約は EditMode テストで固定。
 * **Update**: [プロジェクトリファレンス](/design/decisions/project-reference.md) のキャプチャを種別マージ + Play Mode 限定へ（不具合対応・ADR「実装で確定」に追認）。「ビルドごとに丸ごと上書き」だったため、novel 未配線スコープのビルド（タイトル画面のシーンや EditMode テスト）が空キャプチャで実データを消し「一度再生しても音・キャラがすぐ消える」不具合になっていた。`ProjectReferenceCaptureStore` が種別ごとにマージ（空 = 列挙未提供として以前の値を保持・標準構図のまま = 未提供扱い）、Edit Mode のコンテナビルドは不採用、試聴用 AudioClip は常に GUID から実体化（再生終了の参照破棄で試聴が死なない）。あわせてユーザー要望で `IAudioChannel.EnumerateKeys()` / `ICharacterCatalog.EnumerateEntries()` の default 実装（空）を削除し明示実装必須に（実装忘れによる沈黙の空目録の防止。`EnumerateLayouts()` の default は維持）。CHANGELOG・getting-started 追随、マージ契約は EditMode テストで固定（本環境は Unity 起動不可のためコンパイル未実測）。

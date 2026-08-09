@@ -5,6 +5,11 @@
 
 ## [Unreleased]
 
+### Added
+- コマンド `speaker` (糖衣: `speaker '？？？'` / `speaker :claude, 'クロード'`) を追加。カタログに載せない
+  単発キャラをそのシナリオ限りの話者として宣言でき、表示名に使われるうえ Validate Scenarios の
+  「未定義のキャラ id」からも外れる (未宣言・未登録の id は従来どおり誤記として警告)
+
 ### Changed
 - Validate Scenarios: 未登録コマンドで停止する代わりに、NoMethodError のコマンド名を no-op stub として
   定義し直して流し直し、以降の行も検証を続けるようにした。読み飛ばした名前は

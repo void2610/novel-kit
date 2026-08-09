@@ -36,6 +36,7 @@ namespace Novel.Editor
     internal sealed partial class ScenarioKeyRecorder
     {
         public readonly HashSet<(ScenarioKeyKind Kind, string Key)> Keys = new();
+        public readonly HashSet<string> DeclaredSpeakers = new();
         public int MaxChoiceOptions { get; private set; }
 
         public void On(SayCommand cmd)
@@ -59,6 +60,12 @@ namespace Novel.Editor
             var pairs = cmd.CastPairs ?? Array.Empty<string>();
             for (var i = 0; i + 1 < pairs.Length; i += 2)
                 Add(ScenarioKeyKind.Speaker, pairs[i]);
+        }
+
+        // speaker 宣言はキーの使用ではなく「このシナリオ限りの話者定義」なので正解側に足す
+        public void On(SpeakerCommand cmd)
+        {
+            if (!string.IsNullOrEmpty(cmd.Id)) DeclaredSpeakers.Add(cmd.Id);
         }
 
         public void On(ExitCommand cmd) => Add(ScenarioKeyKind.Speaker, cmd.Character);
@@ -92,6 +99,9 @@ namespace Novel.Editor
 
             // no-op stub に置き換えて読み飛ばした未登録コマンド名 (game 独自コマンドか誤記)
             public HashSet<string> UnknownCommands { get; } = new();
+
+            // speaker で宣言された、このシナリオ限りの話者 id
+            public HashSet<string> DeclaredSpeakers { get; } = new();
 
             // 選択肢数が実行上限を超え、回さなかった回答の分岐が残っている場合の選択肢数 (0 = 全回答を実行済み)
             public int UncoveredChoiceOptions { get; set; }
@@ -135,6 +145,7 @@ namespace Novel.Editor
                     await runner.PlayAsync(scenarioKey, NovelResumePoint.End, CancellationToken.None);
 
                     result.Keys.UnionWith(recorder.Keys);
+                    result.DeclaredSpeakers.UnionWith(recorder.DeclaredSpeakers);
                     maxOptions = Math.Max(maxOptions, recorder.MaxChoiceOptions);
 
                     // 未登録コマンドで止まったら、その名前を no-op stub として足して同じ回答で流し直す
@@ -198,6 +209,9 @@ namespace Novel.Editor
             var count = 0;
             foreach (var (kind, key) in collected.Keys)
             {
+                // speaker 宣言済みの話者はカタログ未登録でも正 (単発キャラの意図的な使用)
+                if (kind == ScenarioKeyKind.Speaker && collected.DeclaredSpeakers.Contains(key)) continue;
+
                 var (set, label) = kind switch
                 {
                     ScenarioKeyKind.Speaker => (known.Speakers, "キャラ id"),

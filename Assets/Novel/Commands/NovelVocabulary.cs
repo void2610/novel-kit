@@ -42,6 +42,16 @@ namespace Novel.Commands
         public string[] CastPairs { get; init; }
     }
 
+    // カタログに載せない単発キャラをこのシナリオ限りの話者として宣言する (検証の未定義キャラ判定から外れる)
+    [MRubyObject]
+    public readonly partial record struct SpeakerCommand : ICommand
+    {
+        public string Id { get; init; }
+
+        // 空なら Id をそのまま表示名にする
+        public string DisplayName { get; init; }
+    }
+
     // 指定キャラを場面から退場 (cast から外し、 該当 slot を非表示に)
     [MRubyObject]
     public readonly partial record struct ExitCommand : ICommand

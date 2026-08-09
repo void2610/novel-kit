@@ -66,6 +66,19 @@ namespace Novel.Tests
             Assert.That(result.Keys, Does.Contain((ScenarioKeyKind.Image, "bg_after_unknown")));
         });
 
+        [UnityTest]
+        public IEnumerator speaker_宣言した単発キャラはカタログ未登録でも未定義として数えない() => UniTask.ToCoroutine(async () =>
+        {
+            var result = await Collect("test_declared_speaker");
+
+            Assert.That(result.ExecutionError, Is.Null);
+            Assert.That(result.DeclaredSpeakers, Is.EquivalentTo(new[] { "？？？", "claude" }));
+
+            var known = new ScenarioKeyValidator.KnownKeys { Speakers = new HashSet<string>() };
+            // 宣言済み 2 名は数えず、未宣言・未登録の typo_chan だけを未定義とする
+            Assert.That(ScenarioKeyValidator.Report("test.rb", null, result, known), Is.EqualTo(1));
+        });
+
         [Test]
         public void Report_は正解データに無いキーだけを数え_情報源の無い種別はスキップする()
         {
