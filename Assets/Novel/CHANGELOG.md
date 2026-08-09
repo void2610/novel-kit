@@ -6,8 +6,8 @@
 ## [Unreleased]
 
 ### Changed
-- Validate Scenarios: 未登録コマンドで NoMethodError で停止する代わりに、`method_missing` で
-  名前だけ記録して読み飛ばし、以降の行も検証を続けるようにした。読み飛ばした名前は
+- Validate Scenarios: 未登録コマンドで停止する代わりに、NoMethodError のコマンド名を no-op stub として
+  定義し直して流し直し、以降の行も検証を続けるようにした。読み飛ばした名前は
   「game 独自コマンドなら正常。誤記でないか確認」として警告に列挙する
 
 ### Added

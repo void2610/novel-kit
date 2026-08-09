@@ -5,7 +5,6 @@ using System.Threading;
 using Cysharp.Threading.Tasks;
 using MRubyCS;
 using Novel.Commands;
-using VitalRouter.MRuby;
 using Novel.Runtime;
 using Novel.View;
 using UnityEditor;
@@ -20,8 +19,7 @@ namespace Novel.Editor
     // 早送り実行し、Router に流れる型付きコマンド (BackgroundCommand 等) からキーを記録する。
     // パースの正確さ (コメント/クォート/複数行/#{} 補間) を mruby 本体に委ね、糖衣の追加にも追従不要。
     // choose は回答を変えて選択肢数ぶん再実行し、単一の回答で到達できる分岐を全て通す
-    // (複数の choose の組合せでしか到達しない行は対象外。game 独自コマンドは語彙が無いが、
-    // method_missing で名前だけ記録して読み飛ばし、以降の行も検証を続ける)。
+    // (複数の choose の組合せでしか到達しない行は対象外。語彙の無い game 独自コマンドは no-op stub 化して流し直す)。
 
     internal enum ScenarioKeyKind
     {
@@ -33,25 +31,12 @@ namespace Novel.Editor
         Layout,       // stage の構図 id
     }
 
-    // 検証専用: method_missing が捕まえた未登録コマンド名の通知 (キー検証ではなく読み飛ばしの報告用)
-    [MRubyCS.Serializer.MRubyObject]
-    internal readonly partial record struct UnknownScenarioCommand : ICommand
-    {
-        public string Name { get; init; }
-    }
-
     // 実行中に Router へ流れたコマンドからキーを拾う購読者 (ハンドラと並んで購読するだけの受動的な記録係)
     [Routes]
     internal sealed partial class ScenarioKeyRecorder
     {
         public readonly HashSet<(ScenarioKeyKind Kind, string Key)> Keys = new();
-        public readonly HashSet<string> UnknownCommands = new();
         public int MaxChoiceOptions { get; private set; }
-
-        public void On(UnknownScenarioCommand cmd)
-        {
-            if (!string.IsNullOrEmpty(cmd.Name)) UnknownCommands.Add(cmd.Name);
-        }
 
         public void On(SayCommand cmd)
         {
@@ -95,6 +80,9 @@ namespace Novel.Editor
         // 実行の上限。choose の選択肢数がこれを超える分は回さない (通常 2〜4)
         private const int MaxPasses = 8;
 
+        // 1 シナリオで stub 化する未登録コマンドの上限 (= 流し直しの上限)
+        private const int MaxUnknownCommands = 32;
+
         internal sealed class CollectResult
         {
             public HashSet<(ScenarioKeyKind Kind, string Key)> Keys { get; } = new();
@@ -102,7 +90,7 @@ namespace Novel.Editor
             // 完走できなかったパスのエラー (書き間違い等)。null = 全パス完走
             public string? ExecutionError { get; set; }
 
-            // method_missing で読み飛ばした未登録コマンド名 (game 独自コマンドか誤記)
+            // no-op stub に置き換えて読み飛ばした未登録コマンド名 (game 独自コマンドか誤記)
             public HashSet<string> UnknownCommands { get; } = new();
 
             // 選択肢数が実行上限を超え、回さなかった回答の分岐が残っている場合の選択肢数 (0 = 全回答を実行済み)
@@ -129,46 +117,59 @@ namespace Novel.Editor
             var maxOptions = 1;
             for (var answer = 0; answer < maxOptions && answer < MaxPasses; answer++)
             {
-                var recorder = new ScenarioKeyRecorder();
-                var errors = new CaptureErrorHandler();
-                var router = new Router();
-                using var subscription = recorder.MapTo(router);
-                using var runner = new NovelScenarioRunner(source, router,
-                    new AnswerView(answer), new IdentityTextResolver(), new EmptyCatalog(),
-                    errorHandler: errors,
-                    preambleSources: new IPreambleSource[]
+                for (var retry = 0; retry <= MaxUnknownCommands; retry++)
+                {
+                    var recorder = new ScenarioKeyRecorder();
+                    var errors = new CaptureErrorHandler();
+                    var router = new Router();
+                    using var subscription = recorder.MapTo(router);
+                    using var runner = new NovelScenarioRunner(source, router,
+                        new AnswerView(answer), new IdentityTextResolver(), new EmptyCatalog(),
+                        errorHandler: errors,
+                        preambleSources: new IPreambleSource[]
+                        {
+                            new PreambleSource(new ResourcesTextAssetLoader()),
+                            new BytesPreambleSource(StubPreamble(result.UnknownCommands)),
+                        });
+
+                    await runner.PlayAsync(scenarioKey, NovelResumePoint.End, CancellationToken.None);
+
+                    result.Keys.UnionWith(recorder.Keys);
+                    maxOptions = Math.Max(maxOptions, recorder.MaxChoiceOptions);
+
+                    // 未登録コマンドで止まったら、その名前を no-op stub として足して同じ回答で流し直す
+                    var unknown = ParseUndefinedMethod(errors.Error);
+                    if (unknown == null || !result.UnknownCommands.Add(unknown))
                     {
-                        new PreambleSource(new ResourcesTextAssetLoader()),
-                        new BytesPreambleSource(UnknownCommandPreamble()),
-                    },
-                    commandModules: new INovelCommandModule[] { new UnknownCommandVocabulary() });
-
-                await runner.PlayAsync(scenarioKey, NovelResumePoint.End, CancellationToken.None);
-
-                result.Keys.UnionWith(recorder.Keys);
-                result.UnknownCommands.UnionWith(recorder.UnknownCommands);
-                maxOptions = Math.Max(maxOptions, recorder.MaxChoiceOptions);
-                result.ExecutionError ??= errors.Error;
+                        result.ExecutionError ??= errors.Error;
+                        break;
+                    }
+                }
             }
             if (maxOptions > MaxPasses) result.UncoveredChoiceOptions = maxOptions;
             return result;
         }
 
-        // 未登録コマンドは名前を記録して読み飛ばす (NoMethodError で実行が止まると以降の行が未検証になるため)
-        private static byte[]? _unknownCommandPreamble;
-
-        private static byte[] UnknownCommandPreamble()
+        // "undefined method location for Object (NoMethodError)" からコマンド名を取り出す
+        private static string? ParseUndefinedMethod(string? error)
         {
-            if (_unknownCommandPreamble != null) return _unknownCommandPreamble;
-            const string source =
-                "def method_missing(name, *args)\n" +
-                "  __nk_unknown_command name.to_s\n" +
-                "  nil\n" +
-                "end\n";
-            var state = MRubyState.Create();   // MRubyState は IDisposable でない (コンパイル専用の一時 state)
+            if (error == null) return null;
+            var match = System.Text.RegularExpressions.Regex.Match(error, @"undefined method '?([A-Za-z_][A-Za-z0-9_]*[?!]?)'? for");
+            return match.Success ? match.Groups[1].Value : null;
+        }
+
+        // 収集済みの未登録コマンドを nil を返す no-op として定義する preamble
+        private static byte[] StubPreamble(IEnumerable<string> names)
+        {
+            var source = new System.Text.StringBuilder();
+            foreach (var name in names)
+                source.Append("def ").Append(name).Append("(*args)\n  nil\nend\n");
+            if (source.Length == 0) source.Append("nil\n");
+
+            var state = MRubyState.Create();   // コンパイル専用の一時 state (MRubyState は IDisposable ではない)
             using var compiler = MRubyCS.Compiler.MRubyCompiler.Create(state);
-            using var compiled = compiler.CompileToBinaryFormat(System.Text.Encoding.UTF8.GetBytes(source));
-            return _unknownCommandPreamble = compiled.AsSpan().ToArray();
+            using var compiled = compiler.CompileToBinaryFormat(System.Text.Encoding.UTF8.GetBytes(source.ToString()));
+            return compiled.AsSpan().ToArray();
         }
 
         private sealed class BytesPreambleSource : IPreambleSource
@@ -176,18 +177,6 @@ namespace Novel.Editor
             private readonly byte[] _bytecode;
             public BytesPreambleSource(byte[] bytecode) => _bytecode = bytecode;
             public UniTask<byte[]?> LoadPreambleAsync(CancellationToken ct) => UniTask.FromResult<byte[]?>(_bytecode);
-        }
-
-        private sealed class UnknownCommandVocabulary : INovelCommandModule
-        {
-            public void RegisterVocabulary(MRubyState state) => state.AddCommand<UnknownScenarioCommand>("__nk_unknown_command");
-            public IDisposable MapHandlers(ICommandSubscribable router) => NullSubscription.Instance;
-        }
-
-        private sealed class NullSubscription : IDisposable
-        {
-            public static readonly NullSubscription Instance = new();
-            public void Dispose() { }
         }
 
         /// <summary>集めたキーを正解データと突き合わせ、問題数を返す (問題ごとに Debug.LogWarning 済み)。</summary>
