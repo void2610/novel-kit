@@ -341,9 +341,8 @@ namespace Novel.Editor.Localization
                     if (i + 1 < line.Length && line[i + 1] == '{')
                     {
                         var close = line.IndexOf('}', i + 2);
-                        if (close > i + 2 && TryParseHex(line, i + 2, close - i - 2, out var cp))
+                        if (close > i + 2 && TryAppendCodePoints(line, i + 2, close - i - 2, sb))
                         {
-                            sb.Append(char.ConvertFromUtf32(cp));
                             i = close;
                             return;
                         }
@@ -372,6 +371,23 @@ namespace Novel.Editor.Localization
                     else sb.Append(e);   // \\ \" \' \# を含む「エスケープした文字そのもの」
                     return;
             }
+        }
+
+        // Ruby の \u{...} は空白区切りで複数コードポイントを許す (例: \u{3042 3044} → あい)。
+        // 全部が有効なときだけ sb へ足して true (途中失敗で半端に書かない)
+        private static bool TryAppendCodePoints(string text, int start, int length, StringBuilder sb)
+        {
+            var parts = text.Substring(start, length)
+                .Split(new[] { ' ' }, System.StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 0) return false;
+            var buffer = new StringBuilder();
+            foreach (var part in parts)
+            {
+                if (!TryParseHex(part, 0, part.Length, out var cp)) return false;
+                buffer.Append(char.ConvertFromUtf32(cp));
+            }
+            sb.Append(buffer);
+            return true;
         }
 
         private static bool IsHex(char c) => c is >= '0' and <= '9' or >= 'a' and <= 'f' or >= 'A' and <= 'F';

@@ -64,7 +64,20 @@ namespace Novel.Localization
         /// </summary>
         public async UniTask InitializeAsync(CancellationToken ct)
         {
-            await LocalizationSettings.InitializationOperation.ToUniTask(cancellationToken: ct);
+            try
+            {
+                await LocalizationSettings.InitializationOperation.ToUniTask(cancellationToken: ct);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;   // キャンセルだけは呼び出し元の関心事
+            }
+            catch (Exception e)
+            {
+                // 契約どおりフェイルセーフ: 初期化失敗もテーブル取得失敗と同様に警告 + 原文フォールバック
+                Debug.LogWarning($"[Novel] Unity Localization の初期化に失敗: {e.GetType().Name}: {e.Message}。原文のまま表示します。");
+                return;
+            }
             await ReloadTableAsync(ct);
         }
 

@@ -62,16 +62,32 @@ namespace Novel.Localization
     public static class MissingTextCollector
     {
         private static readonly HashSet<string> Missed = new();
+        private static bool _restored;
+
+#if UNITY_EDITOR
+        // Play Mode 終了時の domain reload で static は消えるため、エディタでは SessionState
+        // (エディタセッション中は生存) へ write-through する。区切りはテキストに現れない unit separator
+        private const string SessionKey = "Novel.Localization.MissingTexts";
+        private const char Separator = '\u001f';
+#endif
 
         public static void Record(string raw)
         {
-            lock (Missed) Missed.Add(raw);
+            lock (Missed)
+            {
+                EnsureRestored();
+                if (!Missed.Add(raw)) return;
+#if UNITY_EDITOR
+                UnityEditor.SessionState.SetString(SessionKey, string.Join(Separator.ToString(), Missed));
+#endif
+            }
         }
 
         public static IReadOnlyList<string> Snapshot()
         {
             lock (Missed)
             {
+                EnsureRestored();
                 var list = new List<string>(Missed);
                 list.Sort(StringComparer.Ordinal);
                 return list;
@@ -80,7 +96,27 @@ namespace Novel.Localization
 
         public static void Clear()
         {
-            lock (Missed) Missed.Clear();
+            lock (Missed)
+            {
+                _restored = true;   // 復元をスキップ (消した直後に旧内容が蘇らないように)
+                Missed.Clear();
+#if UNITY_EDITOR
+                UnityEditor.SessionState.EraseString(SessionKey);
+#endif
+            }
+        }
+
+        // domain reload 後の初回アクセスで SessionState から復元する (ビルドでは in-memory のみ)
+        private static void EnsureRestored()
+        {
+            if (_restored) return;
+            _restored = true;
+#if UNITY_EDITOR
+            var stored = UnityEditor.SessionState.GetString(SessionKey, "");
+            if (stored.Length == 0) return;
+            foreach (var text in stored.Split(Separator))
+                if (text.Length > 0) Missed.Add(text);
+#endif
         }
     }
 }

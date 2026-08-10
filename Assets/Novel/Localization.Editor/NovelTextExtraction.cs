@@ -97,7 +97,8 @@ namespace Novel.Localization.Editor
             }
 
             var currentTextSet = new HashSet<string>(plan.AllCurrentTexts, StringComparer.Ordinal);
-            var renamedAway = new HashSet<string>(StringComparer.Ordinal);   // リネームで実際に消費される旧原文
+            var renamedAway = new HashSet<string>(StringComparer.Ordinal);         // リネームで実際に消費される旧原文
+            var reservedRenameTargets = new HashSet<string>(StringComparer.Ordinal);   // 本計画内で先着予約済みのリネーム先
 
             foreach (var file in plan.CurrentPerFile.Keys.Union(previousPerFile.Keys).ToList())
             {
@@ -117,8 +118,11 @@ namespace Novel.Localization.Editor
                     var isSplit = currentTextSet.Contains(oldText) ||
                                   previousOccurrenceCount.TryGetValue(oldText, out var n) && n > 1;
                     // 旧エントリが実際に消費される (リネームされる) 場合のみ deprecated 候補から除外する。
-                    // 分離とリネーム先の既存キー衝突では旧エントリが残るため、出現を失えば deprecated 対象
-                    if (!isSplit && !collection.SharedData.Contains(newText)) renamedAway.Add(oldText);
+                    // 分離・リネーム先の既存キー衝突では旧エントリが残る。さらに複数のリネームが同じ未登録の
+                    // NewText を指す場合、Apply でリネームされるのは先着 1 件だけ (後続はターゲット衝突で旧キー
+                    // 残留) のため、計画内の予約も追跡して先着だけを除外する (applier の適用順 = 本ループ順)
+                    if (!isSplit && !collection.SharedData.Contains(newText) && reservedRenameTargets.Add(newText))
+                        renamedAway.Add(oldText);
                     plan.Renames.Add(new RenameOp
                     {
                         OldText = oldText,

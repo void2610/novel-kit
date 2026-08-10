@@ -236,7 +236,10 @@ dev ビルドで resolver がテーブルミスした原文を記録し、レポ
   テンプレート基準なので値が変わっても既読が割れない（`#{}` に存在した既読分断も解消）。
   ローカライズ非依存の機能として Runtime に置く（`Novel.Localization` 不要で単言語でも使える）。
 - 検証状況: 実装環境に Unity が無いため、EditMode テストと Unity Localization API を使う
-  Editor 層は**実機（Unity + com.unity.localization 導入）での確認が未了**。
+  Editor 層は**実機（Unity + com.unity.localization 導入）での確認が未了**。とくに
+  `ExtractionPlanner`/`ExtractionApplier`（KeyId 保持リネーム・分離・収斂・訳の退避/削除・
+  deprecated 付与/復活）は純ロジックテストが無く、**実テーブルでの EditMode テスト整備が宿題**
+  （com.unity.localization 導入後に追加する。レビュー指摘）。
 
 # 既知の制約（v1 として受容）
 

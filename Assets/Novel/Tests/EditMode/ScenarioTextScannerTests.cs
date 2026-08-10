@@ -97,14 +97,14 @@ namespace Novel.Tests
             var texts = ScanTexts(string.Join("\n",
                 "narration \"復帰\\rとベル\\aとエスケープ\\e\"",
                 "narration \"16進\\x41と\\x4a\"",
-                "narration \"Unicode\\u3042と\\u{1F600}\"",
+                "narration \"Unicode\\u3042と\\u{1F600}と\\u{3042 3044}\"",
                 "narration \"8進\\101と空白\\s\""));
 
             CollectionAssert.AreEqual(new[]
             {
                 "復帰\rとベル\aとエスケープ\x1b",
                 "16進Aと\x4a",
-                "Unicodeあと\U0001F600",
+                "Unicodeあと\U0001F600とあい",
                 "8進Aと空白 ",
             }, texts);
         }

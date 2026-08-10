@@ -56,8 +56,13 @@ namespace Novel.Runtime
             _progress = progress ?? new NovelPlaybackProgress();
             // テキスト変数 %{key} の解決: game 供給 provider 優先 → IStateStore 変数値。デリゲートは行ごとの割当を避けるためここで固定
             _variableLookup = NovelTextVariables.CreateLookup(textVariables, state);
-            _onMissingVariable = name => Debug.LogWarning(
-                $"[Novel] 未定義のテキスト変数 %{{{name}}} をそのまま表示します。flag/val の設定漏れか、ITextVariableProvider の未登録を確認してください。");
+            _onMissingVariable = name =>
+            {
+                // dev 警告 (ADR)。本番はログを汚さない — プレースホルダ温存で画面上の可視性は保たれる
+                if (Debug.isDebugBuild)
+                    Debug.LogWarning(
+                        $"[Novel] 未定義のテキスト変数 %{{{name}}} をそのまま表示します。flag/val の設定漏れか、ITextVariableProvider の未登録を確認してください。");
+            };
         }
 
         public async UniTask On(SayCommand cmd, CancellationToken ct)
