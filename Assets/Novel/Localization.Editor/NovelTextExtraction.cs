@@ -97,8 +97,7 @@ namespace Novel.Localization.Editor
             }
 
             var currentTextSet = new HashSet<string>(plan.AllCurrentTexts, StringComparer.Ordinal);
-            var removedTexts = new HashSet<string>(StringComparer.Ordinal);
-            var renamedAway = new HashSet<string>(StringComparer.Ordinal);
+            var renamedAway = new HashSet<string>(StringComparer.Ordinal);   // リネームで実際に消費される旧原文
 
             foreach (var file in plan.CurrentPerFile.Keys.Union(previousPerFile.Keys).ToList())
             {
@@ -117,7 +116,9 @@ namespace Novel.Localization.Editor
                     // 変更側だけ新エントリへ分離する (他所の occurrence を巻き込まない)
                     var isSplit = currentTextSet.Contains(oldText) ||
                                   previousOccurrenceCount.TryGetValue(oldText, out var n) && n > 1;
-                    if (!isSplit) renamedAway.Add(oldText);
+                    // 旧エントリが実際に消費される (リネームされる) 場合のみ deprecated 候補から除外する。
+                    // 分離とリネーム先の既存キー衝突では旧エントリが残るため、出現を失えば deprecated 対象
+                    if (!isSplit && !collection.SharedData.Contains(newText)) renamedAway.Add(oldText);
                     plan.Renames.Add(new RenameOp
                     {
                         OldText = oldText,
@@ -134,11 +135,12 @@ namespace Novel.Localization.Editor
                     });
                 }
                 foreach (var index in diff.AddedCurrent) plan.Additions.Add(current[index]);
-                foreach (var index in diff.RemovedPrevious) removedTexts.Add(previous[index]);
             }
 
-            // 追跡済みだったが今回どこにも現れない原文 → deprecated (リネーム元と現存は除く)
-            foreach (var text in removedTexts)
+            // 消滅判定は「前回追跡していた全原文」を母集合にする。RemovedPrevious (対にならなかった消滅) だけでは、
+            // 全出現が変更された多重出現原文 (全 split → 旧エントリ残留) とリネーム先衝突 (旧エントリ残留) が
+            // 漏れて、出所メタデータを失った宙ぶらりんのエントリになる (レビュー指摘)
+            foreach (var text in previousOccurrenceCount.Keys)
                 if (!currentTextSet.Contains(text) && !renamedAway.Contains(text))
                     plan.Deprecations.Add(text);
 
@@ -221,17 +223,29 @@ namespace Novel.Localization.Editor
         }
 
         // 出所メタデータは毎回ゼロから再構築する (冪等・多重出現も出現ごとに 1 つずつ載る)。
-        // 現存キーの deprecated マークはここで解除する (復活対応)
+        // 現存キーの deprecated マークはここで解除し (復活対応)、逆に「追跡されていたのに現存しない」キーには
+        // マークを保証する (計画の消滅リストの取りこぼしに対する適用時の安全網。追跡実績の無い手動エントリは触らない)
         private static void RebuildSourceMetadata(ExtractionPlan plan, SharedTableData shared)
         {
             var currentTextSet = new HashSet<string>(plan.AllCurrentTexts, StringComparer.Ordinal);
             foreach (var entry in shared.Entries)
             {
+                var hadTracking = false;
                 foreach (var meta in entry.Metadata.MetadataEntries.OfType<NovelTextSourceMetadata>().ToList())
+                {
+                    hadTracking = true;
                     entry.Metadata.RemoveMetadata(meta);
+                }
                 if (currentTextSet.Contains(entry.Key))
+                {
                     foreach (var meta in entry.Metadata.MetadataEntries.OfType<NovelDeprecatedMetadata>().ToList())
                         entry.Metadata.RemoveMetadata(meta);
+                }
+                else if (hadTracking &&
+                         !entry.Metadata.MetadataEntries.OfType<NovelDeprecatedMetadata>().Any())
+                {
+                    entry.Metadata.AddMetadata(new NovelDeprecatedMetadata());
+                }
             }
             foreach (var (file, texts) in plan.CurrentPerFile)
             {
