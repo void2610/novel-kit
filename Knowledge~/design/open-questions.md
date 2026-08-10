@@ -3,7 +3,7 @@ type: Design
 title: 残論点（未決の設計判断）
 description: ランナー API 凍結前に解消すべき未決事項と、後続で詰める設計トピック。
 tags: [open-questions, todo, design]
-timestamp: 2026-08-07T00:00:00Z
+timestamp: 2026-08-09T00:00:00Z
 status: 保留
 ---
 

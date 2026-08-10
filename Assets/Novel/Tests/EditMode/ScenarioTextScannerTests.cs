@@ -89,6 +89,26 @@ namespace Novel.Tests
             }, texts);
         }
 
+        // ランタイム (MRuby) が受け取る文字列とキーが一致しないと訳が永久に引けないため、
+        // 二重引用符のエスケープはランタイム準拠で解釈する (レビュー指摘 NovelTextExtraction)
+        [Test]
+        public void 拡張エスケープをランタイム準拠で解釈する()
+        {
+            var texts = ScanTexts(string.Join("\n",
+                "narration \"復帰\\rとベル\\aとエスケープ\\e\"",
+                "narration \"16進\\x41と\\x4a\"",
+                "narration \"Unicode\\u3042と\\u{1F600}\"",
+                "narration \"8進\\101と空白\\s\""));
+
+            CollectionAssert.AreEqual(new[]
+            {
+                "復帰\rとベル\aとエスケープ\x1b",
+                "16進Aと\x4a",
+                "Unicodeあと\U0001F600",
+                "8進Aと空白 ",
+            }, texts);
+        }
+
         [Test]
         public void インラインタグは原文の一部としてそのまま保持する()
         {

@@ -3,7 +3,7 @@ type: Design
 title: 公開 API 表面（凍結）
 description: 確定 15 ADR を統合した novel-kit の公開表面。ランナー / コマンド / View 抽象 / game 供給サービスのシグネチャを 1 箇所に集約する。
 tags: [api, surface, freeze, contract, runner, view]
-timestamp: 2026-06-15T00:00:00Z
+timestamp: 2026-08-09T00:00:00Z
 status: 確定
 ---
 

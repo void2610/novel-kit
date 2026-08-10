@@ -3,7 +3,7 @@ type: Decision
 title: 多言語化は原文キー + 追従抽出（opt-in・第一実装は Unity Localization）
 description: ITextResolver の seam に原文（日本語 raw テキスト）キーの訳テーブル解決を差し込む。同一性は安定 ID で持ち、原文変更は差分検出でキーリネームに変換して訳を追従させる。テーブルバックエンドは中立で、第一実装に Unity Localization を使う。
 tags: [decision, localization, i18n, unity-localization, text, asmdef]
-timestamp: 2026-08-08T00:00:00Z
+timestamp: 2026-08-09T00:00:00Z
 status: 確定
 ---
 

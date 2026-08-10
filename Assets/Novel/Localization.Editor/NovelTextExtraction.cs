@@ -40,16 +40,29 @@ namespace Novel.Localization.Editor
     /// </summary>
     public static class ExtractionPlanner
     {
-        // .rb を集めて走査する（"~" フォルダ = Unity 非インポートと、プロセを含まない preamble は対象外）
-        public static ExtractionPlan Scan(string assetsPath)
+        // .rb を集めて走査する。対象外: "~" フォルダ (Unity 非インポート)・"Tests"/"Editor" フォルダ配下
+        // (テストフィクスチャやツール用スクリプトを製品テーブルへ混入させない)・プロセを含まない preamble。
+        // relativeRoot (Assets からの相対) でシナリオ置き場だけに絞れる (空 = Assets 全体)
+        public static ExtractionPlan Scan(string assetsPath, string relativeRoot = "")
         {
-            var files = Directory.GetFiles(assetsPath, "*.rb", SearchOption.AllDirectories)
-                .Where(p => !p.Replace('\\', '/').Split('/').Any(seg => seg.EndsWith("~", StringComparison.Ordinal)))
+            var plan = new ExtractionPlan();
+            var root = string.IsNullOrEmpty(relativeRoot)
+                ? assetsPath
+                : Path.Combine(assetsPath, relativeRoot.Replace('\\', '/').TrimStart('/'));
+            if (!Directory.Exists(root))
+            {
+                plan.Issues.Add($"スキャンルートが見つかりません: Assets/{relativeRoot}");
+                return plan;
+            }
+
+            var files = Directory.GetFiles(root, "*.rb", SearchOption.AllDirectories)
+                .Where(p => !p.Replace('\\', '/').Split('/').Any(seg =>
+                    seg.EndsWith("~", StringComparison.Ordinal) ||
+                    seg.Equals("Tests", StringComparison.Ordinal) ||
+                    seg.Equals("Editor", StringComparison.Ordinal)))
                 .Where(p => !Path.GetFileNameWithoutExtension(p).Equals("preamble", StringComparison.OrdinalIgnoreCase))
                 .OrderBy(p => p, StringComparer.Ordinal)
                 .ToList();
-
-            var plan = new ExtractionPlan();
             var charaSet = new HashSet<string>();
             var sources = files.ToDictionary(f => f, File.ReadAllText);
             foreach (var source in sources.Values) ScenarioTextScanner.CollectCharaDeclarations(source, charaSet);
@@ -163,21 +176,22 @@ namespace Novel.Localization.Editor
                     continue;
                 }
 
-                if (rename.IsSplit)
+                if (shared.Contains(rename.NewText))
                 {
-                    var target = EnsureEntry(shared, rename.NewText);
-                    if (rename.Kind != RenameKind.Rewritten)
-                        CopyValues(collection, oldEntry, target);              // 訳コピー + fuzzy
-                    else
-                        ArchiveValues(collection, oldEntry, target);           // 参考退避のみ (未訳で起票)
-                    MarkFuzzy(target, rename);
+                    // 変更後の原文が既存エントリと同文 (別行への収斂)。既存エントリの訳は正当なので
+                    // コピーも fuzzy 付けもしない。旧エントリは分離なら他所の出現で生き続け、
+                    // 非分離なら出所メタデータ再構築で deprecated 判定に落ちる
                     continue;
                 }
 
-                if (shared.Contains(rename.NewText))
+                if (rename.IsSplit)
                 {
-                    // リネーム先が既存キーと衝突 (別行が同文になった) → 既存エントリへ収斂。旧は出現を失い
-                    // 最終的な出所メタデータ再構築で deprecated 判定に落ちる
+                    var target = shared.AddKey(rename.NewText);               // 新規起票 (既存衝突は上で除外済み)
+                    if (rename.Kind != RenameKind.Rewritten)
+                        CopyValues(collection, oldEntry, target);              // 訳コピー + fuzzy
+                    else
+                        ArchiveValues(collection, oldEntry, target, rename.OldText);   // 参考退避のみ (未訳で起票)
+                    MarkFuzzy(target, rename);
                     continue;
                 }
 
@@ -185,7 +199,8 @@ namespace Novel.Localization.Editor
                 var entry = shared.GetEntry(rename.NewText)!;
                 if (rename.Kind == RenameKind.Rewritten)
                 {
-                    ArchiveValues(collection, entry, entry);                   // 旧訳を退避して未訳化
+                    // RenameKey 後は entry.Key が新原文になるため、退避の PreviousSource は旧原文を明示して渡す
+                    ArchiveValues(collection, entry, entry, rename.OldText);   // 旧訳を退避して未訳化
                     ClearValues(collection, entry);
                 }
                 MarkFuzzy(entry, rename);
@@ -260,8 +275,9 @@ namespace Novel.Localization.Editor
                     table.RemoveEntry(entry.Id);
         }
 
+        // previousSource: リライト前の原文。RenameKey 後は from.Key が新原文になっているため呼び出し側が明示する
         private static void ArchiveValues(StringTableCollection collection,
-            SharedTableData.SharedTableEntry from, SharedTableData.SharedTableEntry into)
+            SharedTableData.SharedTableEntry from, SharedTableData.SharedTableEntry into, string previousSource)
         {
             foreach (var table in collection.StringTables)
             {
@@ -269,7 +285,7 @@ namespace Novel.Localization.Editor
                 if (string.IsNullOrEmpty(value)) continue;
                 into.Metadata.AddMetadata(new NovelArchivedTranslationMetadata
                 {
-                    PreviousSource = from.Key,
+                    PreviousSource = previousSource,
                     LocaleCode = table.LocaleIdentifier.Code,
                     Value = value!,
                 });

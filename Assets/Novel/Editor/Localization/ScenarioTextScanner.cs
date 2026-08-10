@@ -306,6 +306,90 @@ namespace Novel.Editor.Localization
             return literals;
         }
 
+        // 二重引用符リテラルのエスケープ 1 つを解釈して sb へ足す。i はエスケープ文字 (\ の次) を指し、
+        // 消費した最終文字の位置へ進めて返す。単純置換・8進 (\nnn)・16進 (\xNN)・Unicode (\uNNNN / \u{...}) に対応。
+        // 未知のエスケープは Ruby 同様に文字だけ残す
+        private static void AppendDoubleQuoteEscape(string line, ref int i, StringBuilder sb)
+        {
+            var e = line[i];
+            switch (e)
+            {
+                case 'n': sb.Append('\n'); return;
+                case 't': sb.Append('\t'); return;
+                case 'r': sb.Append('\r'); return;
+                case 'f': sb.Append('\f'); return;
+                case 'v': sb.Append('\v'); return;
+                case 'a': sb.Append('\a'); return;
+                case 'b': sb.Append('\b'); return;
+                case 'e': sb.Append('\x1b'); return;
+                case 's': sb.Append(' '); return;
+                case 'x':
+                {
+                    var value = 0;
+                    var digits = 0;
+                    while (digits < 2 && i + 1 < line.Length && IsHex(line[i + 1]))
+                    {
+                        value = value * 16 + HexValue(line[++i]);
+                        digits++;
+                    }
+                    if (digits > 0) sb.Append((char)value);
+                    else sb.Append('x');   // \x に 16 進が続かない形は Ruby では構文エラー。best-effort で温存
+                    return;
+                }
+                case 'u':
+                {
+                    if (i + 1 < line.Length && line[i + 1] == '{')
+                    {
+                        var close = line.IndexOf('}', i + 2);
+                        if (close > i + 2 && TryParseHex(line, i + 2, close - i - 2, out var cp))
+                        {
+                            sb.Append(char.ConvertFromUtf32(cp));
+                            i = close;
+                            return;
+                        }
+                    }
+                    else if (i + 4 < line.Length && TryParseHex(line, i + 1, 4, out var cp4))
+                    {
+                        sb.Append(char.ConvertFromUtf32(cp4));
+                        i += 4;
+                        return;
+                    }
+                    sb.Append('u');   // 不成立は best-effort で温存
+                    return;
+                }
+                default:
+                    if (e >= '0' && e <= '7')
+                    {
+                        var value = e - '0';
+                        var digits = 1;
+                        while (digits < 3 && i + 1 < line.Length && line[i + 1] >= '0' && line[i + 1] <= '7')
+                        {
+                            value = value * 8 + (line[++i] - '0');
+                            digits++;
+                        }
+                        sb.Append((char)value);
+                    }
+                    else sb.Append(e);   // \\ \" \' \# を含む「エスケープした文字そのもの」
+                    return;
+            }
+        }
+
+        private static bool IsHex(char c) => c is >= '0' and <= '9' or >= 'a' and <= 'f' or >= 'A' and <= 'F';
+        private static int HexValue(char c) => c <= '9' ? c - '0' : (char.ToLowerInvariant(c) - 'a') + 10;
+
+        private static bool TryParseHex(string text, int start, int length, out int value)
+        {
+            value = 0;
+            if (length <= 0 || length > 6 || start + length > text.Length) return false;
+            for (var i = start; i < start + length; i++)
+            {
+                if (!IsHex(text[i])) return false;
+                value = value * 16 + HexValue(text[i]);
+            }
+            // サロゲート域は単独のコードポイントとして不正 (ConvertFromUtf32 が投げる) ため不成立扱い
+            return value <= 0x10FFFF && (value < 0xD800 || value > 0xDFFF);
+        }
+
         // Ruby の一重/二重引用符リテラルを 1 つ読み、アンエスケープ済みテキストを返す。
         // 戻り値 next は閉じ引用符の位置 (-1 = 未クローズ)。二重引用符は #{ を補間として検出
         private static (string Text, bool HasInterpolation, int Next) ReadLiteral(string line, int openIndex)
@@ -318,25 +402,19 @@ namespace Novel.Editor.Localization
                 var c = line[i];
                 if (c == '\\' && i + 1 < line.Length)
                 {
-                    var e = line[++i];
+                    i++;
                     if (quote == '\'')
                     {
                         // 一重引用符は \\ と \' のみエスケープ。他は \ ごと残る (Ruby 準拠)
+                        var e = line[i];
                         if (e == '\\' || e == '\'') sb.Append(e);
                         else { sb.Append('\\'); sb.Append(e); }
                     }
                     else
                     {
-                        sb.Append(e switch
-                        {
-                            'n' => "\n",
-                            't' => "\t",
-                            '\\' => "\\",
-                            '"' => "\"",
-                            '\'' => "'",
-                            '#' => "#",
-                            _ => e.ToString(),   // 未知のエスケープは Ruby 同様に文字だけ残す
-                        });
+                        // ランタイムが受け取る文字列と一致しないとキー照合が永久に外れるため、
+                        // MRuby の二重引用符エスケープを網羅的に解釈する
+                        AppendDoubleQuoteEscape(line, ref i, sb);
                     }
                 }
                 else if (c == quote) return (sb.ToString(), interpolation, i);

@@ -15,8 +15,10 @@ namespace Novel.Localization.Editor
     public sealed class NovelTextExtractionWindow : EditorWindow
     {
         private const string TableNamePrefsKey = "Novel.Localization.TableCollectionName";
+        private const string ScanRootPrefsKey = "Novel.Localization.ScanRoot";
 
         private string _tableName = "NovelText";
+        private string _scanRoot = "";
         private ExtractionPlan? _plan;
         private Vector2 _scroll;
 
@@ -25,6 +27,7 @@ namespace Novel.Localization.Editor
         {
             var window = GetWindow<NovelTextExtractionWindow>("Novel Text Extraction");
             window._tableName = EditorPrefs.GetString(TableNamePrefsKey, "NovelText");
+            window._scanRoot = EditorPrefs.GetString(ScanRootPrefsKey, "");
         }
 
         // dev プレイで収集した抽出漏れ (テーブルミス) の一覧をログへ出す
@@ -50,6 +53,15 @@ namespace Novel.Localization.Editor
             {
                 _tableName = tableName;
                 EditorPrefs.SetString(TableNamePrefsKey, tableName);
+                _plan = null;   // 別テーブル基準の古い計画を適用させない (Scan からやり直し)
+            }
+            var scanRoot = EditorGUILayout.TextField(
+                new GUIContent("スキャンルート", "Assets からの相対パス。空 = Assets 全体。~/Tests/Editor フォルダは常に除外"), _scanRoot);
+            if (scanRoot != _scanRoot)
+            {
+                _scanRoot = scanRoot;
+                EditorPrefs.SetString(ScanRootPrefsKey, scanRoot);
+                _plan = null;   // 走査範囲が変わった計画も無効化
             }
 
             EditorGUILayout.Space();
@@ -83,7 +95,7 @@ namespace Novel.Localization.Editor
         {
             var collection = GetCollection();
             if (collection == null) return;
-            var plan = ExtractionPlanner.Scan(Application.dataPath);
+            var plan = ExtractionPlanner.Scan(Application.dataPath, _scanRoot);
             ExtractionPlanner.BuildDiff(plan, collection);
             _plan = plan;
         }

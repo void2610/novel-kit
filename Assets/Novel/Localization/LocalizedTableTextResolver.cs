@@ -33,6 +33,9 @@ namespace Novel.Localization
         private StringTable? _table;
         private bool _isSourceLocale;
         private bool _disposed;
+        // 再ロードの世代番号。ロケール連打 (en→fr) でロード完了が逆順に届いても、最新要求以外の結果を
+        // 捨てて古いロケールのテーブルが居座らないようにする (Unity メインスレッド前提の単純カウンタ)
+        private int _reloadGeneration;
 
         /// <summary>
         /// 訳が付かなかった原文の通知（dev 抽出漏れ収集用）。テーブルロード済み・非原文ロケールでの
@@ -101,6 +104,7 @@ namespace Novel.Localization
 
         private async UniTask ReloadTableAsync(CancellationToken ct)
         {
+            var generation = ++_reloadGeneration;   // この要求を最新とし、先行の in-flight ロード結果を無効化する
             var selected = LocalizationSettings.SelectedLocale;
             _isSourceLocale = _sourceLocaleCode != null && selected != null &&
                               selected.Identifier.Code == _sourceLocaleCode;
@@ -112,8 +116,10 @@ namespace Novel.Localization
 
             try
             {
-                _table = await LocalizationSettings.StringDatabase.GetTableAsync(_tableReference).ToUniTask(cancellationToken: ct);
-                if (_table == null)
+                var table = await LocalizationSettings.StringDatabase.GetTableAsync(_tableReference).ToUniTask(cancellationToken: ct);
+                if (generation != _reloadGeneration) return;   // 後発の切替/破棄が来ていたら結果を捨てる
+                _table = table;
+                if (table == null)
                     Debug.LogWarning($"[Novel] String Table が見つかりません table='{_tableReference}'。原文のまま表示します。");
             }
             catch (OperationCanceledException)
@@ -122,6 +128,7 @@ namespace Novel.Localization
             }
             catch (Exception e)
             {
+                if (generation != _reloadGeneration) return;
                 _table = null;
                 Debug.LogWarning($"[Novel] String Table のロードに失敗 table='{_tableReference}': {e.GetType().Name}: {e.Message}。原文のまま表示します。");
             }
@@ -131,6 +138,7 @@ namespace Novel.Localization
         {
             if (_disposed) return;
             _disposed = true;
+            _reloadGeneration++;   // in-flight ロードの結果を無効化 (破棄後の _table 書き込みを防ぐ)
             LocalizationSettings.SelectedLocaleChanged -= OnSelectedLocaleChanged;
         }
     }
