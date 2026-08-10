@@ -55,12 +55,28 @@ namespace Novel.Tests
         });
 
         [UnityTest]
-        public IEnumerator 未登録の独自コマンドがあると完走しない旨を報告する() => UniTask.ToCoroutine(async () =>
+        public IEnumerator 未登録の独自コマンドは名前を記録して読み飛ばし_以降の行も検証する() => UniTask.ToCoroutine(async () =>
         {
-            // test_custom_command.rb は cmd :custom_echo を使う (検証ハーネスには語彙が無い)
-            var result = await Collect("test_custom_command");
+            // test_unknown_command.rb は未登録コマンド 3 種 (引数付き / 条件式) の後に bg を呼ぶ
+            var result = await Collect("test_unknown_command");
 
-            Assert.That(result.ExecutionError, Is.Not.Null);
+            Assert.That(result.ExecutionError, Is.Null);
+            Assert.That(result.UnknownCommands,
+                Is.EquivalentTo(new[] { "mystery_effect", "mystery_ruby", "mystery_flag?" }));
+            Assert.That(result.Keys, Does.Contain((ScenarioKeyKind.Image, "bg_after_unknown")));
+        });
+
+        [UnityTest]
+        public IEnumerator speaker_宣言した単発キャラはカタログ未登録でも未定義として数えない() => UniTask.ToCoroutine(async () =>
+        {
+            var result = await Collect("test_declared_speaker");
+
+            Assert.That(result.ExecutionError, Is.Null);
+            Assert.That(result.DeclaredSpeakers, Is.EquivalentTo(new[] { "？？？", "claude" }));
+
+            var known = new ScenarioKeyValidator.KnownKeys { Speakers = new HashSet<string>() };
+            // 宣言済み 2 名は数えず、未宣言・未登録の typo_chan だけを未定義とする
+            Assert.That(ScenarioKeyValidator.Report("test.rb", null, result, known), Is.EqualTo(1));
         });
 
         [Test]
