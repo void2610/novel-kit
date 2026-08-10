@@ -207,10 +207,11 @@ dev ビルドで resolver がテーブルミスした原文を記録し、レポ
 2. **Phase 2**: `Novel.Localization` アセンブリ + `LocalizedTableTextResolver` + 初期化契約。
 3. **Phase 3**: 追跡エンジン（LCS + fuzzy / 移行レポート）+ dev 未ヒット収集。
    annotate モードは仕様のみ確保し、**並行翻訳の実需要が出た時点で実装**する。
-4. **Phase 4（バックログ）**: `#{}` 補間の救済（Smart String / 明示キー糖衣 `t()`）・
-   訳し分けのための文脈付き resolve オーバーロード（speakerId 等を渡す default interface method）・
-   ロケール横断のタグ整合検証（`Novel/Validate Scenarios` 拡張）・AssetTable スプライトローダ・
-   locale-aware ルビ・参考 View のフォント切替支援。
+4. **Phase 4（バックログ）**: 訳し分けのための文脈付き resolve オーバーロード
+   （speakerId 等を渡す default interface method）・ロケール横断のタグ整合検証
+   （`Novel/Validate Scenarios` 拡張）・AssetTable スプライトローダ・locale-aware ルビ・
+   参考 View のフォント切替支援。
+   （当初ここにあった「`#{}` 補間の救済」はテキスト変数 `%{key}` として前倒し実装済み → 実装で確定）
 
 # 実装で確定（2026-08-08・Phase 1-3 実装）
 
@@ -227,6 +228,13 @@ dev ビルドで resolver がテーブルミスした原文を記録し、レポ
   純ロジック（走査/diff）は `Novel.Editor/Localization/` に置き EditMode テストを持つ。
   抽出対象は say 本文・`as:`/`display_as:`・choose 選択肢で、**say の話者 id は抽出しない**
   （カタログ id が普通。その場話者のリテラル表示名は dev 収集で回収）。
+- **テキスト変数 `%{key}`（2026-08-09・「補間は対象外」の撤回）**: 当初 v1 制約として受容した
+  `#{}` 問題は「変数を使うな」ではなく **遅延展開テンプレート**で解決した。`NovelTextVariables.Expand`
+  が say 本文・表示名・choose 選択肢の resolve 後に `%{key}` を展開する。値は game 供給
+  `ITextVariableProvider`（no-op 既定・後勝ち登録）優先で `IStateStore` の変数値へフォールバック。
+  未定義はプレースホルダ温存 + dev 警告（黙って消さない）。エスケープは `%%{`。既読 ID は
+  テンプレート基準なので値が変わっても既読が割れない（`#{}` に存在した既読分断も解消）。
+  ローカライズ非依存の機能として Runtime に置く（`Novel.Localization` 不要で単言語でも使える）。
 - 検証状況: 実装環境に Unity が無いため、EditMode テストと Unity Localization API を使う
   Editor 層は**実機（Unity + com.unity.localization 導入）での確認が未了**。
 
@@ -235,9 +243,12 @@ dev ビルドで resolver がテーブルミスした原文を記録し、レポ
 - **annotate モード導入時の一括 diff**（annotate を有効化する場合のみ）: 全対象行への ID 付与で
   一度だけ大きな機械的 diff が発生する（以後は新規行への 1 コメント追加のみ）。導入 PR として
   分離すればレビュー負担は限定的。
-- **`#{}` 補間入りテキスト**は実行時の最終文字列がキーになりテーブルに載らない。
-  v1 ガイドラインは「ローカライズ対象のプロセに補間を使わない」（[Docs/scenario](/../Docs/scenario/index.md) へ
-  実装時に明記）。救済は Phase 4。
+- **Ruby 補間 `#{}` はローカライズ不可**（Ruby が発行前に即時評価しテンプレートが C# へ届かないため。
+  さらに値が変わるたび既読 ID が割れる）。ただし**変数の文中表示自体はテキスト変数 `%{key}` で一級対応**
+  （2026-08-09 追記。下記「実装で確定」）: `%{key}` は Ruby で不活性の素文字列なのでテンプレートのまま
+  キーになり、**訳の取得後**に `IStateStore`（`flag`/`val` 値）/ game 供給 `ITextVariableProvider`
+  （主人公名等）から展開する。gettext / Rails i18n のプレースホルダ方式と同型で、翻訳者は訳文中で
+  プレースホルダを自由に動かせる。ガイドラインは「変数は `%{}` で書く（`#{}` は使わない）」へ変更。
 - **同一原文の訳し分け不可**（同じ「はい」が文脈で yes/okay に分かれる等）。キーが原文のみのため
   同一訳になる。頻度は低いと見込み v1 は受容し、文脈付きオーバーロードを Phase 4 で検討。
 - 語順の都合で分割行（複数 say に跨るセンテンス）の翻訳が不自然になり得るのは

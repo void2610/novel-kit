@@ -115,7 +115,7 @@ namespace Novel.Editor.Localization
             if (literal.HasInterpolation)
             {
                 result.Issues.Add(new ScanIssue(lineNumber,
-                    "補間 #{} 入りのため抽出できません。ローカライズ対象のプロセに補間は使わない (localization ADR)"));
+                    "Ruby 補間 #{} 入りのため抽出できません。変数はテキスト変数 %{key} で書き直してください (訳の取得後に展開されるため多言語・既読と両立します)"));
                 return;
             }
             if (literal.Text.Length > 0) result.Texts.Add(new ScannedText(literal.Text, lineNumber));

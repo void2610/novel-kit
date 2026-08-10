@@ -451,6 +451,22 @@ namespace Novel.Tests
             Assert.AreEqual("EN:こんにちは", view.Lines[0].PlainText);  // 平文は表示言語基準のまま
         });
 
+        // テキスト変数 %{key} は resolve 後に IStateStore の値で展開され、未定義はそのまま残る
+        // (Ruby 補間 #{} と違いテンプレートが C# に届くため、多言語キー照合・既読 ID と両立する)
+        [UnityTest]
+        public IEnumerator テキスト変数が状態値で展開され未定義は温存される() => UniTask.ToCoroutine(async () =>
+        {
+            var view = new FakeView();
+            var runner = NewRunner(view);
+
+            var result = await runner.PlayAsync("test_variables", CancellationToken.None);
+
+            Assert.AreEqual(NovelResult.Completed, result);
+            Assert.AreEqual("所持金は500Gだ", view.Lines[0].Text);         // flag :gold の値が差し込まれる
+            Assert.AreEqual("所持金は500Gだ", view.Lines[0].PlainText);    // 平文も展開後基準
+            Assert.AreEqual("未定義は%{unknown}のまま", view.Lines[1].Text);  // 未定義は可視のまま (黙って消さない)
+        });
+
         // say の表示ごとに IBacklog へ話者・本文（rich）が記録されることを検証
         [UnityTest]
         public IEnumerator say表示ごとにバックログへ話者と本文が積まれる() => UniTask.ToCoroutine(async () =>

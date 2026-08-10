@@ -29,13 +29,16 @@ namespace Novel.Runtime
         private readonly ISpriteLoader? _sprites;
         private readonly IRubyDictionary? _ruby;
         private readonly NovelPlaybackProgress _progress;
+        private readonly Func<string, string?> _variableLookup;
+        private readonly Action<string> _onMissingVariable;
 
         public NovelCommandHandler(INovelView view, IStateStore state, ITextResolver text, ICharacterCatalog catalog,
             IPortraitDirector? portraitDirector = null, IBackgroundChannel? background = null, IStillChannel? still = null,
             IAudioChannel? audio = null,
             IWorldEffectSink? worldEffectSink = null, IBacklog? backlog = null,
             ICenterImageChannel? centerImage = null, NovelPlaybackProgress? progress = null,
-            ISpriteLoader? sprites = null, IRubyDictionary? ruby = null)
+            ISpriteLoader? sprites = null, IRubyDictionary? ruby = null,
+            ITextVariableProvider? textVariables = null)
         {
             _view = view;
             _state = state;
@@ -51,6 +54,10 @@ namespace Novel.Runtime
             _sprites = sprites;
             _ruby = ruby;
             _progress = progress ?? new NovelPlaybackProgress();
+            // テキスト変数 %{key} の解決: game 供給 provider 優先 → IStateStore 変数値。デリゲートは行ごとの割当を避けるためここで固定
+            _variableLookup = NovelTextVariables.CreateLookup(textVariables, state);
+            _onMissingVariable = name => Debug.LogWarning(
+                $"[Novel] 未定義のテキスト変数 %{{{name}}} をそのまま表示します。flag/val の設定漏れか、ITextVariableProvider の未登録を確認してください。");
         }
 
         public async UniTask On(SayCommand cmd, CancellationToken ct)
@@ -66,15 +73,19 @@ namespace Novel.Runtime
                 !_portraitDirector.IsShowing(cmd.SpeakerId, portraitKey))
                 await _portraitDirector.ShowAsync(cmd.SpeakerId, await LoadSpriteAsync(portraitKey!, ct), ct);
 
-            var resolved = _text.Resolve(cmd.Text);
+            // テキスト変数 %{key} は訳の取得 (Resolve) 後に展開する (テンプレートがテーブルのキーで、
+            // 翻訳者は訳文中でプレースホルダを自由に動かせる)
+            var resolved = NovelTextVariables.Expand(_text.Resolve(cmd.Text), _variableLookup, _onMissingVariable);
             var displayName = ResolveDisplayName(cmd);
-            if (displayName != null) displayName = _text.Resolve(displayName);   // 表示名も多言語 seam を通す（localization）
-            // 既読 ID は resolve 前の原文から算出する (ロケールを切り替えても既読/スキップが分断しないように)。
-            // タグは除いて算出 (タグ有無で既読が割れないように)。恒等 resolver では従来と同一ハッシュ
+            if (displayName != null)   // 表示名も多言語 seam + 変数展開を通す（localization）
+                displayName = NovelTextVariables.Expand(_text.Resolve(displayName), _variableLookup, _onMissingVariable);
+            // 既読 ID は resolve/展開前の原文 (テンプレート) から算出する。ロケール切替で既読が分断せず、
+            // %{gold} 等の値が変わっても同じ行は既読のまま (スキップが効く)。恒等 resolver では従来と同一ハッシュ。
+            // タグは除いて算出 (タグ有無で既読が割れないように)
             var rawPlain = NovelTagLexer.ToPlainText(cmd.Text);
             var textId = StableId.Of(cmd.SpeakerId, rawPlain);
             var alreadyRead = _state.IsRead(textId);
-            // View へ渡す平文は表示言語 (resolve 後) 基準。恒等 resolver は同一参照を返すため再計算を省く
+            // View へ渡す平文は表示テキスト (resolve + 展開後) 基準。恒等 resolver + 変数無しは同一参照を返すため再計算を省く
             var plain = ReferenceEquals(resolved, cmd.Text) ? rawPlain : NovelTagLexer.ToPlainText(resolved);
 
             // バックログは rich のまま記録（link/color を残し再表示・キーワード収集できるように。Clear 契機は game 所有）
@@ -96,12 +107,12 @@ namespace Novel.Runtime
             // 早送り中で選択結果が復元済みならUIを出さず前回の選択を保つ（未復元の自動採番キー等は通常表示に落とす）
             if (_progress.IsFastForwarding && _state.Has(cmd.StateKey)) return;
 
-            // 選択肢も say と同じく ITextResolver を通す（多言語化の seam を say と揃える）
+            // 選択肢も say と同じく ITextResolver + テキスト変数展開を通す（多言語化の seam を say と揃える）
             var options = cmd.Options;
             var resolved = new string[options.Length];
             for (int i = 0; i < options.Length; i++)
             {
-                resolved[i] = _text.Resolve(options[i]);
+                resolved[i] = NovelTextVariables.Expand(_text.Resolve(options[i]), _variableLookup, _onMissingVariable);
                 // 選択肢も say と同じく表示専用の辞書ルビを付ける (適用位置の裁量を View に残さない)
                 if (_ruby != null) resolved[i] = _ruby.ApplyTo(resolved[i]);
             }

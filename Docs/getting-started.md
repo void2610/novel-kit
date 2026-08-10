@@ -282,7 +282,11 @@ await resolver.InitializeAsync(ct);
 
 - 既読/スキップは原文基準なので、言語を切り替えても既読状態は保たれます。
 - ロケール切替は次に表示される行から反映されます（表示中の行・バックログは遡って変わりません）。
-- `#{}` 補間入りのテキストはローカライズできません（[シナリオライターズガイド 7 章](./scenario/07-pitfalls.md)）。
+- 文中の変数は `%{gold}` 形式（テキスト変数）で書きます。テンプレートのまま翻訳テーブルのキーになり、
+  訳の取得後に値が差し込まれるため、翻訳者は訳文中でプレースホルダを自由に動かせます。値は既定で
+  `IStateStore`（`flag`/`val`）から取り、主人公名などゲーム固有値は `ITextVariableProvider` の
+  後勝ち登録で供給します。Ruby の `#{}` 補間は焼き込みになるためローカライズできません
+  （[シナリオライターズガイド 7 章](./scenario/07-pitfalls.md)）。
 - 糖衣の間接呼び等で静的抽出から漏れた行は、dev プレイで
   `resolver.TextMissed += MissingTextCollector.Record;` と配線し
   `Novel/Localization/Report Missing Texts` で回収できます。

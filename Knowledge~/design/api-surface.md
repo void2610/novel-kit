@@ -171,6 +171,9 @@ public interface ITextResolver {
 - 多言語実装は opt-in の `Novel.Localization`（`LocalizedTableTextResolver`: 原文キーで String Table を引き
   未ヒットは原文フォールバック・`InitializeAsync` preload 契約・`TextMissed` dev 収集）。
   [多言語化 ADR](/design/decisions/localization-unity-package.md)。
+- テキスト変数 `%{key}`: resolve **後**に `NovelTextVariables.Expand` が say 本文・表示名・choose 選択肢へ
+  値を差し込む。供給は game の `ITextVariableProvider`（no-op 既定・後勝ち登録）優先 → `IStateStore` 変数値。
+  未定義はプレースホルダ温存 + dev 警告。既読 ID はテンプレート基準（値が変わっても既読が割れない）。
 
 # 5. ルーター所有権
 

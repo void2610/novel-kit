@@ -16,6 +16,12 @@
     共有原文は分離し、消滅キーは削除せず deprecated マーク。適用前に移行レポートで人間が確認する
   - `MissingTextCollector` + `Novel/Localization/Report Missing Texts`: dev プレイでのテーブルミス回収
 
+- テキスト変数 `%{key}` (遅延展開)。`narration "所持金は%{gold}Gだ"` のようにテンプレートのまま書き、
+  表示時に `IStateStore` (`flag`/`val` 値) / game 供給 `ITextVariableProvider` (主人公名等・後勝ち登録) から
+  差し込む。Ruby 補間 `#{}` と違い、多言語キー照合と既読 ID がテンプレート基準で成立する
+  (`#{}` は値が変わるたび既読が割れる問題もあった)。未定義変数はプレースホルダ温存 + dev 警告。
+  エスケープは `%%{`。ローカライズ非依存 (単言語でも使用可)
+
 ### Changed
 - 既読 ID (スキップ判定) を resolve 後テキストから **resolve 前の原文**基準へ変更。ロケールを切り替えても
   既読が分断しない。既定の恒等 resolver では従来と同一ハッシュのためセーブ互換は不変

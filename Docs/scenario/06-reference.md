@@ -25,6 +25,7 @@
 | `flag :met_alice` | フラグ `met_alice` に 1 を入れる（印を立てる） |
 | `flag :score, 5` | フラグ `score` に 5 を入れる（整数のみ） |
 | `val(:score)` | フラグ `score` の中身を読む（未使用なら 0） |
+| `narration "スコアは%{score}点"` | 文中にフラグの値を差し込む（テキスト変数。`#{}` は使わない → [7 章](./07-pitfalls.md)） |
 | `flag?(:met_alice)` | 印が立っているか（0 以外か）を調べる |
 
 ### 画面（[4 章](./04-staging.md)）

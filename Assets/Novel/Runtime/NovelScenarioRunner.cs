@@ -41,7 +41,8 @@ namespace Novel.Runtime
             IEnumerable<IPreambleSource>? preambleSources = null,
             IEnumerable<INovelCommandModule>? commandModules = null,
             IBacklog? backlog = null,
-            ICenterImageChannel? centerImage = null, ISpriteLoader? sprites = null, IRubyDictionary? ruby = null)
+            ICenterImageChannel? centerImage = null, ISpriteLoader? sprites = null, IRubyDictionary? ruby = null,
+            ITextVariableProvider? textVariables = null)
         {
             _source = source;
             _router = router;
@@ -78,7 +79,7 @@ namespace Novel.Runtime
             var handler = new NovelCommandHandler(view, _store, text, catalog,
                 portraitDirector: portraitDirector, background: background, still: still, audio: audio,
                 worldEffectSink: worldEffectSink, backlog: backlog, centerImage: centerImage,
-                progress: _progress, sprites: sprites, ruby: ruby);
+                progress: _progress, sprites: sprites, ruby: ruby, textVariables: textVariables);
             _sprites = sprites;
             _subscriptions = new List<IDisposable> { handler.MapTo(_router) };
             // 独自コマンドハンドラを同じノベル専用 Router へ写像（購読は Dispose でまとめて解除）
