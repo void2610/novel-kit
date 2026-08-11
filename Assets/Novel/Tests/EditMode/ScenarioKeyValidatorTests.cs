@@ -67,15 +67,15 @@ namespace Novel.Tests
         });
 
         [UnityTest]
-        public IEnumerator speaker_宣言した単発キャラはカタログ未登録でも未定義として数えない() => UniTask.ToCoroutine(async () =>
+        public IEnumerator guest_明示した単発キャラはカタログ未登録でも未定義として数えない() => UniTask.ToCoroutine(async () =>
         {
-            var result = await Collect("test_declared_speaker");
+            var result = await Collect("test_guest_speaker");
 
             Assert.That(result.ExecutionError, Is.Null);
-            Assert.That(result.DeclaredSpeakers, Is.EquivalentTo(new[] { "？？？", "claude" }));
+            Assert.That(result.GuestSpeakers, Is.EquivalentTo(new[] { "？？？", "claude" }));
 
             var known = new ScenarioKeyValidator.KnownKeys { Speakers = new HashSet<string>() };
-            // 宣言済み 2 名は数えず、未宣言・未登録の typo_chan だけを未定義とする
+            // guest 明示の 2 名は数えず、未明示・未登録の typo_chan だけを未定義とする
             Assert.That(ScenarioKeyValidator.Report("test.rb", null, result, known), Is.EqualTo(1));
         });
 

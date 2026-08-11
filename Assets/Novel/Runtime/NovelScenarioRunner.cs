@@ -59,7 +59,6 @@ namespace Novel.Runtime
                 config.AddCommand<PortraitCommand>("portrait");
                 config.AddCommand<StageCommand>("stage");
                 config.AddCommand<ExitCommand>("exit");
-                config.AddCommand<SpeakerCommand>("speaker");
                 config.AddCommand<ClearStageCommand>("clear_stage");
                 config.AddCommand<BackgroundCommand>("bg");
                 config.AddCommand<StillCommand>("still");
