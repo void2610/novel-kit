@@ -1,6 +1,7 @@
 #nullable enable
 using System.Linq;
 using System.Text;
+using Novel.Editor.Localization;
 using UnityEditor;
 using UnityEditor.Localization;
 using UnityEngine;
@@ -83,7 +84,7 @@ namespace Novel.Localization.Editor
                     var collection = GetCollection();
                     if (collection != null)
                     {
-                        ExtractionApplier.Apply(_plan, collection);
+                        ExtractionApplier.Apply(_plan, new UnityLocalizationTableEditor(collection));
                         Debug.Log($"[Novel] 抽出を適用しました: リネーム/分離 {_plan.Renames.Count}・新規 {_plan.Additions.Count}・deprecated {_plan.Deprecations.Count}");
                         _plan = null;   // 適用済み計画の再適用を防ぐ
                     }
@@ -96,7 +97,7 @@ namespace Novel.Localization.Editor
             var collection = GetCollection();
             if (collection == null) return;
             var plan = ExtractionPlanner.Scan(Application.dataPath, _scanRoot);
-            ExtractionPlanner.BuildDiff(plan, collection);
+            ExtractionPlanner.BuildDiff(plan, new UnityLocalizationTableEditor(collection));
             _plan = plan;
         }
 

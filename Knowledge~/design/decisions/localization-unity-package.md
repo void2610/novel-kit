@@ -235,11 +235,16 @@ dev ビルドで resolver がテーブルミスした原文を記録し、レポ
   未定義はプレースホルダ温存 + dev 警告（黙って消さない）。エスケープは `%%{`。既読 ID は
   テンプレート基準なので値が変わっても既読が割れない（`#{}` に存在した既読分断も解消）。
   ローカライズ非依存の機能として Runtime に置く（`Novel.Localization` 不要で単言語でも使える）。
-- 検証状況: 実装環境に Unity が無いため、EditMode テストと Unity Localization API を使う
-  Editor 層は**実機（Unity + com.unity.localization 導入）での確認が未了**。とくに
-  `ExtractionPlanner`/`ExtractionApplier`（KeyId 保持リネーム・分離・収斂・訳の退避/削除・
-  deprecated 付与/復活）は純ロジックテストが無く、**実テーブルでの EditMode テスト整備が宿題**
-  （com.unity.localization 導入後に追加する。レビュー指摘）。
+- **テーブル操作の抽象化（2026-08-10・レビュー指摘対応）**: 破壊的更新のロジックが Unity Localization 型に
+  直結しており検証できなかったため、`ITextTableEditor`（キー/値/追跡メタデータ操作。`RenameKey` は
+  安定 ID を保つ契約）を挟み、`ExtractionPlanner`/`ExtractionApplier` を **Unity 非依存の純ロジック**として
+  `Novel.Editor/Localization/` へ移した。Unity Localization は `UnityLocalizationTableEditor` アダプタに
+  隔離される。これにより KeyId 保持リネーム・分離・収斂・訳の退避/削除・deprecated 付与/復活・冪等性を
+  パッケージ非導入の EditMode テストで検証できる（ADR の「バックエンド中立」とも整合し、
+  自前テーブル実装への差し替えもこの interface 1 本で済む）。
+- 検証状況: 実装環境に Unity が無いため、**EditMode テストの実行**と、Unity Localization に触れる層
+  （`UnityLocalizationTableEditor` アダプタ・抽出ウィンドウ・resolver）の**実機確認が未了**
+  （com.unity.localization 導入後に実施）。抽出の判断ロジック自体は上記の純ロジックテストで担保。
 
 # 既知の制約（v1 として受容）
 
