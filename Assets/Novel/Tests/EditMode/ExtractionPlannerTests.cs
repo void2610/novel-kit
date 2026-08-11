@@ -142,6 +142,47 @@ namespace Novel.Tests
             }
         }
 
+        // 除外判定は「ルートからの相対パス」だけで行う。絶対パス全体を見ると、プロジェクトが
+        // Editor/ や末尾 ~ のディレクトリ配下に置かれているだけで全ファイルが除外され、
+        // 走査 0 件 → 全エントリ deprecated 提案という事故になる
+        [Test]
+        public void スキャンルート自体がTestsやEditorという名前でも除外されない()
+        {
+            var root = Path.Combine(Path.GetTempPath(), "novelkit_scan_" + Path.GetRandomFileName());
+            var nested = Path.Combine(root, "Editor", "work~", "Tests");   // ルート側にだけ除外語を含める
+            try
+            {
+                Write(nested, "Scenarios/main.rb", "narration \"本編の行\"");
+                Write(nested, "Scenarios/Tests/fixture.rb", "narration \"テスト用の行\"");
+
+                var plan = ExtractionPlanner.Scan(nested);
+
+                CollectionAssert.AreEqual(new[] { "本編の行" }, plan.AllCurrentTexts.ToArray());
+            }
+            finally
+            {
+                if (Directory.Exists(root)) Directory.Delete(root, true);
+            }
+        }
+
+        [Test]
+        public void 走査0件のときは適用前に気付けるようissueを出す()
+        {
+            var root = Path.Combine(Path.GetTempPath(), "novelkit_scan_" + Path.GetRandomFileName());
+            Directory.CreateDirectory(root);
+            try
+            {
+                var plan = ExtractionPlanner.Scan(root);
+
+                CollectionAssert.IsEmpty(plan.AllCurrentTexts.ToArray());
+                Assert.AreEqual(1, plan.Issues.Count);
+            }
+            finally
+            {
+                if (Directory.Exists(root)) Directory.Delete(root, true);
+            }
+        }
+
         [Test]
         public void スキャンルート指定で走査範囲を絞れる()
         {

@@ -52,14 +52,17 @@ namespace Novel.Editor.Localization
                 return plan;
             }
 
+            // 除外判定は **スキャンルートからの相対パス**だけで行う。絶対パス全体を見ると、
+            // プロジェクトの置き場所 (例: /home/me/Editor/proj や末尾 ~ のディレクトリ) だけで
+            // 全ファイルが除外され、走査 0 件 → 全エントリ deprecated 提案という事故になる
             var files = Directory.GetFiles(root, "*.rb", SearchOption.AllDirectories)
-                .Where(p => !p.Replace('\\', '/').Split('/').Any(seg =>
-                    seg.EndsWith("~", StringComparison.Ordinal) ||
-                    seg.Equals("Tests", StringComparison.Ordinal) ||
-                    seg.Equals("Editor", StringComparison.Ordinal)))
+                .Where(p => !IsExcluded(RelativeSegments(root, p)))
                 .Where(p => !Path.GetFileNameWithoutExtension(p).Equals("preamble", StringComparison.OrdinalIgnoreCase))
                 .OrderBy(p => p, StringComparer.Ordinal)
                 .ToList();
+            if (files.Count == 0)
+                plan.Issues.Add($"走査対象の .rb が 1 件も見つかりません (Assets/{relativeRoot})。" +
+                                "スキャンルートの指定を確認してください (このまま適用すると既存エントリが消滅扱いになります)");
             var charaSet = new HashSet<string>();
             var sources = files.ToDictionary(f => f, File.ReadAllText);
             foreach (var source in sources.Values) ScenarioTextScanner.CollectCharaDeclarations(source, charaSet);
@@ -148,6 +151,23 @@ namespace Novel.Editor.Localization
             // 未追跡の新出のうち、リネーム先と一致するものは applier のリネームで起票される
             plan.Additions.RemoveAll(t => plan.Renames.Any(r => r.NewText == t));
         }
+
+        // スキャンルート配下のディレクトリ/ファイル名だけを返す (ルート自身のパス要素は含めない)
+        private static string[] RelativeSegments(string root, string fullPath)
+        {
+            var normalized = fullPath.Replace('\\', '/');
+            var normalizedRoot = root.Replace('\\', '/').TrimEnd('/');
+            var relative = normalized.StartsWith(normalizedRoot, StringComparison.Ordinal)
+                ? normalized.Substring(normalizedRoot.Length)
+                : normalized;
+            return relative.TrimStart('/').Split('/');
+        }
+
+        private static bool IsExcluded(string[] segments)
+            => segments.Any(seg =>
+                seg.EndsWith("~", StringComparison.Ordinal) ||         // Unity 非インポート
+                seg.Equals("Tests", StringComparison.Ordinal) ||       // テストフィクスチャ
+                seg.Equals("Editor", StringComparison.Ordinal));       // ツール用スクリプト
 
         private static string ToRelativePath(string assetsPath, string fullPath)
         {

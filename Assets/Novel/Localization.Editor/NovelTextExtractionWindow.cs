@@ -22,6 +22,7 @@ namespace Novel.Localization.Editor
         private string _scanRoot = "";
         private ExtractionPlan? _plan;
         private Vector2 _scroll;
+        private bool _confirmedRiskyApply;   // 走査 0 件で全消滅になる計画を人間が明示承認したか
 
         [MenuItem("Novel/Localization/Extract Strings...")]
         private static void Open()
@@ -55,6 +56,7 @@ namespace Novel.Localization.Editor
                 _tableName = tableName;
                 EditorPrefs.SetString(TableNamePrefsKey, tableName);
                 _plan = null;   // 別テーブル基準の古い計画を適用させない (Scan からやり直し)
+                _confirmedRiskyApply = false;
             }
             var scanRoot = EditorGUILayout.TextField(
                 new GUIContent("スキャンルート", "Assets からの相対パス。空 = Assets 全体。~/Tests/Editor フォルダは常に除外"), _scanRoot);
@@ -63,6 +65,7 @@ namespace Novel.Localization.Editor
                 _scanRoot = scanRoot;
                 EditorPrefs.SetString(ScanRootPrefsKey, scanRoot);
                 _plan = null;   // 走査範囲が変わった計画も無効化
+                _confirmedRiskyApply = false;
             }
 
             EditorGUILayout.Space();
@@ -73,7 +76,21 @@ namespace Novel.Localization.Editor
             DrawPlan(_plan);
 
             EditorGUILayout.Space();
+            // 走査 0 件なのに消滅が出るのは、ほぼスキャンルートの指定ミス。適用すると全エントリが
+            // deprecated + 追跡メタデータ消去になるため、確認してからでないと押せなくする
+            var looksLikeMisconfiguration = !_plan.AllCurrentTexts.Any() && _plan.Deprecations.Count > 0;
+            if (looksLikeMisconfiguration)
+            {
+                EditorGUILayout.HelpBox(
+                    $"走査結果が 0 件なのに既存エントリ {_plan.Deprecations.Count} 件が消滅扱いになります。\n" +
+                    "スキャンルートの指定ミスの可能性が高いので、意図的でなければ適用しないでください。",
+                    MessageType.Error);
+                _confirmedRiskyApply = EditorGUILayout.ToggleLeft(
+                    "全シナリオを削除したので、この結果で正しい", _confirmedRiskyApply);
+            }
+
             var hasWork = _plan.Renames.Count + _plan.Additions.Count + _plan.Deprecations.Count > 0;
+            if (looksLikeMisconfiguration && !_confirmedRiskyApply) hasWork = false;
             using (new EditorGUI.DisabledScope(!hasWork))
             {
                 if (GUILayout.Button("Apply（テーブルへ書き込む）") &&
@@ -87,6 +104,7 @@ namespace Novel.Localization.Editor
                         ExtractionApplier.Apply(_plan, new UnityLocalizationTableEditor(collection));
                         Debug.Log($"[Novel] 抽出を適用しました: リネーム/分離 {_plan.Renames.Count}・新規 {_plan.Additions.Count}・deprecated {_plan.Deprecations.Count}");
                         _plan = null;   // 適用済み計画の再適用を防ぐ
+                        _confirmedRiskyApply = false;
                     }
                 }
             }
@@ -99,6 +117,7 @@ namespace Novel.Localization.Editor
             var plan = ExtractionPlanner.Scan(Application.dataPath, _scanRoot);
             ExtractionPlanner.BuildDiff(plan, new UnityLocalizationTableEditor(collection));
             _plan = plan;
+            _confirmedRiskyApply = false;
         }
 
         private StringTableCollection? GetCollection()

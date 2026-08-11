@@ -32,7 +32,8 @@ namespace Novel.Runtime
         private readonly Func<string, string?> _variableLookup;
         private readonly Action<string> _onMissingVariable;
 
-        // speaker で宣言された単発キャラの id → 表示名 (カタログに載せないキャラの受け皿)
+        // speaker で宣言された単発キャラの id → 表示名 (カタログに載せないキャラの受け皿)。
+        // 「そのシナリオ限り」の宣言なので、再生ごとに runner が ResetScenarioState() で捨てる
         private readonly Dictionary<string, string> _declaredSpeakers = new();
 
         public NovelCommandHandler(INovelView view, IStateStore state, ITextResolver text, ICharacterCatalog catalog,
@@ -67,6 +68,10 @@ namespace Novel.Runtime
                         $"[Novel] 未定義のテキスト変数 %{{{name}}} をそのまま表示します。flag/val の設定漏れか、ITextVariableProvider の未登録を確認してください。");
             };
         }
+
+        // 1 シナリオ分だけ有効な状態を捨てる (runner が PlayAsync の頭で呼ぶ)。
+        // 宣言を持ち越すと、前に再生したシナリオの表示名が別シナリオへ漏れて再生順で表示が変わる
+        public void ResetScenarioState() => _declaredSpeakers.Clear();
 
         public async UniTask On(SayCommand cmd, CancellationToken ct)
         {

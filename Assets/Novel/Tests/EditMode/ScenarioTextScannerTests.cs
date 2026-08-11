@@ -66,6 +66,27 @@ namespace Novel.Tests
             CollectionAssert.AreEqual(new[] { "正体は伏せたまま", "？？？" }, texts);
         }
 
+        // 位置を文字列リテラルの並びで数えると、シンボル話者では本文の位置がずれて
+        // 立ち絵キーを翻訳対象にしてしまう (実引数の並びで数える必要がある)
+        [Test]
+        public void シンボル話者のsayでも本文だけを抽出する()
+        {
+            CollectionAssert.AreEqual(new[] { "やあ" },
+                ScanTexts("say :carol, \"やあ\", \"carol/wave\""));
+            CollectionAssert.AreEqual(new[] { "やあ" },
+                ScanTexts("say :carol, \"やあ\""));
+            CollectionAssert.AreEqual(new[] { "やあ", "？？？" },
+                ScanTexts("say :carol, \"やあ\", \"carol/wave\", display_as: \"？？？\""));
+        }
+
+        // 変数・メソッド呼び出しが話者や本文に来ても、リテラルでない引数は拾わない
+        [Test]
+        public void リテラルでない引数は抽出しない()
+        {
+            CollectionAssert.IsEmpty(ScanTexts("say speaker_id, message"));
+            CollectionAssert.AreEqual(new[] { "本文です" }, ScanTexts("say speaker_id, \"本文です\""));
+        }
+
         [Test]
         public void 補間入りリテラルは抽出せずissueとして報告する()
         {

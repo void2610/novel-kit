@@ -469,6 +469,23 @@ namespace Novel.Tests
             Assert.AreEqual("未定義は%{unknown}のまま", view.Lines[1].Text);  // 未定義は可視のまま (黙って消さない)
         });
 
+        // speaker 宣言は「そのシナリオ限り」の契約。runner を使い回しても次のシナリオへ漏れない
+        // (漏れると再生順で表示名が変わる。カタログ未登録 id は id 文字列へフォールバックするのが正)
+        [UnityTest]
+        public IEnumerator speaker宣言は次のシナリオへ漏れない() => UniTask.ToCoroutine(async () =>
+        {
+            var view = new FakeView();
+            var runner = NewRunner(view);
+
+            var declared = await runner.PlayAsync("test_speaker_declare", CancellationToken.None);
+            Assert.AreEqual(NovelResult.Completed, declared);
+            Assert.AreEqual("謎の声", view.Lines[0].DisplayName);      // 宣言したシナリオでは表示名が効く
+
+            var undeclared = await runner.PlayAsync("test_speaker_undeclared", CancellationToken.None);
+            Assert.AreEqual(NovelResult.Completed, undeclared);
+            Assert.AreEqual("ghost", view.Lines[1].DisplayName);        // 未宣言なので id へフォールバック
+        });
+
         // say の表示ごとに IBacklog へ話者・本文（rich）が記録されることを検証
         [UnityTest]
         public IEnumerator say表示ごとにバックログへ話者と本文が積まれる() => UniTask.ToCoroutine(async () =>

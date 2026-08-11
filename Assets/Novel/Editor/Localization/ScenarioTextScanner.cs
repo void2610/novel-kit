@@ -70,49 +70,51 @@ namespace Novel.Editor.Localization
             {
                 var method = ReadLeadingIdentifier(line, out var rest);
                 if (method == null) continue;
+                var isChara = charaLookup.Contains(method);
+                // cmd 直呼び (ライブラリ配管) と対象外メソッド (bg/se/flag 等) は触らない
+                if (!isChara && method is not ("say" or "narration" or "choose" or "speaker")) continue;
 
-                var literals = ReadStringLiterals(rest, lineNumber, result.Issues);
-                if (literals.Count == 0) continue;
+                // 位置は「実引数の並び」で数える。文字列リテラルだけを数えると、シンボル話者
+                // (say :carol, "やあ", "carol/wave") で本文の位置がずれて立ち絵キーを拾ってしまう
+                var args = SplitArguments(rest, lineNumber, result.Issues);
+                var positional = args.FindAll(a => a.Kwarg == null);
 
                 switch (method)
                 {
                     case "narration":
-                        AddPositional(result, literals, textIndex: 0, lineNumber);
-                        AddKwarg(result, literals, "as", "display_as");
+                        AddPositional(result, positional, index: 0, lineNumber);
                         break;
                     case "say":
-                        // say "text"（ナレーション形）/ say "id", "text"(, "portrait_key")。
+                        // say "text"（ナレーション形）/ say speaker, "text"(, "portrait_key")。
                         // 位置引数の 2 つ目が本文（1 つしか無ければそれが本文）。話者 id は抽出しない
-                        var positional = literals.FindAll(l => l.Kwarg == null);
-                        var textIdx = positional.Count >= 2 ? 1 : 0;
-                        if (positional.Count > textIdx) Add(result, positional[textIdx], lineNumber);
-                        AddKwarg(result, literals, "as", "display_as");
+                        AddPositional(result, positional, positional.Count >= 2 ? 1 : 0, lineNumber);
                         break;
                     case "choose":
-                        // choose(["A", "B"], key: :x) — key: 以外の位置リテラルが選択肢
-                        foreach (var literal in literals)
-                            if (literal.Kwarg == null)
+                        // choose(["A", "B"], key: :x) — 位置引数（配列）内の全リテラルが選択肢
+                        foreach (var arg in positional)
+                            foreach (var literal in arg.Literals)
                                 Add(result, literal, lineNumber);
                         break;
                     case "speaker":
                         // 単発話者宣言 (speaker '？？？' / speaker :id, '表示名')。最後の位置リテラルが
                         // 表示名で、1 引数の文字列形は id 自体が表示名を兼ねる。表示名は ITextResolver を通る
-                        var speakerPositional = literals.FindAll(l => l.Kwarg == null);
-                        if (speakerPositional.Count > 0)
-                            Add(result, speakerPositional[speakerPositional.Count - 1], lineNumber);
-                        break;
-                    case "cmd":
-                        break;   // ライブラリ配管（preamble 内部）は対象外
-                    default:
-                        // chara 糖衣: alice "text"(, as: "…")。宣言済みメソッド名のみ拾う
-                        if (charaLookup.Contains(method))
+                        for (var i = positional.Count - 1; i >= 0; i--)
                         {
-                            var pos = literals.FindAll(l => l.Kwarg == null);
-                            if (pos.Count > 0) Add(result, pos[0], lineNumber);
-                            AddKwarg(result, literals, "as", "display_as");
+                            if (positional[i].Value is not { } speakerName) continue;
+                            Add(result, speakerName, lineNumber);
+                            break;
                         }
                         break;
+                    default:
+                        // chara 糖衣: alice "text"(, as: "…")
+                        AddPositional(result, positional, index: 0, lineNumber);
+                        break;
                 }
+
+                // 表示名の上書き (say/chara 糖衣共通)
+                foreach (var arg in args)
+                    if (arg.Kwarg is "as" or "display_as" && arg.Value is { } displayName)
+                        Add(result, displayName, lineNumber);
             }
             return result;
         }
@@ -128,17 +130,11 @@ namespace Novel.Editor.Localization
             if (literal.Text.Length > 0) result.Texts.Add(new ScannedText(literal.Text, lineNumber));
         }
 
-        private static void AddPositional(ScanResult result, List<Literal> literals, int textIndex, int lineNumber)
+        // 指定位置の引数が文字列リテラルそのものなら抽出する（変数・メソッド呼び出しは対象外）
+        private static void AddPositional(ScanResult result, List<Argument> positional, int index, int lineNumber)
         {
-            var positional = literals.FindAll(l => l.Kwarg == null);
-            if (positional.Count > textIndex) Add(result, positional[textIndex], lineNumber);
-        }
-
-        private static void AddKwarg(ScanResult result, List<Literal> literals, params string[] kwargNames)
-        {
-            foreach (var literal in literals)
-                if (literal.Kwarg != null && System.Array.IndexOf(kwargNames, literal.Kwarg) >= 0)
-                    Add(result, literal, literal.LineNumber);
+            if (index < positional.Count && positional[index].Value is { } literal)
+                Add(result, literal, lineNumber);
         }
 
         // ---- 行の論理結合（choose の複数行配列などの継続行を括弧バランスで繋ぐ） ----
@@ -255,62 +251,124 @@ namespace Novel.Editor.Localization
         private readonly struct Literal
         {
             public readonly string Text;
-            public readonly string? Kwarg;          // 直前の kwarg 名 (display_as: 等)。位置引数は null
             public readonly bool HasInterpolation;
-            public readonly int LineNumber;
-            public Literal(string text, string? kwarg, bool hasInterpolation, int lineNumber)
+            public Literal(string text, bool hasInterpolation)
             {
                 Text = text;
-                Kwarg = kwarg;
                 HasInterpolation = hasInterpolation;
-                LineNumber = lineNumber;
             }
         }
 
-        // 行内の文字列リテラルを、直前の kwarg 名付きで出現順に読む
-        private static List<Literal> ReadStringLiterals(string line, int lineNumber, List<ScanIssue> issues)
+        // 呼び出しの実引数 1 つ分。位置は実引数単位で数える (シンボル・変数も 1 つと数える)
+        private readonly struct Argument
         {
-            var literals = new List<Literal>();
-            string? pendingKwarg = null;
-            for (var i = 0; i < line.Length; i++)
+            public readonly string? Kwarg;         // kwarg 名 (display_as: 等)。位置引数は null
+            public readonly List<Literal> Literals;   // 引数内に現れた全リテラル (配列リテラル用)
+            public readonly Literal? Value;        // 引数そのものが文字列リテラルならその値
+            public Argument(string? kwarg, List<Literal> literals, Literal? value)
             {
-                var c = line[i];
-                if (char.IsLetter(c) || c == '_')
+                Kwarg = kwarg;
+                Literals = literals;
+                Value = value;
+            }
+        }
+
+        // 引数リストを最上位のカンマで分割する。文字列内・入れ子の括弧内のカンマは無視し、
+        // 最上位の ')' で終端する
+        private static List<Argument> SplitArguments(string rest, int lineNumber, List<ScanIssue> issues)
+        {
+            var args = new List<Argument>();
+            var i = 0;
+            while (i < rest.Length && char.IsWhiteSpace(rest[i])) i++;
+            if (i < rest.Length && rest[i] == '(') i++;   // 括弧付き呼び出し
+
+            var segmentStart = i;
+            var depth = 0;
+            while (i <= rest.Length)
+            {
+                if (i == rest.Length)
                 {
-                    // 識別子を読み、直後が ':' なら kwarg 名として保持 (:: や三項の : と区別するため直後判定のみ)
-                    var start = i;
-                    while (i < line.Length && (char.IsLetterOrDigit(line[i]) || line[i] == '_')) i++;
-                    if (i < line.Length && line[i] == ':' && (i + 1 >= line.Length || line[i + 1] != ':'))
-                        pendingKwarg = line.Substring(start, i - start);
-                    else
-                    {
-                        pendingKwarg = null;
-                        i--;
-                    }
+                    AddSegment(args, rest, segmentStart, i, lineNumber, issues);
+                    break;
                 }
-                else if (c == '\'' || c == '"')
+                var c = rest[i];
+                if (c == '\'' || c == '"')
                 {
-                    var (text, hasInterpolation, next) = ReadLiteral(line, i);
+                    var (_, _, next) = ReadLiteral(rest, i);
                     if (next < 0)
                     {
                         issues.Add(new ScanIssue(lineNumber, "閉じられていない文字列リテラル"));
                         break;
                     }
-                    literals.Add(new Literal(text, pendingKwarg, hasInterpolation, lineNumber));
-                    pendingKwarg = null;
-                    i = next;
+                    i = next + 1;
+                    continue;
                 }
-                else if (!char.IsWhiteSpace(c) && c != '(' && c != '[' && c != ',')
+                if (depth == 0 && c == ',')
                 {
-                    // シンボル・数値等の別トークンが挟まったら kwarg の効力は切れる
-                    if (c == ':')
-                    {
-                        while (i + 1 < line.Length && (char.IsLetterOrDigit(line[i + 1]) || line[i + 1] == '_')) i++;
-                    }
-                    pendingKwarg = null;
+                    AddSegment(args, rest, segmentStart, i, lineNumber, issues);
+                    segmentStart = i + 1;
                 }
+                else if (depth == 0 && c == ')')
+                {
+                    AddSegment(args, rest, segmentStart, i, lineNumber, issues);
+                    return args;   // 呼び出しの終端 (後続の後置 if / メソッドチェーンは読まない)
+                }
+                else if (c is '(' or '[' or '{') depth++;
+                else if (c is ')' or ']' or '}') depth--;
+                i++;
             }
-            return literals;
+            return args;
+        }
+
+        private static void AddSegment(List<Argument> args, string rest, int start, int end,
+            int lineNumber, List<ScanIssue> issues)
+        {
+            if (end <= start) return;
+            var segment = rest.Substring(start, end - start);
+            if (segment.Trim().Length == 0) return;
+            args.Add(ParseArgument(segment, lineNumber, issues));
+        }
+
+        // 引数 1 つを解析する。`name: value` 形は kwarg として名前を落とし、値部分のリテラルを読む
+        private static Argument ParseArgument(string segment, int lineNumber, List<ScanIssue> issues)
+        {
+            var i = 0;
+            while (i < segment.Length && char.IsWhiteSpace(segment[i])) i++;
+
+            string? kwarg = null;
+            var identifierStart = i;
+            while (i < segment.Length && (char.IsLetterOrDigit(segment[i]) || segment[i] == '_')) i++;
+            // 識別子の直後が ':' で、シンボル (`:sym`) でも `::` でもなければ kwarg
+            if (i > identifierStart && i < segment.Length && segment[i] == ':' &&
+                (i + 1 >= segment.Length || segment[i + 1] != ':'))
+            {
+                kwarg = segment.Substring(identifierStart, i - identifierStart);
+                i++;
+            }
+            else
+            {
+                i = identifierStart;
+            }
+            while (i < segment.Length && char.IsWhiteSpace(segment[i])) i++;
+
+            // 値部分の全リテラルを読む。値そのものが文字列リテラルなら Value に立てる
+            var literals = new List<Literal>();
+            Literal? value = null;
+            for (var j = i; j < segment.Length; j++)
+            {
+                if (segment[j] != '\'' && segment[j] != '"') continue;
+                var (text, hasInterpolation, next) = ReadLiteral(segment, j);
+                if (next < 0)
+                {
+                    issues.Add(new ScanIssue(lineNumber, "閉じられていない文字列リテラル"));
+                    break;
+                }
+                var literal = new Literal(text, hasInterpolation);
+                literals.Add(literal);
+                if (j == i) value = literal;   // 引数の先頭が文字列 = 引数はリテラルそのもの
+                j = next;
+            }
+            return new Argument(kwarg, literals, value);
         }
 
         // 二重引用符リテラルのエスケープ 1 つを解釈して sb へ足す。i はエスケープ文字 (\ の次) を指し、
