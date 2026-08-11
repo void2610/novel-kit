@@ -1,9 +1,9 @@
 ---
 type: Decision
 title: プロジェクトリファレンス — キー列挙はチャンネル契約に統合・実体は DI ビルド時にキャプチャ
-description: ライター向けに「使える名前と構図」を一覧するエディタウィンドウを追加する。列挙の契約は IAudioChannel / IPortraitChannel 自身に default 実装付きで統合し、実行時にしか実体がない情報は RegisterNovelKitCore が DI ビルド時にキャプチャしてエディタ側キャッシュへ渡す（game 側の追加記述ゼロ）。音の参考実装は追加しない。
+description: ライター向けに「使える名前と構図」を一覧するエディタウィンドウを追加する。列挙の契約は IAudioChannel / IPortraitChannel / ICharacterCatalog 自身に統合し（音とキャラは明示実装必須・構図のみ default = 標準 5 構図）、実行時にしか実体がない情報は RegisterNovelKitCore が DI ビルド時にキャプチャしてエディタ側キャッシュへ渡す（game 側の追加記述ゼロ・種別ごとにマージ）。音の参考実装は追加しない。
 tags: [decision, editor, tooling, audio, portrait, layout, catalog, writer]
-timestamp: 2026-08-07T16:10:00Z
+timestamp: 2026-08-07T22:35:00Z
 status: 確定
 ---
 
@@ -146,6 +146,17 @@ public interface IPortraitChannel
   このためのロードはしない）を追加し、エディタ側キャッシュが GUID で永続化・読込時に実体へ復元する。
   ウィンドウはこの参照を最優先し、無いキーのみパス照合へ落とす。`Asset` の型は Runtime の
   「signature にアセット型を持ち込まない」方針を守るため `object`（エディタが UnityEngine.Object と解釈）。
+- **キャプチャは種別ごとにマージし、Play Mode 由来のみ採用**（2026-08-08・不具合対応）。当初の
+  「ビルドごとに丸ごと上書き」は、novel 未配線スコープのビルド（タイトル画面のシーンや EditMode テスト）が
+  空のキャプチャで実データを消し、「一度再生しても音・キャラがすぐ消える」不具合になった。
+  エディタ側ストアが種別ごとにマージ（空 = 列挙未提供として以前の値を保持。構図は既定実装が標準 5 構図を
+  返すため「標準構図のまま = 未提供」の扱い。標準へ意図的に戻すには `Library/NovelKit` を削除して再生し直す）し、
+  Edit Mode のコンテナビルドは採用しない。試聴用 AudioClip はドメイン内 Latest のランタイム参照を使い回さず
+  常に GUID から実体を引く（再生終了の参照破棄で試聴が死なない）。マージ契約は EditMode テストで固定。
+- **音・キャラの列挙に default 実装を置かない**（2026-08-08・ユーザー要望）。`IAudioChannel.EnumerateKeys()` /
+  `ICharacterCatalog.EnumerateEntries()` の default（空）は、実装忘れが「再生しても一覧に出ない」という
+  沈黙の空目録になるため削除し、明示実装をコンパイルエラーで要求する（当初の「既存実装無改修」より
+  発見可能性を優先）。`IPortraitChannel.EnumerateLayouts()` は無指定でも標準 5 構図が実在するため default を維持。
 
 # 検討した代替案
 

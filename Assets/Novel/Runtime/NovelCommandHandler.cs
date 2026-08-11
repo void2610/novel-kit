@@ -32,6 +32,9 @@ namespace Novel.Runtime
         private readonly Func<string, string?> _variableLookup;
         private readonly Action<string> _onMissingVariable;
 
+        // speaker で宣言された単発キャラの id → 表示名 (カタログに載せないキャラの受け皿)
+        private readonly Dictionary<string, string> _declaredSpeakers = new();
+
         public NovelCommandHandler(INovelView view, IStateStore state, ITextResolver text, ICharacterCatalog catalog,
             IPortraitDirector? portraitDirector = null, IBackgroundChannel? background = null, IStillChannel? still = null,
             IAudioChannel? audio = null,
@@ -169,6 +172,13 @@ namespace Novel.Runtime
             await _portraitDirector.StageAsync(new PortraitLayout(cmd.LayoutId), cast, ct);
         }
 
+        public UniTask On(SpeakerCommand cmd, CancellationToken ct)
+        {
+            if (!string.IsNullOrEmpty(cmd.Id))
+                _declaredSpeakers[cmd.Id] = string.IsNullOrEmpty(cmd.DisplayName) ? cmd.Id : cmd.DisplayName;
+            return UniTask.CompletedTask;
+        }
+
         public async UniTask On(ExitCommand cmd, CancellationToken ct)
         {
             if (_portraitDirector != null) await _portraitDirector.ExitAsync(cmd.Character, ct);
@@ -263,6 +273,7 @@ namespace Novel.Runtime
             if (string.IsNullOrEmpty(cmd.SpeakerId)) return null;
             if (cmd.DisplayAs is { } overrideName) return overrideName;
             if (_catalog.TryGet(cmd.SpeakerId, out var entry)) return entry.DisplayName;
+            if (_declaredSpeakers.TryGetValue(cmd.SpeakerId, out var declared)) return declared;
             return cmd.SpeakerId;
         }
     }

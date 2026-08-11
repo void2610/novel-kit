@@ -11,8 +11,15 @@ using UnityEngine;
 namespace Novel.Editor
 {
     /// <summary>
-    /// <see cref="NovelProjectCapture"/> の購読側 (project-reference ADR)。DI ビルド時のスナップショットを
-    /// Library/ 配下へ永続化し、ドメインリロード / エディタ再起動を跨いでプロジェクトリファレンスに供給する。
+    /// <see cref="NovelProjectCapture"/> の購読側 (project-reference ADR)。再生時の DI ビルドで届いた
+    /// スナップショットを種別ごとにマージして Library/ 配下へ永続化し、ドメインリロード / エディタ再起動を
+    /// 跨いでプロジェクトリファレンスに供給する。
+    /// - 空の種別 (EnumerateKeys 等が空を返す配線) は「列挙未提供」とみなし、以前の実データを保持する。
+    ///   タイトル画面など novel 未配線のスコープのビルドが、キャプチャ済みの目録を消さないため
+    ///   (ScenarioKeyValidator の「空 = 列挙未提供」と同じ割り切り)。
+    /// - Edit Mode でのコンテナビルド (EditMode テスト・エディタツール) は実プロジェクトの配線ではないため採用しない。
+    /// - AudioKeyInfo.Asset は GUID で永続化し、読み出しは常に GUID からアセット実体を引く
+    ///   (再生終了でランタイム側の参照が破棄されても試聴が生き続ける)。
     /// </summary>
     [InitializeOnLoad]
     public static class ProjectReferenceCaptureStore
@@ -22,30 +29,115 @@ namespace Novel.Editor
 
         static ProjectReferenceCaptureStore()
         {
-            NovelProjectCapture.Captured += Save;
+            NovelProjectCapture.Captured += OnCaptured;
         }
 
-        // ディスクからの読込結果のドメイン内キャッシュ (OnGUI 等の高頻度呼び出しで毎回 I/O しないため)。
-        // 新しいキャプチャは Latest が優先されるので、ドメイン中にディスク側を読み直す必要はない
-        private static NovelProjectCapture.Snapshot? _fromDisk;
-        private static bool _diskLoaded;
+        // マージ済みキャプチャのドメイン内キャッシュ。_dto (GUID 形式・ディスクと同内容) が正で、
+        // _snapshot はその実体化。OnGUI 等の高頻度呼び出しで毎回 I/O しないためのもの
+        private static Dto? _dto;
+        private static NovelProjectCapture.Snapshot? _snapshot;
+        private static bool _loaded;
 
-        /// <summary>ドメイン内の最新キャプチャ、無ければ永続化済みファイルを返す (どちらも無ければ null)。</summary>
+        /// <summary>マージ済みの最新キャプチャを返す (一度もキャプチャされていなければ null)。</summary>
         public static NovelProjectCapture.Snapshot? LoadOrLatest()
         {
-            if (NovelProjectCapture.Latest != null) return NovelProjectCapture.Latest;
-            if (_diskLoaded) return _fromDisk;
-            _diskLoaded = true;
-            _fromDisk = LoadFromDisk();
-            return _fromDisk;
+            EnsureLoaded();
+            // アセット削除や Unload で試聴用参照が死んでいたら GUID から引き直す
+            if (_snapshot != null && HasDestroyedAsset(_snapshot)) _snapshot = ToSnapshot(_dto!);
+            return _snapshot;
         }
 
-        private static NovelProjectCapture.Snapshot? LoadFromDisk()
+        private static void EnsureLoaded()
         {
-            if (!File.Exists(FilePath)) return null;
+            if (_loaded) return;
+            _loaded = true;
+            _dto = LoadFromDisk();
+            _snapshot = _dto == null ? null : ToSnapshot(_dto);
+        }
+
+        private static void OnCaptured(NovelProjectCapture.Snapshot snapshot)
+        {
+            if (!(PlayModeGateForTest ?? EditorApplication.isPlayingOrWillChangePlaymode)) return;
+            EnsureLoaded();
+            // ToDto はアセット参照が生きているこの時点で GUID を確定させる
+            _dto = Merge(_dto, ToDto(snapshot));
+            _snapshot = ToSnapshot(_dto);
+            Save(_dto);
+        }
+
+        // ---- テスト用シーム (実プロジェクトの Library キャッシュを汚さずにキャプチャ経路を検証する) ----
+
+        internal static bool? PlayModeGateForTest;    // null = 実際の Play Mode 状態を見る
+        internal static string? FilePathForTest;      // null = 既定の Library パス
+
+        internal static void ResetForTest()
+        {
+            _loaded = false;
+            _dto = null;
+            _snapshot = null;
+        }
+
+        /// <summary>
+        /// 種別ごとに「空 = 列挙未提供」とみなし、以前の実データ (と対応する取得元型名) を保持する。
+        /// 非空の種別は新しいキャプチャで置き換える。
+        /// </summary>
+        private static Dto Merge(Dto? old, Dto incoming)
+        {
+            if (old == null) return incoming;
+            if (incoming.audio.Length == 0 && old.audio.Length > 0)
+            {
+                incoming.audio = old.audio;
+                incoming.audioChannelType = old.audioChannelType;
+            }
+            if (incoming.characters.Length == 0 && old.characters.Length > 0)
+            {
+                incoming.characters = old.characters;
+                incoming.characterCatalogType = old.characterCatalogType;
+            }
+            // 構図は既定実装が標準 5 構図を返すため「標準構図のまま = 未提供」とみなす。
+            // 独自構図から意図的に標準へ戻したい場合は Library/NovelKit を削除して再生し直す
+            if (old.layouts.Length > 0 && (incoming.layouts.Length == 0 || IsDefaultLayouts(incoming.layouts)))
+            {
+                incoming.layouts = old.layouts;
+                incoming.portraitChannelType = old.portraitChannelType;
+            }
+            return incoming;
+        }
+
+        private static bool IsDefaultLayouts(LayoutDto[] layouts)
+        {
+            var defaults = StageLayoutInfo.Defaults;
+            if (layouts.Length != defaults.Count) return false;
+            for (var i = 0; i < layouts.Length; i++)
+            {
+                if (layouts[i].id != defaults[i].Id || layouts[i].slotCount != defaults[i].SlotCount ||
+                    layouts[i].note != (defaults[i].Note ?? ""))
+                    return false;
+            }
+            return true;
+        }
+
+        // テストから種別マージ (+ DTO 往復のシリアライズ) を検証するための入口
+        internal static NovelProjectCapture.Snapshot MergeForTest(
+            NovelProjectCapture.Snapshot? old, NovelProjectCapture.Snapshot incoming)
+            => ToSnapshot(Merge(old == null ? null : ToDto(old), ToDto(incoming)));
+
+        private static bool HasDestroyedAsset(NovelProjectCapture.Snapshot snapshot)
+        {
+            foreach (var key in snapshot.AudioKeys)
+                if (key.Asset is UnityEngine.Object obj && obj == null)
+                    return true;
+            return false;
+        }
+
+        private static string TargetPath => FilePathForTest ?? FilePath;
+
+        private static Dto? LoadFromDisk()
+        {
+            if (!File.Exists(TargetPath)) return null;
             try
             {
-                return ToSnapshot(JsonUtility.FromJson<Dto>(File.ReadAllText(FilePath)));
+                return JsonUtility.FromJson<Dto>(File.ReadAllText(TargetPath));
             }
             catch (Exception e)
             {
@@ -54,12 +146,13 @@ namespace Novel.Editor
             }
         }
 
-        private static void Save(NovelProjectCapture.Snapshot snapshot)
+        private static void Save(Dto dto)
         {
             try
             {
-                System.IO.Directory.CreateDirectory(CacheDirectory);
-                File.WriteAllText(FilePath, JsonUtility.ToJson(ToDto(snapshot)));
+                var path = TargetPath;
+                System.IO.Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                File.WriteAllText(path, JsonUtility.ToJson(dto));
             }
             catch (Exception e)
             {

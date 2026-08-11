@@ -1,4 +1,5 @@
 #nullable enable
+using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using Novel.Assets;
@@ -40,6 +41,8 @@ namespace Novel.View
         public UniTask PlaySeLoopAsync(string seKey, float interval, int count, CancellationToken ct) { Warn(); return UniTask.CompletedTask; }
         public void PlayBgm(string bgmKey) => Warn();
         public void StopBgm() => Warn();
+        // 目録はエディタ向けメタデータで、シナリオコマンドの未供給とは別問題のため警告しない
+        public IEnumerable<AudioKeyInfo> EnumerateKeys() => System.Array.Empty<AudioKeyInfo>();
         private void Warn() => FacetWarning.Once(ref _warned, "se/bgm", nameof(IAudioChannel));
     }
 

@@ -122,6 +122,8 @@ namespace Novel.Tests
                 entry = default;
                 return false;
             }
+
+            public IEnumerable<CharacterKeyInfo> EnumerateEntries() => System.Array.Empty<CharacterKeyInfo>();
         }
 
         // 多言語 resolver の代理: 原文に接頭辞を付けて「別言語のテキスト」を模す

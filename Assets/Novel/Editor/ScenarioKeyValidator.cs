@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using MRubyCS;
 using Novel.Commands;
 using Novel.Runtime;
 using Novel.View;
@@ -18,8 +19,7 @@ namespace Novel.Editor
     // 早送り実行し、Router に流れる型付きコマンド (BackgroundCommand 等) からキーを記録する。
     // パースの正確さ (コメント/クォート/複数行/#{} 補間) を mruby 本体に委ね、糖衣の追加にも追従不要。
     // choose は回答を変えて選択肢数ぶん再実行し、単一の回答で到達できる分岐を全て通す
-    // (複数の choose の組合せでしか到達しない行は対象外。独自コマンドを使うシナリオは
-    // その語彙が無いため途中で止まり、そこまでのキーだけ検証して警告する)。
+    // (複数の choose の組合せでしか到達しない行は対象外。語彙の無い game 独自コマンドは no-op stub 化して流し直す)。
 
     internal enum ScenarioKeyKind
     {
@@ -36,6 +36,7 @@ namespace Novel.Editor
     internal sealed partial class ScenarioKeyRecorder
     {
         public readonly HashSet<(ScenarioKeyKind Kind, string Key)> Keys = new();
+        public readonly HashSet<string> DeclaredSpeakers = new();
         public int MaxChoiceOptions { get; private set; }
 
         public void On(SayCommand cmd)
@@ -61,6 +62,12 @@ namespace Novel.Editor
                 Add(ScenarioKeyKind.Speaker, pairs[i]);
         }
 
+        // speaker 宣言はキーの使用ではなく「このシナリオ限りの話者定義」なので正解側に足す
+        public void On(SpeakerCommand cmd)
+        {
+            if (!string.IsNullOrEmpty(cmd.Id)) DeclaredSpeakers.Add(cmd.Id);
+        }
+
         public void On(ExitCommand cmd) => Add(ScenarioKeyKind.Speaker, cmd.Character);
         public void On(BackgroundCommand cmd) => Add(ScenarioKeyKind.Image, cmd.BackgroundKey);
         public void On(StillCommand cmd) => Add(ScenarioKeyKind.Image, cmd.StillKey);
@@ -80,12 +87,21 @@ namespace Novel.Editor
         // 実行の上限。choose の選択肢数がこれを超える分は回さない (通常 2〜4)
         private const int MaxPasses = 8;
 
+        // 1 シナリオで stub 化する未登録コマンドの上限 (= 流し直しの上限)
+        private const int MaxUnknownCommands = 32;
+
         internal sealed class CollectResult
         {
             public HashSet<(ScenarioKeyKind Kind, string Key)> Keys { get; } = new();
 
-            // 完走できなかったパスのエラー (独自コマンド未登録・書き間違い等)。null = 全パス完走
+            // 完走できなかったパスのエラー (書き間違い等)。null = 全パス完走
             public string? ExecutionError { get; set; }
+
+            // no-op stub に置き換えて読み飛ばした未登録コマンド名 (game 独自コマンドか誤記)
+            public HashSet<string> UnknownCommands { get; } = new();
+
+            // speaker で宣言された、このシナリオ限りの話者 id
+            public HashSet<string> DeclaredSpeakers { get; } = new();
 
             // 選択肢数が実行上限を超え、回さなかった回答の分岐が残っている場合の選択肢数 (0 = 全回答を実行済み)
             public int UncoveredChoiceOptions { get; set; }
@@ -111,36 +127,91 @@ namespace Novel.Editor
             var maxOptions = 1;
             for (var answer = 0; answer < maxOptions && answer < MaxPasses; answer++)
             {
-                var recorder = new ScenarioKeyRecorder();
-                var errors = new CaptureErrorHandler();
-                var router = new Router();
-                using var subscription = recorder.MapTo(router);
-                using var runner = new NovelScenarioRunner(source, router,
-                    new AnswerView(answer), new IdentityTextResolver(), new EmptyCatalog(),
-                    errorHandler: errors,
-                    preambleSources: new IPreambleSource[] { new PreambleSource(new ResourcesTextAssetLoader()) });
+                for (var retry = 0; ; retry++)
+                {
+                    var recorder = new ScenarioKeyRecorder();
+                    var errors = new CaptureErrorHandler();
+                    var router = new Router();
+                    using var subscription = recorder.MapTo(router);
+                    using var runner = new NovelScenarioRunner(source, router,
+                        new AnswerView(answer), new IdentityTextResolver(), new EmptyCatalog(),
+                        errorHandler: errors,
+                        preambleSources: new IPreambleSource[]
+                        {
+                            new PreambleSource(new ResourcesTextAssetLoader()),
+                            new BytesPreambleSource(StubPreamble(result.UnknownCommands)),
+                        });
 
-                await runner.PlayAsync(scenarioKey, NovelResumePoint.End, CancellationToken.None);
+                    await runner.PlayAsync(scenarioKey, NovelResumePoint.End, CancellationToken.None);
 
-                result.Keys.UnionWith(recorder.Keys);
-                maxOptions = Math.Max(maxOptions, recorder.MaxChoiceOptions);
-                result.ExecutionError ??= errors.Error;
+                    result.Keys.UnionWith(recorder.Keys);
+                    result.DeclaredSpeakers.UnionWith(recorder.DeclaredSpeakers);
+                    maxOptions = Math.Max(maxOptions, recorder.MaxChoiceOptions);
+
+                    // 未登録コマンドで止まったら、その名前を no-op stub として足して同じ回答で流し直す
+                    var unknown = ParseUndefinedMethod(errors.Error);
+                    if (unknown == null || !result.UnknownCommands.Add(unknown))
+                    {
+                        result.ExecutionError ??= errors.Error;
+                        break;
+                    }
+                    // 上限に達したら流し直さない。未検証のまま成功扱いにしないようエラーを残す
+                    if (retry >= MaxUnknownCommands)
+                    {
+                        result.ExecutionError ??= errors.Error;
+                        break;
+                    }
+                }
             }
             if (maxOptions > MaxPasses) result.UncoveredChoiceOptions = maxOptions;
             return result;
+        }
+
+        // "undefined method location for Object (NoMethodError)" からコマンド名を取り出す
+        private static string? ParseUndefinedMethod(string? error)
+        {
+            if (error == null) return null;
+            var match = System.Text.RegularExpressions.Regex.Match(error, @"undefined method '?([A-Za-z_][A-Za-z0-9_]*[?!]?)'? for");
+            return match.Success ? match.Groups[1].Value : null;
+        }
+
+        // 収集済みの未登録コマンドを nil を返す no-op として定義する preamble
+        private static byte[] StubPreamble(IEnumerable<string> names)
+        {
+            var source = new System.Text.StringBuilder();
+            foreach (var name in names)
+                source.Append("def ").Append(name).Append("(*args)\n  nil\nend\n");
+            if (source.Length == 0) source.Append("nil\n");
+
+            var state = MRubyState.Create();   // コンパイル専用の一時 state (MRubyState は IDisposable ではない)
+            using var compiler = MRubyCS.Compiler.MRubyCompiler.Create(state);
+            using var compiled = compiler.CompileToBinaryFormat(System.Text.Encoding.UTF8.GetBytes(source.ToString()));
+            return compiled.AsSpan().ToArray();
+        }
+
+        private sealed class BytesPreambleSource : IPreambleSource
+        {
+            private readonly byte[] _bytecode;
+            public BytesPreambleSource(byte[] bytecode) => _bytecode = bytecode;
+            public UniTask<byte[]?> LoadPreambleAsync(CancellationToken ct) => UniTask.FromResult<byte[]?>(_bytecode);
         }
 
         /// <summary>集めたキーを正解データと突き合わせ、問題数を返す (問題ごとに Debug.LogWarning 済み)。</summary>
         internal static int Report(string path, string? rubySource, CollectResult collected, KnownKeys known)
         {
             if (collected.ExecutionError != null)
-                Debug.LogWarning($"[Novel] {path} スタブ実行が完走しませんでした（独自コマンド使用か書き間違い。以降の行は未検証）:\n{collected.ExecutionError}");
+                Debug.LogWarning($"[Novel] {path} スタブ実行が完走しませんでした（書き間違い等。以降の行は未検証）:\n{collected.ExecutionError}");
+            if (collected.UnknownCommands.Count > 0)
+                Debug.LogWarning($"[Novel] {path} 未登録コマンドを読み飛ばした（game 独自コマンドなら正常。誤記でないか確認）: {string.Join(", ", collected.UnknownCommands)}");
             if (collected.UncoveredChoiceOptions > 0)
                 Debug.LogWarning($"[Novel] {path} 選択肢が {collected.UncoveredChoiceOptions} 個あり実行上限（{MaxPasses} 回答）を超えたため、{MaxPasses + 1} 個目以降の回答でしか到達しない分岐は未検証");
 
             var count = 0;
             foreach (var (kind, key) in collected.Keys)
             {
+                // speaker 宣言済みの話者はカタログ未登録でも正 (単発キャラの意図的な使用)
+                if (kind == ScenarioKeyKind.Speaker && collected.DeclaredSpeakers.Contains(key)) continue;
+
                 var (set, label) = kind switch
                 {
                     ScenarioKeyKind.Speaker => (known.Speakers, "キャラ id"),
@@ -164,7 +235,7 @@ namespace Novel.Editor
             var known = new KnownKeys { Speakers = ScanSpeakers(), ImageKeys = ScanImageKeySuffixes() };
 
             // 音と構図は実行時にしか実体がないため、キャプチャがあるときだけ検証する。
-            // キャプチャがあっても種別のキーが 0 件なら「列挙未提供 (EnumerateKeys 既定の空)」とみなし
+            // キャプチャがあっても種別のキーが 0 件なら「列挙未提供 (EnumerateKeys が空)」とみなし
             // null = スキップに倒す (空集合として扱うと全キーが未定義の大量誤警告になる)
             var snapshot = ProjectReferenceCaptureStore.LoadOrLatest();
             if (snapshot != null)
@@ -264,6 +335,8 @@ namespace Novel.Editor
                 entry = default;
                 return false;
             }
+
+            public IEnumerable<CharacterKeyInfo> EnumerateEntries() => Array.Empty<CharacterKeyInfo>();
         }
 
         private sealed class CaptureErrorHandler : INovelErrorHandler

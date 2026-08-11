@@ -45,6 +45,11 @@ namespace Novel.Tests
                 entry = default;
                 return false;
             }
+
+            public IEnumerable<CharacterKeyInfo> EnumerateEntries()
+            {
+                yield return new CharacterKeyInfo("kii", "キイ", "Characters/kii/default");
+            }
         }
 
         private sealed class StubView : INovelView

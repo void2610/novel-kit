@@ -48,6 +48,7 @@ namespace Novel.Runtime
         public UniTask PlaySeLoopAsync(string seKey, float interval, int count, CancellationToken ct) => UniTask.CompletedTask;
         public void PlayBgm(string bgmKey) { }
         public void StopBgm() { }
+        public IEnumerable<AudioKeyInfo> EnumerateKeys() => System.Array.Empty<AudioKeyInfo>();
     }
 
     public sealed class NullWorldEffectSink : IWorldEffectSink

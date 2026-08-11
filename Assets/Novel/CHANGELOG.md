@@ -21,16 +21,23 @@
   差し込む。Ruby 補間 `#{}` と違い、多言語キー照合と既読 ID がテンプレート基準で成立する
   (`#{}` は値が変わるたび既読が割れる問題もあった)。未定義変数はプレースホルダ温存 + dev 警告。
   エスケープは `%%{`。ローカライズ非依存 (単言語でも使用可)
+- コマンド `speaker` (糖衣: `speaker '？？？'` / `speaker :claude, 'クロード'`) を追加。カタログに載せない
+  単発キャラをそのシナリオ限りの話者として宣言でき、表示名に使われるうえ Validate Scenarios の
+  「未定義のキャラ id」からも外れる (未宣言・未登録の id は従来どおり誤記として警告)。
+  表示名は `ITextResolver` を通るためローカライズ抽出 (`Extract Strings`) の対象
 
 ### Changed
 - 既読 ID (スキップ判定) を resolve 後テキストから **resolve 前の原文**基準へ変更。ロケールを切り替えても
   既読が分断しない。既定の恒等 resolver では従来と同一ハッシュのためセーブ互換は不変
+- Validate Scenarios: 未登録コマンドで停止する代わりに、NoMethodError のコマンド名を no-op stub として
+  定義し直して流し直し、以降の行も検証を続けるようにした。読み飛ばした名前は
+  「game 独自コマンドなら正常。誤記でないか確認」として警告に列挙する
 
 ### Added
 - `AudioKeyInfo` に `Asset` (任意・エディタ試聴用) を追加。`IAudioChannel.EnumerateKeys()` が保持済みの
   AudioClip を渡すと、プロジェクトリファレンスの試聴がキー体系に依存せず効く (エディタ側で GUID 永続化)。
   Novel.Runtime にアセット型を持ち込まないため型は `object`
-- `ICharacterCatalog.EnumerateEntries()` (default 実装付き) を追加。コード実装のカタログも
+- `ICharacterCatalog.EnumerateEntries()` を追加。コード実装のカタログも
   プロジェクトリファレンス / シナリオ検証のキャラ情報源になる (DI ビルド時キャプチャに `Characters` を追加。
   `ScriptableCharacterCatalog` は実装済み)。アセットカタログが無い場合、ウィンドウはキャプチャを表示し、
   検証はアセットとキャプチャの和集合を正とする
@@ -41,6 +48,10 @@
   `Lifetime.Transient` は Router と runner が注入点ごとに分裂して進行と `CaptureState` が無言で食い違うため受け付けない
 
 ### Changed
+- **破壊的**: `IAudioChannel.EnumerateKeys()` / `ICharacterCatalog.EnumerateEntries()` の default 実装 (空) を削除。
+  実装忘れが「再生しても一覧に出ない」という沈黙の空目録になるため、明示実装をコンパイルエラーで要求する。
+  移行: 一覧を提供しない実装にも `=> System.Array.Empty<...>()` を明示的に書く。
+  `IPortraitChannel.EnumerateLayouts()` の default (標準 5 構図) は従来どおり。
 - `Novel/Project Reference` ウィンドウを見やすくした。折りたたみ縦積みから種別ごとのタブ (キャラ / 画像 / 構図 / BGM・SE) へ変更。
   画像キーと既定立ち絵はサムネイル付き (サイズはツールバーのスライダーで変更・行クリックでアセットを ping)、
   構図はスロット配置のミニ図付き、音キーは ▶ でその場で試聴できる (`AudioKeyInfo.Asset` のキャプチャ参照が
@@ -99,6 +110,11 @@
 - `NovelDisplayText.Build` を公開。自前 View が `TextRevealEngine` の可視文字数と整合する TMP 文字列構築を再実装せずに済む。
 
 ### Fixed
+- プロジェクトリファレンスのキャプチャが、novel 未配線スコープのビルド (タイトル画面のシーンや EditMode テスト等)
+  で空に上書きされ、音キー・キャラ情報がすぐ消えていた問題。エディタ側ストアが種別ごとにマージするようにした
+  (空の種別は「列挙未提供」として以前の実データを保持。Edit Mode のコンテナビルドは採用しない)。
+  併せて試聴用の AudioClip は常に GUID からアセット実体を引くようにし、再生終了でランタイム参照が
+  破棄されても試聴が生き続けるようにした。
 - `RegisterNovelKit` が PlayerLoop 停止中に `async UniTask` を同期待ちしてデッドロックしていた問題。
 - 親文字なし / 未クローズの `<ruby=よみ>` でよみが表示から脱落していた問題。
 

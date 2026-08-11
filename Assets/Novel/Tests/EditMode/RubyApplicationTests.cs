@@ -46,6 +46,8 @@ namespace Novel.Tests
                 entry = default;
                 return false;
             }
+
+            public IEnumerable<CharacterKeyInfo> EnumerateEntries() => System.Array.Empty<CharacterKeyInfo>();
         }
 
         private static SayCommand Say(string text) => new() { SpeakerId = "", Text = text };

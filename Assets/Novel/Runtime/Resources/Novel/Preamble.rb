@@ -70,6 +70,11 @@ def stage(layout_id, cast = nil)
   cmd :stage, layout_id: layout_id.to_s, cast_pairs: pairs
 end
 
+# カタログに載せない単発キャラをこのシナリオ限りの話者として宣言する (検証の「未定義のキャラ id」から外れる)。例: speaker '？？？' / speaker :claude, 'クロード'
+def speaker(id, display_name = nil)
+  cmd :speaker, id: id.to_s, display_name: display_name.to_s
+end
+
 # 指定キャラを場面から退場 (cast から外し、 該当 slot を非表示に)。 退場アニメは View 実装側で。
 # Ruby 本体の Kernel#exit と被るので exit_chara にしている。
 def exit_chara(character)

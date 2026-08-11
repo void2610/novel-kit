@@ -42,6 +42,18 @@ namespace Novel.Tests
         }
 
         [Test]
+        public void speaker宣言の表示名を抽出する()
+        {
+            // 最後の位置リテラルが表示名 (1 引数の文字列形は id 自体が表示名を兼ねる)。symbol id は対象外
+            var texts = ScanTexts(string.Join("\n",
+                "speaker '？？？'",
+                "speaker :claude, 'クロード'",
+                "speaker 'mystery', 'ミステリー'",
+                "speaker :nameless"));
+            CollectionAssert.AreEqual(new[] { "？？？", "クロード", "ミステリー" }, texts);
+        }
+
+        [Test]
         public void say単引数はナレーション形として本文を抽出する()
         {
             CollectionAssert.AreEqual(new[] { "ナレーション" }, ScanTexts("say \"ナレーション\""));

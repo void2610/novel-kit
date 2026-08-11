@@ -94,6 +94,13 @@ namespace Novel.Editor.Localization
                             if (literal.Kwarg == null)
                                 Add(result, literal, lineNumber);
                         break;
+                    case "speaker":
+                        // 単発話者宣言 (speaker '？？？' / speaker :id, '表示名')。最後の位置リテラルが
+                        // 表示名で、1 引数の文字列形は id 自体が表示名を兼ねる。表示名は ITextResolver を通る
+                        var speakerPositional = literals.FindAll(l => l.Kwarg == null);
+                        if (speakerPositional.Count > 0)
+                            Add(result, speakerPositional[speakerPositional.Count - 1], lineNumber);
+                        break;
                     case "cmd":
                         break;   // ライブラリ配管（preamble 内部）は対象外
                     default:
