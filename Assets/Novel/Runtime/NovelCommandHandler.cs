@@ -32,10 +32,6 @@ namespace Novel.Runtime
         private readonly Func<string, string?> _variableLookup;
         private readonly Action<string> _onMissingVariable;
 
-        // speaker で宣言された単発キャラの id → 表示名 (カタログに載せないキャラの受け皿)。
-        // 「そのシナリオ限り」の宣言なので、再生ごとに runner が ResetScenarioState() で捨てる
-        private readonly Dictionary<string, string> _declaredSpeakers = new();
-
         public NovelCommandHandler(INovelView view, IStateStore state, ITextResolver text, ICharacterCatalog catalog,
             IPortraitDirector? portraitDirector = null, IBackgroundChannel? background = null, IStillChannel? still = null,
             IAudioChannel? audio = null,
@@ -68,10 +64,6 @@ namespace Novel.Runtime
                         $"[Novel] 未定義のテキスト変数 %{{{name}}} をそのまま表示します。flag/val の設定漏れか、ITextVariableProvider の未登録を確認してください。");
             };
         }
-
-        // 1 シナリオ分だけ有効な状態を捨てる (runner が PlayAsync の頭で呼ぶ)。
-        // 宣言を持ち越すと、前に再生したシナリオの表示名が別シナリオへ漏れて再生順で表示が変わる
-        public void ResetScenarioState() => _declaredSpeakers.Clear();
 
         public async UniTask On(SayCommand cmd, CancellationToken ct)
         {
@@ -177,13 +169,6 @@ namespace Novel.Runtime
             await _portraitDirector.StageAsync(new PortraitLayout(cmd.LayoutId), cast, ct);
         }
 
-        public UniTask On(SpeakerCommand cmd, CancellationToken ct)
-        {
-            if (!string.IsNullOrEmpty(cmd.Id))
-                _declaredSpeakers[cmd.Id] = string.IsNullOrEmpty(cmd.DisplayName) ? cmd.Id : cmd.DisplayName;
-            return UniTask.CompletedTask;
-        }
-
         public async UniTask On(ExitCommand cmd, CancellationToken ct)
         {
             if (_portraitDirector != null) await _portraitDirector.ExitAsync(cmd.Character, ct);
@@ -278,7 +263,6 @@ namespace Novel.Runtime
             if (string.IsNullOrEmpty(cmd.SpeakerId)) return null;
             if (cmd.DisplayAs is { } overrideName) return overrideName;
             if (_catalog.TryGet(cmd.SpeakerId, out var entry)) return entry.DisplayName;
-            if (_declaredSpeakers.TryGetValue(cmd.SpeakerId, out var declared)) return declared;
             return cmd.SpeakerId;
         }
     }

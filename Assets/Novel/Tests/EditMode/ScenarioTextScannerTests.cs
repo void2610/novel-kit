@@ -41,16 +41,19 @@ namespace Novel.Tests
             }, texts);
         }
 
+        // guest: true はカタログ外の単発キャラ。未登録 id はそのまま表示名として画面に出るため、
+        // 本文だけでなく話者リテラルも翻訳対象になる
         [Test]
-        public void speaker宣言の表示名を抽出する()
+        public void guest指定のsayは話者名も抽出する()
         {
-            // 最後の位置リテラルが表示名 (1 引数の文字列形は id 自体が表示名を兼ねる)。symbol id は対象外
-            var texts = ScanTexts(string.Join("\n",
-                "speaker '？？？'",
-                "speaker :claude, 'クロード'",
-                "speaker 'mystery', 'ミステリー'",
-                "speaker :nameless"));
-            CollectionAssert.AreEqual(new[] { "？？？", "クロード", "ミステリー" }, texts);
+            CollectionAssert.AreEqual(new[] { "ラー……テイラー……", "？？？" },
+                ScanTexts("say '？？？', 'ラー……テイラー……', guest: true"));
+            // guest 無しの話者はカタログ id なので抽出しない
+            CollectionAssert.AreEqual(new[] { "こんにちは" },
+                ScanTexts("say 'alice', 'こんにちは'"));
+            // guest: false / 変数指定は「付いていない」扱い
+            CollectionAssert.AreEqual(new[] { "こんにちは" },
+                ScanTexts("say 'alice', 'こんにちは', guest: false"));
         }
 
         [Test]

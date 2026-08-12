@@ -22,7 +22,6 @@ namespace Novel.Runtime
         private readonly ISpriteLoader? _sprites;
         private readonly MRubyState _state;
         private readonly MRubyStateStore _store;
-        private readonly NovelCommandHandler _handler;
         private readonly NovelPlaybackProgress _progress = new();
         private readonly List<IDisposable> _subscriptions;
         private bool _preambleLoaded;
@@ -61,7 +60,6 @@ namespace Novel.Runtime
                 config.AddCommand<PortraitCommand>("portrait");
                 config.AddCommand<StageCommand>("stage");
                 config.AddCommand<ExitCommand>("exit");
-                config.AddCommand<SpeakerCommand>("speaker");
                 config.AddCommand<ClearStageCommand>("clear_stage");
                 config.AddCommand<BackgroundCommand>("bg");
                 config.AddCommand<StillCommand>("still");
@@ -78,12 +76,12 @@ namespace Novel.Runtime
                 foreach (var module in modules) module.RegisterVocabulary(config);
             });
 
-            _handler = new NovelCommandHandler(view, _store, text, catalog,
+            var handler = new NovelCommandHandler(view, _store, text, catalog,
                 portraitDirector: portraitDirector, background: background, still: still, audio: audio,
                 worldEffectSink: worldEffectSink, backlog: backlog, centerImage: centerImage,
                 progress: _progress, sprites: sprites, ruby: ruby, textVariables: textVariables);
             _sprites = sprites;
-            _subscriptions = new List<IDisposable> { _handler.MapTo(_router) };
+            _subscriptions = new List<IDisposable> { handler.MapTo(_router) };
             // 独自コマンドハンドラを同じノベル専用 Router へ写像（購読は Dispose でまとめて解除）
             foreach (var module in modules) _subscriptions.Add(module.MapHandlers(_router));
         }
@@ -145,8 +143,6 @@ namespace Novel.Runtime
             try
             {
                 _progress.Reset(resume.SayNumber);
-                // speaker 宣言などシナリオ限りの状態を捨てる (前シナリオの表示名を持ち越さない)
-                _handler.ResetScenarioState();
                 await EnsurePreambleLoadedAsync(ct);
 
                 // 状態の復元/保存は runner が駆動しない。game が PlayAsync の外で RestoreState/CaptureState を

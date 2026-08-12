@@ -72,7 +72,7 @@ namespace Novel.Editor.Localization
                 if (method == null) continue;
                 var isChara = charaLookup.Contains(method);
                 // cmd 直呼び (ライブラリ配管) と対象外メソッド (bg/se/flag 等) は触らない
-                if (!isChara && method is not ("say" or "narration" or "choose" or "speaker")) continue;
+                if (!isChara && method is not ("say" or "narration" or "choose")) continue;
 
                 // 位置は「実引数の並び」で数える。文字列リテラルだけを数えると、シンボル話者
                 // (say :carol, "やあ", "carol/wave") で本文の位置がずれて立ち絵キーを拾ってしまう
@@ -88,22 +88,16 @@ namespace Novel.Editor.Localization
                         // say "text"（ナレーション形）/ say speaker, "text"(, "portrait_key")。
                         // 位置引数の 2 つ目が本文（1 つしか無ければそれが本文）。話者 id は抽出しない
                         AddPositional(result, positional, positional.Count >= 2 ? 1 : 0, lineNumber);
+                        // guest: true はカタログ外の単発キャラ。未登録 id は**そのまま表示名になる**
+                        // （ITextResolver を通る）ため、話者リテラルも抽出対象にする
+                        if (positional.Count >= 2 && HasTrueKwarg(args, "guest"))
+                            AddPositional(result, positional, 0, lineNumber);
                         break;
                     case "choose":
                         // choose(["A", "B"], key: :x) — 位置引数（配列）内の全リテラルが選択肢
                         foreach (var arg in positional)
                             foreach (var literal in arg.Literals)
                                 Add(result, literal, lineNumber);
-                        break;
-                    case "speaker":
-                        // 単発話者宣言 (speaker '？？？' / speaker :id, '表示名')。最後の位置リテラルが
-                        // 表示名で、1 引数の文字列形は id 自体が表示名を兼ねる。表示名は ITextResolver を通る
-                        for (var i = positional.Count - 1; i >= 0; i--)
-                        {
-                            if (positional[i].Value is not { } speakerName) continue;
-                            Add(result, speakerName, lineNumber);
-                            break;
-                        }
                         break;
                     default:
                         // chara 糖衣: alice "text"(, as: "…")
@@ -129,6 +123,10 @@ namespace Novel.Editor.Localization
             }
             if (literal.Text.Length > 0) result.Texts.Add(new ScannedText(literal.Text, lineNumber));
         }
+
+        // `name: true` 形の kwarg が付いているか（値が false / 変数のときは付いていない扱い）
+        private static bool HasTrueKwarg(List<Argument> args, string name)
+            => args.Exists(a => a.Kwarg == name && a.RawValue.Trim() == "true");
 
         // 指定位置の引数が文字列リテラルそのものなら抽出する（変数・メソッド呼び出しは対象外）
         private static void AddPositional(ScanResult result, List<Argument> positional, int index, int lineNumber)
@@ -265,11 +263,13 @@ namespace Novel.Editor.Localization
             public readonly string? Kwarg;         // kwarg 名 (display_as: 等)。位置引数は null
             public readonly List<Literal> Literals;   // 引数内に現れた全リテラル (配列リテラル用)
             public readonly Literal? Value;        // 引数そのものが文字列リテラルならその値
-            public Argument(string? kwarg, List<Literal> literals, Literal? value)
+            public readonly string RawValue;       // 値部分の生テキスト (true/false 等の判定用)
+            public Argument(string? kwarg, List<Literal> literals, Literal? value, string rawValue)
             {
                 Kwarg = kwarg;
                 Literals = literals;
                 Value = value;
+                RawValue = rawValue;
             }
         }
 
@@ -368,7 +368,7 @@ namespace Novel.Editor.Localization
                 if (j == i) value = literal;   // 引数の先頭が文字列 = 引数はリテラルそのもの
                 j = next;
             }
-            return new Argument(kwarg, literals, value);
+            return new Argument(kwarg, literals, value, segment.Substring(i));
         }
 
         // 二重引用符リテラルのエスケープ 1 つを解釈して sb へ足す。i はエスケープ文字 (\ の次) を指し、

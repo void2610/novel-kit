@@ -11,12 +11,12 @@ def state
 end
 
 # 第3引数 portrait_key を渡すと、この行と同時に立ち絵を切り替えられる（表示名 display_as と立ち絵を独立制御）。
-# 例: say 'kii', '正体は伏せたまま', 'kii/default', display_as: '？？？'
-def say(speaker, text = nil, portrait_key = nil, display_as: nil)
+# 例: say 'kii', '正体は伏せたまま', 'kii/default', display_as: '？？？' / say '？？？', 'ラー……', guest: true (カタログ外の単発キャラの明示)
+def say(speaker, text = nil, portrait_key = nil, display_as: nil, guest: false)
   if text.nil?
     cmd :say, speaker_id: '', text: speaker
   else
-    cmd :say, speaker_id: speaker.to_s, display_as: display_as, text: text, portrait_key: portrait_key.to_s
+    cmd :say, speaker_id: speaker.to_s, display_as: display_as, text: text, portrait_key: portrait_key.to_s, guest: guest
   end
 end
 
@@ -68,11 +68,6 @@ def stage(layout_id, cast = nil)
     cast.each_with_index { |k, i| pairs << k.to_s; pairs << i.to_s }
   end
   cmd :stage, layout_id: layout_id.to_s, cast_pairs: pairs
-end
-
-# カタログに載せない単発キャラをこのシナリオ限りの話者として宣言する (検証の「未定義のキャラ id」から外れる)。例: speaker '？？？' / speaker :claude, 'クロード'
-def speaker(id, display_name = nil)
-  cmd :speaker, id: id.to_s, display_name: display_name.to_s
 end
 
 # 指定キャラを場面から退場 (cast から外し、 該当 slot を非表示に)。 退場アニメは View 実装側で。

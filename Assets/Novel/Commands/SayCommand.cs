@@ -12,5 +12,6 @@ namespace Novel.Commands
         public string? DisplayAs { get; init; }   // 任意: 表示名の上書き（名前リビール）
         public string Text { get; init; }         // インラインタグ生テキスト（Runtime で字句解析）
         public string? PortraitKey { get; init; } // 任意: この行と同時に出す立ち絵 key（話者と独立指定）。空/null は未指定
+        public bool Guest { get; init; }          // カタログに載せない単発キャラであることの明示（検証の未定義キャラ判定から外す）
     }
 }
