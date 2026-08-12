@@ -6,11 +6,31 @@
 ## [Unreleased]
 
 ### Added
+- 多言語対応 (opt-in・原文キー + 追従抽出。localization-unity-package ADR)。`com.unity.localization` 導入時のみ
+  有効になる `Novel.Localization` / `Novel.Localization.Editor` を追加
+  - `LocalizedTableTextResolver`: 原文 (タグ込み) をキーに String Table を引く `ITextResolver` 実装。
+    未ヒット/未初期化/原文ロケールは原文フォールバック。`InitializeAsync` で preload・ロケール切替に自動追従・
+    抽出漏れ収集用の `TextMissed` イベント
+  - `Novel/Localization/Extract Strings...`: `.rb` の差分抽出。原文変更を LCS + 類似度で検出し、KeyId を保った
+    キーリネームで訳を追従 (タグのみ=訳保持 / 高類似=訳保持+fuzzy / リライト=旧訳退避・未訳化)。
+    共有原文は分離し、消滅キーは削除せず deprecated マーク。適用前に移行レポートで人間が確認する
+  - `MissingTextCollector` + `Novel/Localization/Report Missing Texts`: dev プレイでのテーブルミス回収
+  - `.rb` に出ないテキストも抽出対象: キャラカタログの表示名 (`ScriptableCharacterCatalog` アセット +
+    DI ビルド時キャプチャの和集合) を疑似ファイルとして同じ追跡に載せる (キャラ改名で訳が追従する)
+
+- テキスト変数 `%{key}` (遅延展開)。`narration "所持金は%{gold}Gだ"` のようにテンプレートのまま書き、
+  表示時に `IStateStore` (`flag`/`val` 値) / game 供給 `ITextVariableProvider` (主人公名等・後勝ち登録) から
+  差し込む。Ruby 補間 `#{}` と違い、多言語キー照合と既読 ID がテンプレート基準で成立する
+  (`#{}` は値が変わるたび既読が割れる問題もあった)。未定義変数はプレースホルダ温存 + dev 警告。
+  エスケープは `%%{`。ローカライズ非依存 (単言語でも使用可)
 - `say` に `guest: true` を追加 (例: `say '？？？', 'ラー……', guest: true`)。カタログに載せない単発キャラを
   その行で明示でき、Validate Scenarios の「未定義のキャラ id」から外れる
-  (未明示・未登録の id は従来どおり誤記として警告)
+  (未明示・未登録の id は従来どおり誤記として警告)。
+  この形の話者 id は未登録のまま表示名として画面に出るため、ローカライズ抽出 (`Extract Strings`) の対象になる
 
 ### Changed
+- 既読 ID (スキップ判定) を resolve 後テキストから **resolve 前の原文**基準へ変更。ロケールを切り替えても
+  既読が分断しない。既定の恒等 resolver では従来と同一ハッシュのためセーブ互換は不変
 - Validate Scenarios: 未登録コマンドで停止する代わりに、NoMethodError のコマンド名を no-op stub として
   定義し直して流し直し、以降の行も検証を続けるようにした。読み飛ばした名前は
   「game 独自コマンドなら正常。誤記でないか確認」として警告に列挙する
