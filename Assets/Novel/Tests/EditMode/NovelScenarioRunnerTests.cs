@@ -126,6 +126,14 @@ namespace Novel.Tests
             public IEnumerable<CharacterKeyInfo> EnumerateEntries() => System.Array.Empty<CharacterKeyInfo>();
         }
 
+        // 多言語 resolver の代理: 原文に接頭辞を付けて「別言語のテキスト」を模す
+        private sealed class PrefixTextResolver : ITextResolver
+        {
+            private readonly string _prefix;
+            public PrefixTextResolver(string prefix) => _prefix = prefix;
+            public string Resolve(string raw) => _prefix + raw;
+        }
+
         private sealed class FakeErrorHandler : INovelErrorHandler
         {
             public bool Called;
@@ -414,6 +422,51 @@ namespace Novel.Tests
 
             Assert.AreEqual(NovelResult.Completed, result);
             Assert.AreEqual(1, runner.CaptureState().Values["picked"]);   // 復元値が再選択で潰れていない
+        });
+
+        // 既読 ID は resolve 前の原文基準: 言語 (resolver) を切り替えても既読/スキップが分断しない
+        // (localization ADR の先行コア変更。恒等 resolver では従来ハッシュと同一なのでセーブ互換も不変)
+        [UnityTest]
+        public IEnumerator 既読IDは原文基準でresolver切替後も既読が保たれる() => UniTask.ToCoroutine(async () =>
+        {
+            // 日本語 (恒等) で一度読む
+            var jpRunner = NewRunner(new FakeView());
+            var jpResult = await jpRunner.PlayAsync("test_hello", CancellationToken.None);
+            Assert.AreEqual(NovelResult.Completed, jpResult);
+            var snapshot = jpRunner.CaptureState();
+
+            // 別言語 resolver へ差し替えて同じシナリオを再生（言語切替 + continue 相当）
+            var view = new FakeView();
+            var enRunner = new NovelScenarioRunner(
+                new ScenarioSource(new ResourcesTextAssetLoader()),
+                new Router(),
+                view,
+                new PrefixTextResolver("EN:"),
+                new EmptyCatalog(),
+                preambleSources: new IPreambleSource[] { new PreambleSource(new ResourcesTextAssetLoader()) });
+            enRunner.RestoreState(snapshot);
+            var enResult = await enRunner.PlayAsync("test_hello", CancellationToken.None);
+
+            Assert.AreEqual(NovelResult.Completed, enResult);
+            Assert.IsTrue(view.Lines[0].IsAlreadyRead);            // 言語が変わっても既読は保持
+            Assert.AreEqual("EN:こんにちは", view.Lines[0].Text);       // 表示は差し替え後のテキスト
+            Assert.AreEqual("EN:こんにちは", view.Lines[0].PlainText);  // 平文は表示言語基準のまま
+        });
+
+        // テキスト変数 %{key} は resolve 後に IStateStore の値で展開され、未定義はそのまま残る
+        // (Ruby 補間 #{} と違いテンプレートが C# に届くため、多言語キー照合・既読 ID と両立する)
+        [UnityTest]
+        public IEnumerator テキスト変数が状態値で展開され未定義は温存される() => UniTask.ToCoroutine(async () =>
+        {
+            var view = new FakeView();
+            var runner = NewRunner(view);
+
+            var result = await runner.PlayAsync("test_variables", CancellationToken.None);
+
+            Assert.AreEqual(NovelResult.Completed, result);
+            Assert.AreEqual("所持金は500Gだ", view.Lines[0].Text);         // flag :gold の値が差し込まれる
+            Assert.AreEqual("所持金は500Gだ", view.Lines[0].PlainText);    // 平文も展開後基準
+            Assert.AreEqual("未定義は%{unknown}のまま", view.Lines[1].Text);  // 未定義は可視のまま (黙って消さない)
         });
 
         // say の表示ごとに IBacklog へ話者・本文（rich）が記録されることを検証

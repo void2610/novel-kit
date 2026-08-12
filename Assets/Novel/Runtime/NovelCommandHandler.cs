@@ -69,10 +69,13 @@ namespace Novel.Runtime
             var resolved = _text.Resolve(cmd.Text);
             var displayName = ResolveDisplayName(cmd);
             if (displayName != null) displayName = _text.Resolve(displayName);   // 表示名も多言語 seam を通す（localization）
-            // 既読 ID はタグを除いた素テキストで算出（タグ有無で既読が割れないように）
-            var plain = NovelTagLexer.ToPlainText(resolved);
-            var textId = StableId.Of(cmd.SpeakerId, plain);
+            // 既読 ID は resolve 前の原文から算出する (ロケールを切り替えても既読/スキップが分断しないように)。
+            // タグは除いて算出 (タグ有無で既読が割れないように)。恒等 resolver では従来と同一ハッシュ
+            var rawPlain = NovelTagLexer.ToPlainText(cmd.Text);
+            var textId = StableId.Of(cmd.SpeakerId, rawPlain);
             var alreadyRead = _state.IsRead(textId);
+            // View へ渡す平文は表示言語 (resolve 後) 基準。恒等 resolver は同一参照を返すため再計算を省く
+            var plain = ReferenceEquals(resolved, cmd.Text) ? rawPlain : NovelTagLexer.ToPlainText(resolved);
 
             // バックログは rich のまま記録（link/color を残し再表示・キーワード収集できるように。Clear 契機は game 所有）
             _backlog?.Add(displayName ?? "", resolved);
