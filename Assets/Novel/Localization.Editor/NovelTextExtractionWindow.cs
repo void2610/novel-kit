@@ -78,7 +78,11 @@ namespace Novel.Localization.Editor
             EditorGUILayout.Space();
             // 走査 0 件なのに消滅が出るのは、ほぼスキャンルートの指定ミス。適用すると全エントリが
             // deprecated + 追跡メタデータ消去になるため、確認してからでないと押せなくする
-            var looksLikeMisconfiguration = !_plan.AllCurrentTexts.Any() && _plan.Deprecations.Count > 0;
+            // カタログ表示名は .rb 走査が 0 件でも載るため、シナリオ由来が 0 件かどうかで判定する
+            var scenarioTextCount = _plan.CurrentPerFile
+                .Where(pair => pair.Key != CatalogTextCollector.SourceKey)
+                .Sum(pair => pair.Value.Count);
+            var looksLikeMisconfiguration = scenarioTextCount == 0 && _plan.Deprecations.Count > 0;
             if (looksLikeMisconfiguration)
             {
                 EditorGUILayout.HelpBox(
@@ -115,6 +119,8 @@ namespace Novel.Localization.Editor
             var collection = GetCollection();
             if (collection == null) return;
             var plan = ExtractionPlanner.Scan(Application.dataPath, _scanRoot);
+            // .rb に出ないが画面に出るテキスト (キャラカタログの表示名) も同じ計画に載せる
+            CatalogTextCollector.AddTo(plan);
             ExtractionPlanner.BuildDiff(plan, new UnityLocalizationTableEditor(collection));
             _plan = plan;
             _confirmedRiskyApply = false;

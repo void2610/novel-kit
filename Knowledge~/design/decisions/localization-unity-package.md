@@ -194,6 +194,9 @@ dev ビルドで resolver がテーブルミスした原文を記録し、レポ
 | 対象 | 扱い |
 |---|---|
 | say 本文・話者表示名・choose 選択肢 | 実装済み seam のまま原文キーで解決 |
+| カタログの表示名（`.rb` に出ない） | ランタイムは `ITextResolver` を通る。**抽出も対象**（`CatalogTextCollector` が SO + DI キャプチャの和集合を疑似ファイル `<character-catalog>` として計画に載せ、改名は通常のリネーム追従になる） |
+| `guest: true` の話者名 | 未登録 id がそのまま表示名になるため `.rb` から抽出する |
+| `ITextVariableProvider` の値（主人公名等） | game 供給。言語別の値を返すのは game 責務（ライブラリは展開のみ） |
 | 既読/スキップ | 原文基準の ID でロケール不変（上記 4） |
 | バックログ | 表示時ロケールで確定・遡及再翻訳しない（受容） |
 | 辞書ルビ（`IRubyDictionary`） | JP 専用スタイリング。非 JP ロケールでは game が空辞書/差し替えで無効化（resolver と独立） |

@@ -25,6 +25,26 @@ namespace Novel.Tests
             table.AddSource(key, file, occurrence);
         }
 
+        // .rb に出ないテキスト (カタログ表示名) も疑似ファイルとして同じ追跡に乗る。
+        // キャラの改名は「リネーム」として検出され、当てた訳が追従する
+        [Test]
+        public void カタログ表示名も追跡対象になりキャラ改名で訳が追従する()
+        {
+            const string catalogSource = CatalogTextCollector.SourceKey;
+            var table = new FakeTextTable("en");
+            Track(table, "アリス", catalogSource, 0);
+            table.SetValue("アリス", "en", "Alice");
+            var originalId = table.IdOf("アリス");
+
+            var plan = PlanWith((catalogSource, new[] { "アリスさん" }));   // カタログ側で改名
+            ExtractionPlanner.BuildDiff(plan, table);
+            ExtractionApplier.Apply(plan, table);
+
+            Assert.AreEqual(originalId, table.IdOf("アリスさん"));
+            Assert.AreEqual("Alice", table.GetValue("アリスさん", "en"));
+            Assert.AreEqual("fuzzy", table.FuzzyOf("アリスさん")?.Reason);
+        }
+
         [Test]
         public void 誤字修正はリネームとして計画され消滅には落ちない()
         {

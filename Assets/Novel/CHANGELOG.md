@@ -15,6 +15,8 @@
     キーリネームで訳を追従 (タグのみ=訳保持 / 高類似=訳保持+fuzzy / リライト=旧訳退避・未訳化)。
     共有原文は分離し、消滅キーは削除せず deprecated マーク。適用前に移行レポートで人間が確認する
   - `MissingTextCollector` + `Novel/Localization/Report Missing Texts`: dev プレイでのテーブルミス回収
+  - `.rb` に出ないテキストも抽出対象: キャラカタログの表示名 (`ScriptableCharacterCatalog` アセット +
+    DI ビルド時キャプチャの和集合) を疑似ファイルとして同じ追跡に載せる (キャラ改名で訳が追従する)
 
 - テキスト変数 `%{key}` (遅延展開)。`narration "所持金は%{gold}Gだ"` のようにテンプレートのまま書き、
   表示時に `IStateStore` (`flag`/`val` 値) / game 供給 `ITextVariableProvider` (主人公名等・後勝ち登録) から
