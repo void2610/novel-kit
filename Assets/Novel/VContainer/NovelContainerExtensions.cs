@@ -44,6 +44,9 @@ namespace Novel.Integration
             builder.Register<INovelErrorHandler, NullErrorHandler>(lifetime);
             // ルビ辞書の no-op 既定 (本文をそのまま返す)。Resources ベース実装は View ヘルパが上書きする
             builder.Register<IRubyDictionary, NullRubyDictionary>(lifetime);
+            // テキスト変数 %{key} の game 固有値供給の no-op 既定 (常に IStateStore の変数値へフォールバック)。
+            // 主人公名などを差し込む game は ITextVariableProvider を後勝ち登録する
+            builder.Register<ITextVariableProvider, NullTextVariableProvider>(lifetime);
             // RingBufferBacklog(int maxLines=200) の既定引数を VContainer は解決できない (int 未登録で Build が落ちる)。
             // ファクトリ登録で既定容量を使う (容量を変えたい game は後勝ちで登録すればよい)。
             builder.Register<IBacklog>(_ => new RingBufferBacklog(), lifetime);
