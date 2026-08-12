@@ -3,7 +3,7 @@ type: Design
 title: 公開 API 表面（凍結）
 description: 確定 15 ADR を統合した novel-kit の公開表面。ランナー / コマンド / View 抽象 / game 供給サービスのシグネチャを 1 箇所に集約する。
 tags: [api, surface, freeze, contract, runner, view]
-timestamp: 2026-06-15T00:00:00Z
+timestamp: 2026-08-09T00:00:00Z
 status: 確定
 ---
 
@@ -166,6 +166,14 @@ public interface ITextResolver {
 ```
 
 - 適用範囲は `say` 本文に加え、話者の表示名と `choose` 選択肢（多言語化 seam を提示テキスト全体で揃える）。
+- 既読 ID（スキップ判定）は **resolve 前の原文**から算出する（ロケール切替で既読が分断しない。
+  恒等 resolver では従来と同一ハッシュ）。`NovelLine.PlainText` は表示言語（resolve 後）基準のまま。
+- 多言語実装は opt-in の `Novel.Localization`（`LocalizedTableTextResolver`: 原文キーで String Table を引き
+  未ヒットは原文フォールバック・`InitializeAsync` preload 契約・`TextMissed` dev 収集）。
+  [多言語化 ADR](/design/decisions/localization-unity-package.md)。
+- テキスト変数 `%{key}`: resolve **後**に `NovelTextVariables.Expand` が say 本文・表示名・choose 選択肢へ
+  値を差し込む。供給は game の `ITextVariableProvider`（no-op 既定・後勝ち登録）優先 → `IStateStore` 変数値。
+  未定義はプレースホルダ温存 + dev 警告。既読 ID はテンプレート基準（値が変わっても既読が割れない）。
 
 # 5. ルーター所有権
 
