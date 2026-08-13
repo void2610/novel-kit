@@ -48,7 +48,7 @@ https://github.com/void2610/novel-kit.git?path=Assets/Novel
 | `Novel.View.VContainer` | 参考 View 込みの DI 統合（`RegisterNovelKit` = Core + Resources ローダ + 警告ファセット + ログ） |
 | `Novel.Assets` | スプライトのロード抽象と表示ファセット（実体は `Assets/Novel/Presentation/`）。`ISpriteLoader` / Resources 実装 / `IPortraitChannel`・`IBackgroundChannel`・`IStillChannel`・`ICenterImageChannel`・`PortraitLayout`。Runtime から一方向に参照される末端で、game の View は VitalRouter/MRuby を引かずにこれだけ参照できる |
 | `Novel.Addressables` | `ITextAssetLoader` / `ISpriteLoader` の Addressables 実装。`com.unity.addressables` 導入時のみコンパイルされる（versionDefines ゲート） |
-| `Novel.Editor` | シナリオ検証メニュー `Novel/Validate Scenarios`（`ScenarioValidator`・全 `.rb` の `.mrb` 生成有無を検査）。`.rb`→`.mrb` のコンパイル自体は mrubycs-compiler パッケージが担当 |
+| `Novel.Editor` | シナリオ検証メニュー `Novel/Validate Scenarios`（`ScenarioValidator`・全 `.rb` の `.mrb` 生成有無を検査）。構図プレビュー `Novel/Stage Preview`（後述）。`.rb`→`.mrb` のコンパイル自体は mrubycs-compiler パッケージが担当 |
 
 ## 使い方（VContainer）
 
@@ -218,6 +218,31 @@ CG 回収の記録やシナリオ外での背景維持といった拡張は game
 
 `spriteMode=Multiple` のアセットは扱いが実装で非対称（Resources 実装は `LoadAll` の先頭スライスを返すが順序は保証されず、
 Addressables 実装はスライス単位のアドレス指定が要る場合がある）。単一スプライトでの利用を推奨する。
+
+## 構図プレビュー (Novel/Stage Preview)
+
+立ち絵の slot 座標は再生して初めて適用されるため、調整のたびに Play を往復することになる。
+`Novel/Stage Preview` は開いているシーンの `IPortraitChannel` を編集モードのまま呼び、
+実物のスプライトで構図を確認できるようにする。
+
+編集モードでは PlayerLoop が回らないため、**`IPortraitChannel` の実装は再生中でないとき
+アニメーションを待たず即座に反映すること**。待つ実装は永久に完了せず、窓が警告を出す。
+
+```csharp
+public async UniTask ShowAsync(int slotIndex, ResolvedSprite portrait, CancellationToken ct)
+{
+    if (!Application.isPlaying)
+    {
+        // 編集モードではモーションが進まないので、待たずに最終状態へ飛ばす
+        ApplyImmediate(slotIndex, portrait.Sprite);
+        return;
+    }
+    await FadeInAsync(slotIndex, portrait.Sprite, ct);
+}
+```
+
+`EnumerateLayouts()` を既定のままにしていると標準 5 構図が並ぶ。実際に定義した構図だけを返すと、
+窓の選択肢が実態と一致する。
 
 ## 既知の fix-later
 
