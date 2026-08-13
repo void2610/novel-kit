@@ -270,7 +270,8 @@ async UniTask INovelView.ShowMessageAsync(NovelLine line, CancellationToken ct)
 
 1. `Window > Asset Management > Localization Tables` で String Table Collection（例 `NovelText`）と
    ロケールを作成する。
-2. `Novel/Localization/Extract Strings...` で `.rb` から原文を抽出してテーブルへ登録する
+2. `Novel/Localization/Extract Strings...`（エディタ抽出ツールは後続 PR で提供予定）で `.rb` から
+   原文を抽出してテーブルへ登録する
    （2 回目以降は差分抽出: 原文の誤字修正やタグ変更は訳を保持したまま追従し、リネーム内容は
    適用前にレポートで確認できる。消えた原文も訳は削除されない）。
 3. resolver を後勝ち登録で差し替え、再生前に初期化する。
@@ -296,14 +297,18 @@ await resolver.InitializeAsync(ct);
   - ゲーム UI（セーブ画面やボタン等）はライブラリの管轄外です。
 - 既読/スキップは原文基準なので、言語を切り替えても既読状態は保たれます。
 - ロケール切替は次に表示される行から反映されます（表示中の行・バックログは遡って変わりません）。
+- 訳テーブルは選択中ロケールのものだけを引き、Unity Localization のフォールバックロケール連鎖
+  （pt-BR→pt 等）には現状対応していません。地域バリアントロケールを使う場合はそのロケール自身の
+  テーブルを用意してください（`sourceLocaleCode` の原文判定は地域バリアントも一致扱いです）。
 - 文中の変数は `%{gold}` 形式（テキスト変数）で書きます。テンプレートのまま翻訳テーブルのキーになり、
   訳の取得後に値が差し込まれるため、翻訳者は訳文中でプレースホルダを自由に動かせます。値は既定で
   `IStateStore`（`flag`/`val`）から取り、主人公名などゲーム固有値は `ITextVariableProvider` の
   後勝ち登録で供給します。Ruby の `#{}` 補間は焼き込みになるためローカライズできません
   （[シナリオライターズガイド 7 章](./scenario/07-pitfalls.md)）。
 - 糖衣の間接呼び等で静的抽出から漏れた行は、dev プレイで
-  `resolver.TextMissed += MissingTextCollector.Record;` と配線し
-  `Novel/Localization/Report Missing Texts` で回収できます。
+  `resolver.TextMissed += MissingTextCollector.Record;` と配線し `MissingTextCollector.Snapshot()` で
+  回収できます（エディタメニュー `Novel/Localization/Report Missing Texts` は後続 PR で提供予定）。
+  配線しない場合も、訳の付かない原文があると dev ビルドで一度だけ警告が出ます。
 
 ---
 
