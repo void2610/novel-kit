@@ -111,7 +111,7 @@ namespace Novel.Editor.Localization
             foreach (var c in added) if (!usedCurr.Contains(c)) diff.AddedCurrent.Add(c);
         }
 
-        // 完全一致行の LCS（DP）。戻り値は (prevIndex, currIndex) の昇順ペア
+        // 完全一致行の LCS（DP）。戻り値は (prevIndex, currIndex) の昇順ペア。メモリ O(n·m) は数千行/ファイルまでの前提
         private static List<(int Previous, int Current)> LongestCommonSubsequence(
             IReadOnlyList<string> previous, IReadOnlyList<string> current)
         {
