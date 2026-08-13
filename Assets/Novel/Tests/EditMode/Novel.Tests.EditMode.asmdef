@@ -12,7 +12,8 @@
         "VContainer",
         "UniTask",
         "Novel.Addressables",
-        "Novel.Assets"
+        "Novel.Assets",
+        "Novel.Localization"
     ],
     "includePlatforms": [
         "Editor"
@@ -30,6 +31,11 @@
             "name": "com.unity.addressables",
             "expression": "",
             "define": "NOVEL_ADDRESSABLES"
+        },
+        {
+            "name": "com.unity.localization",
+            "expression": "",
+            "define": "NOVEL_LOCALIZATION"
         }
     ],
     "noEngineReferences": false
