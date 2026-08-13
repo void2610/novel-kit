@@ -3,7 +3,7 @@ type: Decision
 title: 多言語化は原文キー + 追従抽出（opt-in・第一実装は Unity Localization）
 description: ITextResolver の seam に原文（日本語 raw テキスト）キーの訳テーブル解決を差し込む。同一性は安定 ID で持ち、原文変更は差分検出でキーリネームに変換して訳を追従させる。テーブルバックエンドは中立で、第一実装に Unity Localization を使う。
 tags: [decision, localization, i18n, unity-localization, text, asmdef]
-timestamp: 2026-08-09T00:00:00Z
+timestamp: 2026-08-13T00:00:00Z
 status: 確定
 ---
 
@@ -224,6 +224,11 @@ dev ビルドで resolver がテーブルミスした原文を記録し、レポ
   `sourceLocaleCode`（例 "ja"）一致中はテーブルを引かず常に原文（原文ロケールのテーブル整備を不要にする）。
   ロケール切替は event 購読で自動追従（切替直後〜再ロード完了は原文フォールバック）。
   抽出漏れの dev 収集は resolver の `TextMissed` イベント + `MissingTextCollector` で実装。
+- **DI 登録ヘルパの糖衣（2026-08-13・「実装時に確定」の決着）**: 専用ヘルパは**作らない**で確定。
+  `RegisterNovelKitCore` 既定の `IdentityTextResolver` を後勝ち 1 行
+  `builder.Register<ITextResolver>(...)` で上書きする素の登録で足りる（糖衣を挟むと lifetime 指定や
+  `InitializeAsync` の await 位置の説明が二重になる）。手順は resolver の doc コメントと
+  getting-started 6 章に記載。
 - **Phase 3**: 追跡エンジンは仕様どおりテーブル同居メタデータ（`NovelTextSourceMetadata`＝出現ごとに 1 つ）
   + LCS + タグ除去平文の類似度分類で実装。分類しきい値は fuzzy ≥ 0.55 / 対化 ≥ 0.25（`TrackedTextDiffer` 定数）。
   fuzzy/参考退避/deprecated は Unity Localization の Shared エントリメタデータ
