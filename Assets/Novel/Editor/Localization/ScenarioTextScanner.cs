@@ -66,7 +66,7 @@ namespace Novel.Editor.Localization
             var result = new ScanResult();
             var charaLookup = new HashSet<string>(charaSet);
 
-            foreach (var (line, lineNumber) in LogicalLines(source))
+            foreach (var (line, lineNumber) in LogicalLines(source, result.Issues))
             {
                 var method = ReadLeadingIdentifier(line, out var rest);
                 if (method == null) continue;
@@ -137,7 +137,7 @@ namespace Novel.Editor.Localization
 
         // ---- 行の論理結合（choose の複数行配列などの継続行を括弧バランスで繋ぐ） ----
 
-        private static IEnumerable<(string Line, int LineNumber)> LogicalLines(string source)
+        private static IEnumerable<(string Line, int LineNumber)> LogicalLines(string source, List<ScanIssue>? issues = null)
         {
             var lines = source.Replace("\r\n", "\n").Split('\n');
             var buffer = new StringBuilder();
@@ -160,7 +160,12 @@ namespace Novel.Editor.Localization
                 depth += BracketBalance(stripped);
 
                 // 継続の暴走を防ぐ (未クローズの括弧が長く続く場合は諦めてその行までで確定)
-                if (depth > 0 && i + 1 < lines.Length && (i + 1) - (startLine - 1) < 20) continue;
+                if (depth > 0)
+                {
+                    if (i + 1 < lines.Length && (i + 1) - (startLine - 1) < 20) continue;
+                    issues?.Add(new ScanIssue(startLine,
+                        "未クローズの括弧が続くため、この行から 20 行で走査を打ち切りました。以降のリテラルは抽出されません"));
+                }
 
                 yield return (buffer.ToString(), startLine);
                 buffer.Clear();

@@ -109,9 +109,14 @@ namespace Novel.Localization.Editor
 
         public void Save()
         {
+            // SaveAssets() はプロジェクト全体の保存が走るため、対象アセットに絞って保存する
             EditorUtility.SetDirty(Shared);
-            foreach (var table in _collection.StringTables) EditorUtility.SetDirty(table);
-            AssetDatabase.SaveAssets();
+            AssetDatabase.SaveAssetIfDirty(Shared);
+            foreach (var table in _collection.StringTables)
+            {
+                EditorUtility.SetDirty(table);
+                AssetDatabase.SaveAssetIfDirty(table);
+            }
         }
 
         private StringTable? TableOf(string localeCode)
