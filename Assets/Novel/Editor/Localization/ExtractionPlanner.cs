@@ -43,9 +43,19 @@ namespace Novel.Editor.Localization
         public static ExtractionPlan Scan(string assetsPath, string relativeRoot = "")
         {
             var plan = new ExtractionPlan();
+            // relativeRoot は Assets からの相対パスの約束だが、`..` や絶対パス (Windows のドライブ付き含む) を
+            // 書けてしまう。Path.Combine はそれをそのまま受け入れるため、誤入力で Assets 外の .rb が「正」に
+            // なり、既存エントリが軒並み消滅扱いになる。正規化して Assets 配下であることを検査する
+            var assetsRoot = Normalize(assetsPath);
             var root = string.IsNullOrEmpty(relativeRoot)
-                ? assetsPath
-                : Path.Combine(assetsPath, relativeRoot.Replace('\\', '/').TrimStart('/'));
+                ? assetsRoot
+                : Normalize(Path.Combine(assetsPath, relativeRoot.Replace('\\', '/').TrimStart('/')));
+            if (root != assetsRoot && !root.StartsWith(assetsRoot + "/", StringComparison.Ordinal))
+            {
+                plan.Issues.Add($"スキャンルートが Assets の外を指しています: '{relativeRoot}' → {root}。" +
+                                "Assets からの相対パスを指定してください (`..` や絶対パスは使えません)");
+                return plan;
+            }
             if (!Directory.Exists(root))
             {
                 plan.Issues.Add($"スキャンルートが見つかりません: Assets/{relativeRoot}");
@@ -69,7 +79,7 @@ namespace Novel.Editor.Localization
 
             foreach (var file in files)
             {
-                var relative = ToRelativePath(assetsPath, file);
+                var relative = ToRelativePath(assetsRoot, file);
                 var scan = ScenarioTextScanner.Scan(sources[file], charaSet);
                 plan.CurrentPerFile[relative] = scan.Texts.Select(t => t.Text).ToList();
                 foreach (var issue in scan.Issues)
@@ -148,9 +158,21 @@ namespace Novel.Editor.Localization
                 if (!currentTextSet.Contains(text) && !renamedAway.Contains(text))
                     plan.Deprecations.Add(text);
 
-            // 未追跡の新出のうち、リネーム先と一致するものは applier のリネームで起票される
-            plan.Additions.RemoveAll(t => plan.Renames.Any(r => r.NewText == t));
+            // AddedCurrent は「新しく現れた出現」であって新規キーとは限らない。リネーム先や、
+            // 既に訳のある原文の再出現をここへ残すと、移行レポートが未訳の新規として誤報する
+            // (Apply 側は EnsureKey が no-op になり実害はないが、レポートが信用できなくなる)。
+            // 出所メタデータはどちらの場合も Apply の再構築で載る
+            var newKeys = plan.Additions
+                .Where(t => !table.ContainsKey(t) && !plan.Renames.Any(r => r.NewText == t))
+                .Distinct(StringComparer.Ordinal)   // 同一原文が複数箇所に新出しても起票は 1 エントリ
+                .ToList();
+            plan.Additions.Clear();
+            plan.Additions.AddRange(newKeys);
         }
+
+        // `..` を解決し区切りを / に揃えた絶対パス (末尾 / は落とす)
+        private static string Normalize(string path)
+            => Path.GetFullPath(path).Replace('\\', '/').TrimEnd('/');
 
         // スキャンルート配下のディレクトリ/ファイル名だけを返す (ルート自身のパス要素は含めない)
         private static string[] RelativeSegments(string root, string fullPath)

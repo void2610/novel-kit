@@ -185,6 +185,68 @@ namespace Novel.Tests
             }
         }
 
+        // relativeRoot は Assets 相対の約束。`..` や絶対パスを受け入れると Assets 外の .rb が「正」になり、
+        // 既存エントリが軒並み消滅扱いになる
+        [Test]
+        public void Assets外を指すスキャンルートは拒否する()
+        {
+            var root = Path.Combine(Path.GetTempPath(), "novelkit_scan_" + Path.GetRandomFileName());
+            var assets = Path.Combine(root, "Assets");
+            try
+            {
+                Write(assets, "Scenarios/main.rb", "narration \"本編の行\"");
+                Write(root, "Outside/other.rb", "narration \"外部の行\"");
+
+                foreach (var escaping in new[] { "../Outside", "Scenarios/../../Outside" })
+                {
+                    var plan = ExtractionPlanner.Scan(assets, escaping);
+                    CollectionAssert.IsEmpty(plan.CurrentPerFile, escaping);
+                    Assert.AreEqual(1, plan.Issues.Count, escaping);
+                }
+
+                // 絶対パス指定も同様に弾く (Path.Combine はそのまま採用してしまうため)
+                var absolute = ExtractionPlanner.Scan(assets, Path.Combine(root, "Outside"));
+                CollectionAssert.IsEmpty(absolute.CurrentPerFile);
+                Assert.AreEqual(1, absolute.Issues.Count);
+            }
+            finally
+            {
+                if (Directory.Exists(root)) Directory.Delete(root, true);
+            }
+        }
+
+        // AddedCurrent は「新しく現れた出現」であって新規キーとは限らない。
+        // 既存キーの再出現を新規として報告するとレポートが信用できなくなる
+        [Test]
+        public void 既存キーの再出現は新規として報告しない()
+        {
+            var table = new FakeTextTable("en");
+            Track(table, "はい", File1, 0);
+            table.SetValue("はい", "en", "Yes");
+
+            // 同じ原文が別ファイルにも現れた (新しい出現だが、テーブル上は既存エントリ)
+            var plan = PlanWith((File1, new[] { "はい" }), (File2, new[] { "はい" }));
+            ExtractionPlanner.BuildDiff(plan, table);
+
+            CollectionAssert.IsEmpty(plan.Additions);
+            CollectionAssert.IsEmpty(plan.Deprecations);
+
+            // 出現は Apply で両方に載る (追跡は維持される)
+            ExtractionApplier.Apply(plan, table);
+            Assert.AreEqual(2, table.SourcesOf("はい").Count);
+            Assert.AreEqual("Yes", table.GetValue("はい", "en"));
+        }
+
+        [Test]
+        public void 同一原文が複数箇所に新出しても起票は1件にまとめる()
+        {
+            var table = new FakeTextTable("en");
+            var plan = PlanWith((File1, new[] { "新しい行です" }), (File2, new[] { "新しい行です" }));
+            ExtractionPlanner.BuildDiff(plan, table);
+
+            CollectionAssert.AreEqual(new[] { "新しい行です" }, plan.Additions);
+        }
+
         [Test]
         public void 走査0件のときは適用前に気付けるようissueを出す()
         {

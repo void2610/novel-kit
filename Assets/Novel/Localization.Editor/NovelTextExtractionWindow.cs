@@ -93,9 +93,11 @@ namespace Novel.Localization.Editor
                     "全シナリオを削除したので、この結果で正しい", _confirmedRiskyApply);
             }
 
-            var hasWork = _plan.Renames.Count + _plan.Additions.Count + _plan.Deprecations.Count > 0;
-            if (looksLikeMisconfiguration && !_confirmedRiskyApply) hasWork = false;
-            using (new EditorGUI.DisabledScope(!hasWork))
+            // 3 リストが空でも「出所メタデータだけ変わる」変更 (共有原文の出現が 1 つ減った等) は起きる。
+            // Apply の RebuildSourceMetadata がそれを書き戻さないと、次回 diff が古い出現数を基準にしてしまう。
+            // よって走査が完了していれば常に適用できるようにし、危険な計画のガードだけを残す
+            var canApply = !looksLikeMisconfiguration || _confirmedRiskyApply;
+            using (new EditorGUI.DisabledScope(!canApply))
             {
                 if (GUILayout.Button("Apply（テーブルへ書き込む）") &&
                     EditorUtility.DisplayDialog("Novel Text Extraction",
