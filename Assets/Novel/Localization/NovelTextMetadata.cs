@@ -10,7 +10,7 @@ namespace Novel.Localization
     /// 前回抽出時の {ファイル, 出現順} を Shared エントリに持たせ、次回抽出の LCS diff の基準にする
     /// （独立サイドカーは持たず、追跡状態はテーブルに同居させる）。
     /// </summary>
-    [Metadata(AllowedTypes = MetadataType.SharedTableEntry)]
+    [Metadata(AllowedTypes = MetadataType.SharedStringTableEntry)]
     [Serializable]
     public class NovelTextSourceMetadata : IMetadata
     {
@@ -22,7 +22,7 @@ namespace Novel.Localization
     /// fuzzy（要再確認）マーク。誤字修正等で原文が変わり、旧訳を保持したまま持ち越したエントリに付く。
     /// ランタイムは保持した訳をそのまま表示する（fuzzy の意味論・ADR）。翻訳者が確認したら外す。
     /// </summary>
-    [Metadata(AllowedTypes = MetadataType.SharedTableEntry)]
+    [Metadata(AllowedTypes = MetadataType.SharedStringTableEntry)]
     [Serializable]
     public class NovelFuzzyMetadata : IMetadata
     {
@@ -33,7 +33,7 @@ namespace Novel.Localization
     /// <summary>
     /// 消滅マーク。原文がどのシナリオにも見つからなくなったエントリに付く（訳資産は削除しない・ADR）。
     /// </summary>
-    [Metadata(AllowedTypes = MetadataType.SharedTableEntry)]
+    [Metadata(AllowedTypes = MetadataType.SharedStringTableEntry)]
     [Serializable]
     public class NovelDeprecatedMetadata : IMetadata
     {
@@ -44,7 +44,7 @@ namespace Novel.Localization
     /// リライト時の参考退避（ADR「低類似 → 旧訳をメタデータへ参考退避し未訳化」）。
     /// stale 訳を表示しないためロケール別テーブルからは値を消し、翻訳者の参考としてここに残す。
     /// </summary>
-    [Metadata(AllowedTypes = MetadataType.SharedTableEntry)]
+    [Metadata(AllowedTypes = MetadataType.SharedStringTableEntry)]
     [Serializable]
     public class NovelArchivedTranslationMetadata : IMetadata
     {
