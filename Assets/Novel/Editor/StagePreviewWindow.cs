@@ -159,7 +159,12 @@ namespace Novel.Editor
             for (var i = 0; i < _sprites.Count; i++)
             {
                 SavePref(i, _sprites[i]);
-                if (_sprites[i] == null) continue;
+                if (_sprites[i] == null)
+                {
+                    // 前回の表示を引きずると、指定していない slot が古い絵のまま残る
+                    if (!TryRunToCompletion(channel.HideAsync(i, CancellationToken.None))) pending = true;
+                    continue;
+                }
 
                 var key = AssetDatabase.GetAssetPath(_sprites[i]);
                 if (!TryRunToCompletion(channel.ShowAsync(i, new ResolvedSprite(key, _sprites[i]), CancellationToken.None))) pending = true;
