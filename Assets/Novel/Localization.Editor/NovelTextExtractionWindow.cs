@@ -109,7 +109,7 @@ namespace Novel.Localization.Editor
                     if (collection != null)
                     {
                         ExtractionApplier.Apply(_plan, new UnityLocalizationTableEditor(collection));
-                        Debug.Log($"[Novel] 抽出を適用しました: リネーム/分離 {_plan.Renames.Count}・新規 {_plan.Additions.Distinct().Count()}・deprecated {_plan.Deprecations.Count}");
+                        Debug.Log($"[Novel] 抽出を適用しました: リネーム/分離 {_plan.Renames.Count}・新規 {_plan.Additions.Count}・deprecated {_plan.Deprecations.Count}");
                         _plan = null;   // 適用済み計画の再適用を防ぐ
                         _confirmedRiskyApply = false;
                     }
@@ -143,8 +143,8 @@ namespace Novel.Localization.Editor
         {
             EditorGUILayout.Space();
             var total = plan.CurrentPerFile.Values.Sum(t => t.Count);
-            // 同じ新規原文が複数ファイルに出ると Additions に重複して載る (起票は 1 件) ため、表示は distinct にする
-            var additions = plan.Additions.Distinct().ToList();
+            // Additions は planner が重複と既存キーを畳んだ「新規起票する原文」そのもの
+            var additions = plan.Additions;
             EditorGUILayout.LabelField(
                 $"走査: {plan.CurrentPerFile.Count} ファイル / {total} 件 — " +
                 $"新規 {additions.Count}・リネーム/分離 {plan.Renames.Count}・deprecated {plan.Deprecations.Count}",
