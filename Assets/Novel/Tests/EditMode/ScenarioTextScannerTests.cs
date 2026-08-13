@@ -164,5 +164,15 @@ namespace Novel.Tests
         {
             CollectionAssert.IsEmpty(ScanTexts("cmd :say, speaker_id: '', text: 'ライブラリ配管'"));
         }
+
+        [Test]
+        public void 未クローズ括弧の継続打ち切りはissueとして報告する()
+        {
+            // 20 行を超えて続く未クローズの choose 配列 → 打ち切りを黙って読み飛ばさない
+            var lines = new List<string> { "choose([" };
+            for (var i = 0; i < 25; i++) lines.Add($"\"選択肢{i}\",");
+            var result = ScenarioTextScanner.Scan(string.Join("\n", lines), new HashSet<string>());
+            Assert.That(result.Issues, Has.Some.Matches<ScanIssue>(issue => issue.Reason.Contains("打ち切り")));
+        }
     }
 }
