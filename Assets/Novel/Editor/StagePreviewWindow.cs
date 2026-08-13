@@ -38,7 +38,13 @@ namespace Novel.Editor
             using (new EditorGUILayout.HorizontalScope())
             {
                 EditorGUILayout.LabelField("対象", GUILayout.Width(40f));
-                _channelBehaviour = (MonoBehaviour?)EditorGUILayout.ObjectField(_channelBehaviour, typeof(MonoBehaviour), true);
+                var assigned = (MonoBehaviour?)EditorGUILayout.ObjectField(_channelBehaviour, typeof(MonoBehaviour), true);
+                // 差し替えた実装が別の構図を持つため、対象が変わったら目録を取り直す
+                if (!ReferenceEquals(assigned, _channelBehaviour))
+                {
+                    _channelBehaviour = assigned;
+                    RefreshLayouts();
+                }
                 if (GUILayout.Button("再検出", GUILayout.Width(60f))) Detect();
             }
 
