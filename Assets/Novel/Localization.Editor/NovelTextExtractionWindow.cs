@@ -15,6 +15,7 @@ namespace Novel.Localization.Editor
     /// </summary>
     public sealed class NovelTextExtractionWindow : EditorWindow
     {
+        // EditorPrefs だと別プロジェクトのスキャンルートを持ち越して誤設定ガードに掛かるため、プロジェクト単位で保存する
         private const string TableNamePrefsKey = "Novel.Localization.TableCollectionName";
         private const string ScanRootPrefsKey = "Novel.Localization.ScanRoot";
 
@@ -28,8 +29,8 @@ namespace Novel.Localization.Editor
         private static void Open()
         {
             var window = GetWindow<NovelTextExtractionWindow>("Novel Text Extraction");
-            window._tableName = EditorPrefs.GetString(TableNamePrefsKey, "NovelText");
-            window._scanRoot = EditorPrefs.GetString(ScanRootPrefsKey, "");
+            window._tableName = EditorUserSettings.GetConfigValue(TableNamePrefsKey) ?? "NovelText";
+            window._scanRoot = EditorUserSettings.GetConfigValue(ScanRootPrefsKey) ?? "";
         }
 
         // dev プレイで収集した抽出漏れ (テーブルミス) の一覧をログへ出す
@@ -54,7 +55,7 @@ namespace Novel.Localization.Editor
             if (tableName != _tableName)
             {
                 _tableName = tableName;
-                EditorPrefs.SetString(TableNamePrefsKey, tableName);
+                EditorUserSettings.SetConfigValue(TableNamePrefsKey, tableName);
                 _plan = null;   // 別テーブル基準の古い計画を適用させない (Scan からやり直し)
                 _confirmedRiskyApply = false;
             }
@@ -63,7 +64,7 @@ namespace Novel.Localization.Editor
             if (scanRoot != _scanRoot)
             {
                 _scanRoot = scanRoot;
-                EditorPrefs.SetString(ScanRootPrefsKey, scanRoot);
+                EditorUserSettings.SetConfigValue(ScanRootPrefsKey, scanRoot);
                 _plan = null;   // 走査範囲が変わった計画も無効化
                 _confirmedRiskyApply = false;
             }
@@ -106,7 +107,7 @@ namespace Novel.Localization.Editor
                     if (collection != null)
                     {
                         ExtractionApplier.Apply(_plan, new UnityLocalizationTableEditor(collection));
-                        Debug.Log($"[Novel] 抽出を適用しました: リネーム/分離 {_plan.Renames.Count}・新規 {_plan.Additions.Count}・deprecated {_plan.Deprecations.Count}");
+                        Debug.Log($"[Novel] 抽出を適用しました: リネーム/分離 {_plan.Renames.Count}・新規 {_plan.Additions.Distinct().Count()}・deprecated {_plan.Deprecations.Count}");
                         _plan = null;   // 適用済み計画の再適用を防ぐ
                         _confirmedRiskyApply = false;
                     }
@@ -140,9 +141,11 @@ namespace Novel.Localization.Editor
         {
             EditorGUILayout.Space();
             var total = plan.CurrentPerFile.Values.Sum(t => t.Count);
+            // 同じ新規原文が複数ファイルに出ると Additions に重複して載る (起票は 1 件) ため、表示は distinct にする
+            var additions = plan.Additions.Distinct().ToList();
             EditorGUILayout.LabelField(
                 $"走査: {plan.CurrentPerFile.Count} ファイル / {total} 件 — " +
-                $"新規 {plan.Additions.Count}・リネーム/分離 {plan.Renames.Count}・deprecated {plan.Deprecations.Count}",
+                $"新規 {additions.Count}・リネーム/分離 {plan.Renames.Count}・deprecated {plan.Deprecations.Count}",
                 EditorStyles.boldLabel);
 
             _scroll = EditorGUILayout.BeginScrollView(_scroll);
@@ -163,13 +166,13 @@ namespace Novel.Localization.Editor
                 }
             }
 
-            if (plan.Additions.Count > 0)
+            if (additions.Count > 0)
             {
-                EditorGUILayout.LabelField($"新規（未訳で起票）: {plan.Additions.Count} 件", EditorStyles.boldLabel);
-                foreach (var text in plan.Additions.Take(200))
+                EditorGUILayout.LabelField($"新規（未訳で起票）: {additions.Count} 件", EditorStyles.boldLabel);
+                foreach (var text in additions.Take(200))
                     EditorGUILayout.LabelField("  " + Truncate(text));
-                if (plan.Additions.Count > 200)
-                    EditorGUILayout.LabelField($"  … 他 {plan.Additions.Count - 200} 件");
+                if (additions.Count > 200)
+                    EditorGUILayout.LabelField($"  … 他 {additions.Count - 200} 件");
             }
 
             if (plan.Deprecations.Count > 0)
