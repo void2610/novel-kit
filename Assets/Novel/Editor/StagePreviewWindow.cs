@@ -22,6 +22,8 @@ namespace Novel.Editor
         private StageLayoutInfo[] _layouts = System.Array.Empty<StageLayoutInfo>();
         private int _layoutIndex;
         private readonly List<Sprite?> _sprites = new();
+        private readonly List<Vector2> _positions = new();
+        private string _loadedLayoutId = "";
         private string? _warning;
 
         [MenuItem("Novel/Stage Preview")]
@@ -65,9 +67,28 @@ namespace Novel.Editor
             var layout = _layouts[_layoutIndex];
 
             SyncSpriteCount(layout.SlotCount);
+            var editor = _channelBehaviour as IStageLayoutEditor;
+            if (editor != null) SyncPositions(editor, layout);
+
             EditorGUILayout.Space();
             for (var i = 0; i < _sprites.Count; i++)
-                _sprites[i] = (Sprite?)EditorGUILayout.ObjectField($"slot {i}", _sprites[i], typeof(Sprite), false);
+            {
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    _sprites[i] = (Sprite?)EditorGUILayout.ObjectField($"slot {i}", _sprites[i], typeof(Sprite), false);
+                    if (editor == null) continue;
+
+                    EditorGUI.BeginChangeCheck();
+                    var moved = EditorGUILayout.Vector2Field(GUIContent.none, _positions[i], GUILayout.Width(140f));
+                    // 数値をいじった瞬間に見えないと、結局 適用 を押す往復が残る
+                    if (EditorGUI.EndChangeCheck())
+                    {
+                        _positions[i] = moved;
+                        Store(editor, layout, "Edit stage layout");
+                        Apply(channel, layout);
+                    }
+                }
+            }
 
             EditorGUILayout.Space();
             using (new EditorGUILayout.HorizontalScope())
@@ -76,9 +97,19 @@ namespace Novel.Editor
                 if (GUILayout.Button("クリア")) Clear(channel, layout);
             }
 
+            if (editor != null && GUILayout.Button("シーンの位置を構図へ取り込む"))
+            {
+                _positions.Clear();
+                _positions.AddRange(editor.GetCurrentSlotPositions().Take(layout.SlotCount));
+                Store(editor, layout, "Capture stage layout");
+            }
+
             if (!string.IsNullOrEmpty(_warning)) EditorGUILayout.HelpBox(_warning, MessageType.Warning);
 
-            EditorGUILayout.HelpBox("プレビューはシーン上のオブジェクトを直接書き換えます。座標は再生時に構図から再適用されるため、保存せず閉じても問題ありません。", MessageType.None);
+            if (editor == null)
+                EditorGUILayout.HelpBox("この実装は IStageLayoutEditor を実装していないため、座標はプレビューのみです。窓から編集するには実装してください。", MessageType.Info);
+
+            EditorGUILayout.HelpBox("プレビューの表示状態はシーンを直接書き換えます (座標は再生時に構図から再適用されるため、保存せず閉じても問題ありません)。座標の変更は構図に保存されるので、プレハブ上のインスタンスなら Overrides の適用が要ります。", MessageType.None);
         }
 
         private void Detect()
@@ -91,6 +122,25 @@ namespace Novel.Editor
         private void RefreshLayouts()
         {
             _layouts = _channelBehaviour is IPortraitChannel c ? c.EnumerateLayouts().ToArray() : System.Array.Empty<StageLayoutInfo>();
+        }
+
+        // 構図を切り替えたら、その構図に保存されている座標を読み直す
+        private void SyncPositions(IStageLayoutEditor editor, StageLayoutInfo layout)
+        {
+            if (_loadedLayoutId == layout.Id && _positions.Count == layout.SlotCount) return;
+
+            _loadedLayoutId = layout.Id;
+            _positions.Clear();
+            _positions.AddRange(editor.GetLayoutPositions(layout.Id));
+            while (_positions.Count < layout.SlotCount) _positions.Add(Vector2.zero);
+            while (_positions.Count > layout.SlotCount) _positions.RemoveAt(_positions.Count - 1);
+        }
+
+        private void Store(IStageLayoutEditor editor, StageLayoutInfo layout, string undoName)
+        {
+            Undo.RecordObject(_channelBehaviour, undoName);
+            editor.SetLayoutPositions(layout.Id, _positions);
+            EditorUtility.SetDirty(_channelBehaviour!);
         }
 
         private void SyncSpriteCount(int slotCount)
