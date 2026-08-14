@@ -36,6 +36,11 @@ namespace Novel.View
                 yield return new CharacterKeyInfo(id, entry.DisplayName, entry.DefaultPortraitKey);
         }
 
+#if UNITY_EDITOR
+        // ドメインリロードを無効にしていると同じインスタンスが生き続けるため、 編集を捨てないよう作り直させる
+        private void OnValidate() => _map = null;
+#endif
+
         private Dictionary<string, CharacterEntry> Build()
         {
             var map = new Dictionary<string, CharacterEntry>(entries.Count);

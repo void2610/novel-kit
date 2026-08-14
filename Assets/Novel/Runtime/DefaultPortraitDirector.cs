@@ -84,6 +84,8 @@ namespace Novel.Runtime
             _shown.TryGetValue(character, out var current) &&
             current.Slot == slot && current.Portrait.Key == portraitKey;
 
+        public bool HasPortrait(string character) => _shown.ContainsKey(character);
+
         public async UniTask ShowAsync(string character, ResolvedSprite portrait, CancellationToken ct)
         {
             if (!_layoutInitialized)

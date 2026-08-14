@@ -1,5 +1,6 @@
 #nullable enable
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using NUnit.Framework;
@@ -22,6 +23,7 @@ namespace Novel.Tests
             public UniTask StageAsync(PortraitLayout layout, IReadOnlyDictionary<string, int> cast, CancellationToken ct) => UniTask.CompletedTask;
             public bool IsStaged(string character) => Staged.Contains(character);
             public bool IsShowing(string character, string portraitKey) => Shown.Contains($"{character}:{portraitKey}");
+            public bool HasPortrait(string character) => Shown.Any(x => x.StartsWith($"{character}:"));
 
             public UniTask ShowAsync(string character, ResolvedSprite portrait, CancellationToken ct)
             {
@@ -160,6 +162,20 @@ namespace Novel.Tests
             MakeHandler(director).On(Say("kii", "Characters/kii/smile"), CancellationToken.None).GetAwaiter().GetResult();
 
             Assert.That(director.Shown, Is.EqualTo(new[] { "kii:Characters/kii/smile" }));
+        }
+
+        // portrait コマンドで出した立ち絵が、 次の say で既定の顔に戻されると表情指定が毎行消える
+        [Test]
+        public void 既に立ち絵が出ている話者は既定立ち絵で上書きしない()
+        {
+            var director = new RecordingPortraitDirector();
+            director.Staged.Add("kii");
+            // portrait コマンド相当。 既定 (Characters/kii/normal) とは別の絵を出しておく
+            director.ShowAsync("kii", new ResolvedSprite("Characters/kii/angry", null), CancellationToken.None).GetAwaiter().GetResult();
+
+            MakeHandler(director).On(Say("kii"), CancellationToken.None).GetAwaiter().GetResult();
+
+            Assert.That(director.Shown, Is.EqualTo(new[] { "kii:Characters/kii/angry" }));
         }
 
         [Test]
