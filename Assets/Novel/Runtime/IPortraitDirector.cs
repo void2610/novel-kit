@@ -28,6 +28,9 @@ namespace Novel.Runtime
         // 指定キャラに指定キーの立ち絵を現在の slot で表示中か。 呼び出し側がロード前に空振りを避けるために使う。
         bool IsShowing(string character, string portraitKey);
 
+        // 指定キャラが何らかの立ち絵を表示中か。 既定立ち絵を「まだ何も出ていないときだけ」適用するのに使う。
+        bool HasPortrait(string character);
+
         // 指定キャラを所定の slot に表示する。 cast にいなければ slot 0 にフォールバックして警告。
         UniTask ShowAsync(string character, ResolvedSprite portrait, CancellationToken ct);
 

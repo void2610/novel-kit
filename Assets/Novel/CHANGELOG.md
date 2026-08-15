@@ -35,6 +35,11 @@
 - Validate Scenarios: 未登録コマンドで停止する代わりに、NoMethodError のコマンド名を no-op stub として
   定義し直して流し直し、以降の行も検証を続けるようにした。読み飛ばした名前は
   「game 独自コマンドなら正常。誤記でないか確認」として警告に列挙する
+- **破壊的**: `IPortraitDirector` に `HasPortrait` を追加し、話者の既定立ち絵を「そのキャラの立ち絵がまだ
+  出ていないときだけ」適用するようにした。従来は `portrait` で指定した表情が直後の `say` で既定の顔に
+  戻され、表情指定が毎行消えていた。既定実装は slot を別キャラに奪われた記録も落とすため、
+  cast 外 `portrait` の slot 0 フォールバックで画面から消えたキャラは表示中とみなされない。
+  移行: 自前の `IPortraitDirector` 実装に `HasPortrait` の追加が要る。
 
 ### Added
 - `AudioKeyInfo` に `Asset` (任意・エディタ試聴用) を追加。`IAudioChannel.EnumerateKeys()` が保持済みの

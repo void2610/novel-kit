@@ -247,6 +247,8 @@ namespace Novel.Runtime
             if (!string.IsNullOrEmpty(cmd.PortraitKey)) return cmd.PortraitKey;
             if (string.IsNullOrEmpty(cmd.SpeakerId) || _portraitDirector == null) return null;
             if (!_portraitDirector.IsStaged(cmd.SpeakerId)) return null;
+            // 既に出ている立ち絵は尊重する。 上書きすると portrait コマンドの指定が次の say で毎回消える
+            if (_portraitDirector.HasPortrait(cmd.SpeakerId)) return null;
             return _catalog.TryGet(cmd.SpeakerId, out var entry) ? entry.DefaultPortraitKey : null;
         }
 

@@ -70,6 +70,7 @@ namespace Novel.Runtime
             foreach (var (character, slot) in toReshow)
             {
                 if (!_shown.TryGetValue(character, out var last)) continue;
+                EvictSlotOwner(slot, character);
                 _shown[character] = (slot, last.Portrait);
                 await _channel.ShowAsync(slot, last.Portrait, ct);
             }
@@ -83,6 +84,8 @@ namespace Novel.Runtime
             _cast.TryGetValue(character, out var slot) &&
             _shown.TryGetValue(character, out var current) &&
             current.Slot == slot && current.Portrait.Key == portraitKey;
+
+        public bool HasPortrait(string character) => _shown.ContainsKey(character);
 
         public async UniTask ShowAsync(string character, ResolvedSprite portrait, CancellationToken ct)
         {
@@ -100,6 +103,7 @@ namespace Novel.Runtime
             // 同じ slot に同じ立ち絵を出し直すと、 表示時にフェード等を行う実装で演出が再発火する
             if (_shown.TryGetValue(character, out var current) &&
                 current.Slot == slotIndex && current.Portrait.Key == portrait.Key) return;
+            EvictSlotOwner(slotIndex, character);
             _shown[character] = (slotIndex, portrait);
             await _channel.ShowAsync(slotIndex, portrait, ct);
         }
@@ -118,6 +122,19 @@ namespace Novel.Runtime
             _cast.Clear();
             _shown.Clear();
             // layout はリセットせず、 次の Stage 呼び出しまで現状維持 (画面が突然真っさらにならないように)
+        }
+
+        // 上書きされた側は画面から消えているので記録も落とす。 残ると HasPortrait が「見えていないのに表示中」を返す
+        private void EvictSlotOwner(int slotIndex, string newOwner)
+        {
+            string? evicted = null;
+            foreach (var entry in _shown)
+            {
+                if (entry.Value.Slot != slotIndex || entry.Key == newOwner) continue;
+                evicted = entry.Key;
+                break;
+            }
+            if (evicted != null) _shown.Remove(evicted);
         }
 
         // cast に含まれない呼び出しは slot 0 にフォールバックして警告ログ (typo / 宣言漏れ検出のため)

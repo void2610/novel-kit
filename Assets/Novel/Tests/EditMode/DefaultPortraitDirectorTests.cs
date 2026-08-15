@@ -1,6 +1,7 @@
 #nullable enable
 using System.Collections;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using Novel.Assets;
@@ -193,6 +194,23 @@ namespace Novel.Tests
             await director.ShowAsync("taylor", portrait, CancellationToken.None);
 
             Assert.That(view.Calls, Is.EqualTo(new[] { "show:0:smile" }));
+        });
+
+        // cast 外の portrait は slot 0 にフォールバックするため、 元から slot 0 にいたキャラは画面から消える
+        [UnityTest]
+        public IEnumerator slotを奪われたキャラは表示中とみなされない() => UniTask.ToCoroutine(async () =>
+        {
+            var view = new RecordingPortraitChannel();
+            var director = new DefaultPortraitDirector(view);
+
+            await director.StageAsync(PortraitLayout.Single, new[] { "taylor" }, CancellationToken.None);
+            await director.ShowAsync("taylor", NamedSprite("smile"), CancellationToken.None);
+
+            LogAssert.Expect(UnityEngine.LogType.Warning, new Regex("stage cast に含まれていません"));
+            await director.ShowAsync("stranger", NamedSprite("mask"), CancellationToken.None);
+
+            Assert.IsFalse(director.HasPortrait("taylor"));
+            Assert.IsTrue(director.HasPortrait("stranger"));
         });
 
         [UnityTest]
