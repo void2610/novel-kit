@@ -22,11 +22,22 @@ namespace Novel.Runtime
             public string AudioChannelType { get; }
             public string PortraitChannelType { get; }
             public string CharacterCatalogType { get; }
+
+            /// <summary>配線されていた <see cref="ISpriteLoader"/> の型名 (未キャプチャなら空)。</summary>
+            public string SpriteLoaderType { get; }
+
+            /// <summary>
+            /// ローダがキーの前に付けるプレフィックス。ローダが <see cref="ISpriteKeyPrefix"/> を
+            /// 実装していなければ null (= 不明。空文字の「プレフィックス無しが確定」とは区別する)。
+            /// </summary>
+            public string? SpriteKeyPrefix { get; }
+
             public DateTime CapturedAt { get; }
 
             public Snapshot(IReadOnlyList<AudioKeyInfo> audioKeys, IReadOnlyList<StageLayoutInfo> layouts,
                 IReadOnlyList<CharacterKeyInfo> characters,
-                string audioChannelType, string portraitChannelType, string characterCatalogType, DateTime capturedAt)
+                string audioChannelType, string portraitChannelType, string characterCatalogType, DateTime capturedAt,
+                string spriteLoaderType = "", string? spriteKeyPrefix = null)
             {
                 AudioKeys = audioKeys;
                 Layouts = layouts;
@@ -34,6 +45,8 @@ namespace Novel.Runtime
                 AudioChannelType = audioChannelType;
                 PortraitChannelType = portraitChannelType;
                 CharacterCatalogType = characterCatalogType;
+                SpriteLoaderType = spriteLoaderType;
+                SpriteKeyPrefix = spriteKeyPrefix;
                 CapturedAt = capturedAt;
             }
         }

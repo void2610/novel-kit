@@ -118,6 +118,29 @@ namespace Novel.Tests
         }
 
         [Test]
+        public void Build時に配線されたスプライトローダのrootをキャプチャする()
+        {
+            var builder = MakeBuilder();
+            builder.RegisterInstance<ISpriteLoader>(new ResourcesSpriteLoader("Novel/"));
+
+            using var container = builder.Build();
+
+            var snapshot = NovelProjectCapture.Latest;
+            Assert.That(snapshot!.SpriteLoaderType, Is.EqualTo(nameof(ResourcesSpriteLoader)));
+            Assert.That(snapshot.SpriteKeyPrefix, Is.EqualTo("Novel/"));
+        }
+
+        [Test]
+        public void ISpriteKeyPrefixを実装しないローダのrootは不明として扱う()
+        {
+            using var container = MakeBuilder().Build();   // 既定は NullSpriteLoader (root を名乗らない)
+
+            var snapshot = NovelProjectCapture.Latest;
+            Assert.That(snapshot!.SpriteLoaderType, Is.EqualTo(nameof(NullSpriteLoader)));
+            Assert.That(snapshot.SpriteKeyPrefix, Is.Null);
+        }
+
+        [Test]
         public void Build時にコード実装カタログのキャラ目録をキャプチャする()
         {
             var builder = new ContainerBuilder();
@@ -158,14 +181,16 @@ namespace Novel.Tests
 
         private static NovelProjectCapture.Snapshot Snap(
             AudioKeyInfo[] audio, StageLayoutInfo[] layouts, CharacterKeyInfo[] characters,
-            string audioType, string portraitType, string catalogType) =>
-            new(audio, layouts, characters, audioType, portraitType, catalogType, System.DateTime.Now);
+            string audioType, string portraitType, string catalogType,
+            string spriteLoaderType = "", string? spriteKeyPrefix = null) =>
+            new(audio, layouts, characters, audioType, portraitType, catalogType, System.DateTime.Now,
+                spriteLoaderType, spriteKeyPrefix);
 
         private static NovelProjectCapture.Snapshot RealCapture() => Snap(
             new[] { new AudioKeyInfo("daily", AudioKeyKind.Bgm, "日常シーン") },
             new[] { new StageLayoutInfo("meeting", 6, "会議室") },
             new[] { new CharacterKeyInfo("aria", "アリア", "Characters/aria/default") },
-            "GameAudioChannel", "GamePortraitChannel", "GameCatalog");
+            "GameAudioChannel", "GamePortraitChannel", "GameCatalog", "ResourcesSpriteLoader", "Novel/");
 
         [Test]
         public void 空の種別は以前のキャプチャを消さない()
@@ -221,6 +246,39 @@ namespace Novel.Tests
             Assert.That(merged.AudioKeys, Is.Empty);
             Assert.That(merged.Layouts.Select(l => l.Id),
                 Is.EqualTo(new[] { "single", "pair", "trio", "quad", "penta" }));
+        }
+
+        [Test]
+        public void スプライトローダのrootは往復して復元され未キャプチャの配線に消されない()
+        {
+            // ローダを名乗らない配線 (キャプチャ失敗・別スコープのビルド相当) は root を上書きしない
+            var withoutLoader = Snap(
+                new[] { new AudioKeyInfo("battle", AudioKeyKind.Bgm) },
+                new[] { new StageLayoutInfo("duo_wide", 2) },
+                new[] { new CharacterKeyInfo("noise", "ノイズ") },
+                "NewAudioChannel", "NewPortraitChannel", "NewCatalog");
+
+            var merged = ProjectReferenceCaptureStore.MergeForTest(RealCapture(), withoutLoader);
+
+            Assert.That(merged.SpriteLoaderType, Is.EqualTo("ResourcesSpriteLoader"));
+            Assert.That(merged.SpriteKeyPrefix, Is.EqualTo("Novel/"));
+        }
+
+        [Test]
+        public void rootを名乗らないローダのプレフィックスはnullのまま保たれる()
+        {
+            // 空文字 (root 無しが確定) と null (ローダが ISpriteKeyPrefix 未実装で不明) を混同しない
+            var unknown = Snap(
+                System.Array.Empty<AudioKeyInfo>(), System.Array.Empty<StageLayoutInfo>(),
+                System.Array.Empty<CharacterKeyInfo>(),
+                "A", "P", "C", "GameSpriteLoader");
+            Assert.That(ProjectReferenceCaptureStore.MergeForTest(null, unknown).SpriteKeyPrefix, Is.Null);
+
+            var noRoot = Snap(
+                System.Array.Empty<AudioKeyInfo>(), System.Array.Empty<StageLayoutInfo>(),
+                System.Array.Empty<CharacterKeyInfo>(),
+                "A", "P", "C", "ResourcesSpriteLoader", "");
+            Assert.That(ProjectReferenceCaptureStore.MergeForTest(null, noRoot).SpriteKeyPrefix, Is.EqualTo(""));
         }
 
         // ---- キャプチャ経路 (Publish → ストア)。テスト用シームで一時ファイルへ切り替え、実プロジェクトの

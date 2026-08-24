@@ -9,7 +9,7 @@ namespace Novel.Assets
     /// <see cref="ISpriteLoader"/> の Resources 実装。キーは Resources 相対パス (拡張子なし)。
     /// <c>root</c> を渡すとキーの前に付与する (例: "Novel/" + "Melia")。
     /// </summary>
-    public sealed class ResourcesSpriteLoader : ISpriteLoader
+    public sealed class ResourcesSpriteLoader : ISpriteLoader, ISpriteKeyPrefix
     {
         private readonly string _root;
 
@@ -17,6 +17,8 @@ namespace Novel.Assets
         {
             _root = root;
         }
+
+        public string KeyPrefix => _root;
 
         public UniTask<Sprite?> LoadAsync(string key, CancellationToken ct)
         {

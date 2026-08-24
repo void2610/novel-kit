@@ -94,6 +94,14 @@ namespace Novel.Editor
                 incoming.characters = old.characters;
                 incoming.characterCatalogType = old.characterCatalogType;
             }
+            // スプライトローダは型名を presence マーカーにする (プレフィックス空文字は正当な値のため
+            // 空判定には使えない)。未キャプチャの配線が、以前に判明した root を消さないようにする
+            if (incoming.spriteLoaderType.Length == 0 && old.spriteLoaderType.Length > 0)
+            {
+                incoming.spriteLoaderType = old.spriteLoaderType;
+                incoming.spriteKeyPrefix = old.spriteKeyPrefix;
+                incoming.hasSpriteKeyPrefix = old.hasSpriteKeyPrefix;
+            }
             // 構図は既定実装が標準 5 構図を返すため「標準構図のまま = 未提供」とみなす。
             // 独自構図から意図的に標準へ戻したい場合は Library/NovelKit を削除して再生し直す
             if (old.layouts.Length > 0 && (incoming.layouts.Length == 0 || IsDefaultLayouts(incoming.layouts)))
@@ -171,6 +179,9 @@ namespace Novel.Editor
             public string audioChannelType = "";
             public string portraitChannelType = "";
             public string characterCatalogType = "";
+            public string spriteLoaderType = "";
+            public string spriteKeyPrefix = "";
+            public bool hasSpriteKeyPrefix;   // ローダが ISpriteKeyPrefix を名乗ったか (空プレフィックスの確定と不明の区別)
             public string capturedAt = "";
         }
 
@@ -209,6 +220,9 @@ namespace Novel.Editor
                 audioChannelType = s.AudioChannelType,
                 portraitChannelType = s.PortraitChannelType,
                 characterCatalogType = s.CharacterCatalogType,
+                spriteLoaderType = s.SpriteLoaderType,
+                spriteKeyPrefix = s.SpriteKeyPrefix ?? "",
+                hasSpriteKeyPrefix = s.SpriteKeyPrefix != null,
                 capturedAt = s.CapturedAt.ToString("o", CultureInfo.InvariantCulture),
             };
             for (var i = 0; i < s.AudioKeys.Count; i++)
@@ -244,7 +258,10 @@ namespace Novel.Editor
                 characters.Add(new CharacterKeyInfo(c.id, c.displayName, string.IsNullOrEmpty(c.defaultPortraitKey) ? null : c.defaultPortraitKey));
 
             DateTime.TryParse(dto.capturedAt, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var capturedAt);
-            return new NovelProjectCapture.Snapshot(audio, layouts, characters, dto.audioChannelType, dto.portraitChannelType, dto.characterCatalogType, capturedAt);
+            return new NovelProjectCapture.Snapshot(
+                audio, layouts, characters,
+                dto.audioChannelType, dto.portraitChannelType, dto.characterCatalogType, capturedAt,
+                dto.spriteLoaderType, dto.hasSpriteKeyPrefix ? dto.spriteKeyPrefix : null);
         }
 
         // AudioKeyInfo.Asset (試聴用のアセット参照) は JSON に GUID として永続化し、読み込み時に実体へ戻す
