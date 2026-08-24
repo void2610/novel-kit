@@ -6,6 +6,16 @@
 ## [Unreleased]
 
 ### Added
+- `Novel/Project Reference` の立ち絵・キーまわりを実用強化 (project-reference ADR)
+  - `ISpriteKeyPrefix`: `ISpriteLoader` が「キーの前に付ける root」をエディタへ名乗る任意ファセット
+    (`ResourcesSpriteLoader` は実装済み)。DI ビルド時にキャプチャし、ウィンドウが
+    **シナリオにそのまま書けるキー** を表示するようになった。root 外のスプライトは
+    「このシナリオからは読めない」と明示する。root を名乗らないローダでは従来どおり
+    Resources 相対パスを表示し、その旨を断る
+  - キャラタブが既定立ち絵 1 件ではなく **キャラごとの全立ち絵** を一覧するようになった。
+    所在は「既定立ち絵と同じフォルダ」→「パスセグメントがキャラ id」→「ファイル名が `id_`」の順で推定する
+  - 立ち絵にキャラを特定する部分を落とした短縮表記を併記 (表示専用。コピーされるのは常に実キー)
+  - 全タブの全行にコピーボタンを追加 (画像キー・立ち絵キー・キャラ id・構図 `:single`・BGM / SE キー)
 - 多言語対応 (opt-in・原文キー + 追従抽出。localization-unity-package ADR)。`com.unity.localization` 導入時のみ
   有効になる `Novel.Localization` / `Novel.Localization.Editor` を追加
   - `LocalizedTableTextResolver`: 原文 (タグ込み) をキーに String Table を引く `ITextResolver` 実装。
