@@ -46,6 +46,12 @@ namespace Novel.Editor
 
         private AudioClip? _playingClip;
 
+        // 最新キャプチャ由来のスプライトローダ情報 (null = ローダが ISpriteKeyPrefix を名乗っていない = 不明)
+        private string? _keyPrefix;
+        private string _spriteLoaderType = "";
+        private List<string>? _scenarioSpriteKeys;   // root を剥がした「シナリオに書けるキー」全件
+        private readonly Dictionary<string, IReadOnlyList<PortraitKeyRow>> _portraitRows = new();
+
         private static GUIStyle? _rowLabel;
         private static GUIStyle RowLabel => _rowLabel ??= new GUIStyle(EditorStyles.label) { alignment = TextAnchor.MiddleLeft };
 
@@ -78,6 +84,8 @@ namespace Novel.Editor
             _imageGroups = null;
             _spritePathByKey = null;
             _audioPathByKey = null;
+            _scenarioSpriteKeys = null;
+            _portraitRows.Clear();
             _resolvedSprites.Clear();
             _resolvedAudio.Clear();
             Repaint();
@@ -102,6 +110,14 @@ namespace Novel.Editor
             var snapshot = ProjectReferenceCaptureStore.LoadOrLatest();
             var layouts = snapshot?.Layouts ?? StageLayoutInfo.Defaults;
             var audioKeys = snapshot?.AudioKeys ?? Array.Empty<AudioKeyInfo>();
+            if (snapshot?.SpriteKeyPrefix != _keyPrefix)
+            {
+                _keyPrefix = snapshot?.SpriteKeyPrefix;
+                _scenarioSpriteKeys = null;
+                _portraitRows.Clear();
+                _resolvedSprites.Clear();
+            }
+            _spriteLoaderType = snapshot?.SpriteLoaderType ?? "";
 
             // アセットカタログが無いときはキャプチャ済みキャラが情報源になる (DrawCharacters と同じ優先順)
             var characterCount = _characters.Count == 0
@@ -149,12 +165,9 @@ namespace Novel.Editor
             {
                 EditorGUILayout.LabelField(
                     $"取得元: {snapshot!.CharacterCatalogType} ({FormatTime(snapshot.CapturedAt)} の再生時)", EditorStyles.miniLabel);
+                DrawSpriteKeyHeader();
                 foreach (var c in captured)
-                {
-                    if (!Matches(c.Id) && !Matches(c.DisplayName)) continue;
-                    var portrait = string.IsNullOrEmpty(c.DefaultPortraitKey) ? "" : $"  既定立ち絵: {c.DefaultPortraitKey}";
-                    DrawThumbnailRow(ResolveSpritePath(c.DefaultPortraitKey ?? ""), c.Id, $"表示名: {c.DisplayName}{portrait}");
-                }
+                    DrawCharacterEntry(c.Id, c.DisplayName, c.DefaultPortraitKey ?? "");
                 return;
             }
             if (_characters.Count == 0)
@@ -165,16 +178,50 @@ namespace Novel.Editor
                     MessageType.Info);
                 return;
             }
+            DrawSpriteKeyHeader();
             foreach (var catalog in _characters)
             {
                 DrawPingableHeader(catalog.AssetPath, catalog.AssetPath);
                 foreach (var (id, displayName, defaultPortrait) in catalog.Entries)
-                {
-                    if (!Matches(id) && !Matches(displayName)) continue;
-                    var portrait = string.IsNullOrEmpty(defaultPortrait) ? "" : $"  既定立ち絵: {defaultPortrait}";
-                    DrawThumbnailRow(ResolveSpritePath(defaultPortrait), id, $"表示名: {displayName}{portrait}");
-                }
+                    DrawCharacterEntry(id, displayName, defaultPortrait);
             }
+        }
+
+        /// <summary>キャラ 1 人分。見出し (id + 表示名) に続けて、そのキャラの立ち絵キーを並べる。</summary>
+        private void DrawCharacterEntry(string id, string displayName, string defaultPortraitKey)
+        {
+            var rows = PortraitRowsOf(id, defaultPortraitKey);
+            // キャラ自体が検索に当たれば立ち絵は全件見せる。当たらない場合はキー側の一致だけを拾う
+            var characterMatches = Matches(id) || Matches(displayName);
+            var shown = characterMatches ? rows : rows.Where(r => Matches(r.Key)).ToList();
+            if (!characterMatches && shown.Count == 0) return;
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                EditorGUILayout.LabelField($"{id}    表示名: {displayName}", EditorStyles.boldLabel);
+                DrawCopyButton(id);
+            }
+            if (shown.Count == 0)
+            {
+                EditorGUILayout.LabelField("    立ち絵が見つかりません (キー名にキャラ id を含めるか、既定立ち絵を設定すると一覧できます)",
+                    EditorStyles.miniLabel);
+                return;
+            }
+            foreach (var row in shown)
+            {
+                var note = row.ShortName == row.Key ? "" : $"短縮: {row.ShortName}";
+                if (row.IsDefault) note = string.IsNullOrEmpty(note) ? "既定" : $"{note}    既定";
+                DrawThumbnailRow(ResolveSpritePath(row.Key), row.Key, note, row.Key);
+            }
+        }
+
+        private IReadOnlyList<PortraitKeyRow> PortraitRowsOf(string id, string defaultPortraitKey)
+        {
+            // 全キー走査をキャラ数 x 再描画回数だけ繰り返さないようキャッシュする (Invalidate で捨てる)
+            if (_portraitRows.TryGetValue(id, out var cached)) return cached;
+            var rows = PortraitKeyGrouping.Collect(id, defaultPortraitKey, ScenarioSpriteKeys());
+            _portraitRows[id] = rows;
+            return rows;
         }
 
         private static List<CharacterCatalogView> ScanCharacters()
@@ -211,7 +258,7 @@ namespace Novel.Editor
 
         private void DrawImages()
         {
-            EditorGUILayout.LabelField("キー = Resources 相対パス (立ち絵/背景/一枚絵/補足画像 共通)。クリックでアセットを選択。", EditorStyles.miniLabel);
+            DrawSpriteKeyHeader();
             if (_imageGroups!.Count == 0)
             {
                 EditorGUILayout.HelpBox("Resources 配下にスプライトが見つかりません。", MessageType.Info);
@@ -219,13 +266,56 @@ namespace Novel.Editor
             }
             foreach (var group in _imageGroups)
             {
-                var keys = group.Keys.Where(Matches).ToList();
-                if (keys.Count == 0) continue;
-                EditorGUILayout.LabelField($"{group.Folder} ({keys.Count})", EditorStyles.miniBoldLabel);
-                foreach (var key in keys)
-                    DrawThumbnailRow(_spritePathByKey!.GetValueOrDefault(key), key, "");
+                var rows = group.Keys
+                    .Select(resourceKey => (resourceKey, key: ToScenarioKey(resourceKey)))
+                    .Where(r => Matches(r.key ?? r.resourceKey))
+                    .ToList();
+                if (rows.Count == 0) continue;
+                EditorGUILayout.LabelField($"{group.Folder} ({rows.Count})", EditorStyles.miniBoldLabel);
+                foreach (var (resourceKey, key) in rows)
+                    DrawThumbnailRow(_spritePathByKey!.GetValueOrDefault(resourceKey),
+                        key ?? resourceKey,
+                        key == null ? "ローダの root 外のため、このシナリオからは読めない" : "",
+                        key);
             }
         }
+
+        /// <summary>
+        /// 表示しているキーが「シナリオにそのまま書ける文字列」かどうかを明示する。
+        /// ローダの root が分からない構成では Resources 相対パスのままである旨を断る (誤ったキーを断定しない)。
+        /// </summary>
+        private void DrawSpriteKeyHeader()
+        {
+            if (_keyPrefix == null)
+            {
+                EditorGUILayout.HelpBox(
+                    _spriteLoaderType.Length == 0
+                        ? "スプライトローダが未キャプチャのため、キーは Resources 相対パスをそのまま表示しています。一度再生すると実際の配線から取得します。"
+                        : $"{_spriteLoaderType} が ISpriteKeyPrefix を実装していないため root が分かりません。" +
+                          "キーは Resources 相対パスをそのまま表示しています (root を付けるローダではその分ズレます)。",
+                    MessageType.Info);
+                return;
+            }
+            var root = _keyPrefix.Length == 0 ? "root なし" : $"root: {_keyPrefix}";
+            EditorGUILayout.LabelField(
+                $"キー = シナリオにそのまま書ける文字列。取得元: {_spriteLoaderType} ({root})。クリックでアセットを選択。",
+                EditorStyles.miniLabel);
+        }
+
+        /// <summary>Resources 相対パスを、シナリオにそのまま書けるキーへ変換する (root 外なら null)。</summary>
+        private string? ToScenarioKey(string resourceKey)
+        {
+            if (string.IsNullOrEmpty(_keyPrefix)) return resourceKey;
+            return resourceKey.StartsWith(_keyPrefix, StringComparison.Ordinal)
+                ? resourceKey.Substring(_keyPrefix!.Length)
+                : null;
+        }
+
+        private List<string> ScenarioSpriteKeys() => _scenarioSpriteKeys ??= _spritePathByKey!.Keys
+            .Select(ToScenarioKey)
+            .Where(k => k != null)
+            .Select(k => k!)
+            .ToList();
 
         private List<ImageGroup> ScanImages()
         {
@@ -265,7 +355,10 @@ namespace Novel.Editor
         {
             if (string.IsNullOrEmpty(key)) return null;
             if (_resolvedSprites.TryGetValue(key, out var cached)) return cached;
-            var path = ResolveByKey(_spritePathByKey!, key);
+            // root が判明していれば付け直して一意に引ける。不明なときだけ後方一致の推測に落とす
+            var path = !string.IsNullOrEmpty(_keyPrefix) && _spritePathByKey!.TryGetValue(_keyPrefix + key, out var rooted)
+                ? rooted
+                : ResolveByKey(_spritePathByKey!, key);
             _resolvedSprites[key] = path;
             return path;
         }
@@ -302,6 +395,8 @@ namespace Novel.Editor
                     DrawSlotDiagram(layout.SlotCount);
                     var note = string.IsNullOrEmpty(layout.Note) ? "" : $"  {layout.Note}";
                     EditorGUILayout.LabelField($"{layout.SlotCount} 人{note}");
+                    // stage :single と書ける形でコピーする (表示と同じ文字列)
+                    DrawCopyButton($":{layout.Id}");
                 }
             }
         }
@@ -395,6 +490,7 @@ namespace Novel.Editor
                     Event.current.Use();
                 }
                 EditorGUILayout.LabelField($"{key.Note ?? ""}{duration}", EditorStyles.miniLabel);
+                DrawCopyButton(key.Key);
             }
         }
 
@@ -427,13 +523,40 @@ namespace Novel.Editor
 
         // ---- 共通描画 ----
 
+        private const float CopyButtonWidth = 48f;
+
+        /// <summary>キーをクリップボードへ入れるボタン。コピーできるキーが無い行では無効化する。</summary>
+        private void DrawCopyButton(Rect rect, string? key)
+        {
+            var empty = string.IsNullOrEmpty(key);
+            using (new EditorGUI.DisabledScope(empty))
+            {
+                var content = new GUIContent("コピー", empty ? "コピーできるキーがありません" : $"「{key}」をクリップボードへコピー");
+                if (GUI.Button(rect, content, EditorStyles.miniButton))
+                {
+                    EditorGUIUtility.systemCopyBuffer = key;
+                    ShowNotification(new GUIContent($"コピーしました\n{key}"));
+                }
+            }
+        }
+
+        /// <summary>横並びレイアウト中に置くコピーボタン。</summary>
+        private void DrawCopyButton(string? key) =>
+            DrawCopyButton(
+                GUILayoutUtility.GetRect(CopyButtonWidth, EditorGUIUtility.singleLineHeight, GUILayout.Width(CopyButtonWidth)),
+                key);
+
         /// <summary>サムネイル付きの 1 行。クリックでアセットを ping する。</summary>
-        private void DrawThumbnailRow(string? assetPath, string label, string subLabel)
+        private void DrawThumbnailRow(string? assetPath, string label, string subLabel, string? copyKey = null)
         {
             var size = Mathf.Round(_thumbSize);
             var rect = EditorGUILayout.GetControlRect(false, size);
             var thumbRect = new Rect(rect.x, rect.y + 1f, size, size - 2f);
-            var labelRect = new Rect(thumbRect.xMax + 6f, rect.y, rect.width - size - 6f, rect.height);
+            var copyRect = new Rect(rect.xMax - CopyButtonWidth,
+                rect.y + (rect.height - EditorGUIUtility.singleLineHeight) / 2f,
+                CopyButtonWidth, EditorGUIUtility.singleLineHeight);
+            var labelRect = new Rect(thumbRect.xMax + 6f, rect.y,
+                Mathf.Max(0f, rect.width - size - 10f - CopyButtonWidth), rect.height);
 
             if (assetPath != null && IsRowVisible(rect))
             {
@@ -456,8 +579,11 @@ namespace Novel.Editor
 
             var text = string.IsNullOrEmpty(subLabel) ? label : $"{label}    {subLabel}";
             GUI.Label(labelRect, text, RowLabel);
+            DrawCopyButton(copyRect, copyKey);
 
-            if (assetPath != null && Event.current.type == EventType.MouseDown && rect.Contains(Event.current.mousePosition))
+            // コピーボタン上のクリックは ping に取られないようにする
+            if (assetPath != null && Event.current.type == EventType.MouseDown && rect.Contains(Event.current.mousePosition)
+                && !copyRect.Contains(Event.current.mousePosition))
             {
                 EditorGUIUtility.PingObject(AssetDatabase.LoadMainAssetAtPath(assetPath));
                 Event.current.Use();
