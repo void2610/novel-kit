@@ -525,7 +525,7 @@ namespace Novel.Editor
         // ---- 共通描画 ----
 
         private const float CopyButtonWidth = 22f;
-        private const float ChipGap = 2f;
+        private const float ChipGap = 4f;
 
         private static Texture? _copyIcon;
         private static bool _copyIconResolved;
@@ -559,20 +559,20 @@ namespace Novel.Editor
         }
 
         /// <summary>
-        /// キー文字列とコピーボタンを隣接させた 1 つのまとまり。行の右端にボタンを寄せると
-        /// 読む位置と押す位置が離れて使いづらいため、必ずキーの直後に付ける。
+        /// コピーボタンとキー文字列を隣接させた 1 つのまとまり。行の右端にボタンを寄せると
+        /// 読む位置と押す位置が離れて使いづらいため、キーのすぐ横に置く。
+        /// ボタンを文字列の左に置くのは、キーの長さで押す位置がずれず縦に揃うため。
         /// </summary>
         /// <returns>チップが消費した幅 (後続のラベルを続けて置くのに使う)。</returns>
         private float DrawKeyChip(Rect rect, string label, string? copyKey, out Rect copyRect)
         {
-            var textWidth = Mathf.Min(RowLabel.CalcSize(new GUIContent(label)).x,
-                Mathf.Max(0f, rect.width - CopyButtonWidth - ChipGap));
-            GUI.Label(new Rect(rect.x, rect.y, textWidth, rect.height), label, RowLabel);
-            copyRect = new Rect(rect.x + textWidth + ChipGap,
-                rect.y + (rect.height - EditorGUIUtility.singleLineHeight) / 2f,
+            copyRect = new Rect(rect.x, rect.y + (rect.height - EditorGUIUtility.singleLineHeight) / 2f,
                 CopyButtonWidth, EditorGUIUtility.singleLineHeight);
             DrawCopyButton(copyRect, copyKey);
-            return textWidth + ChipGap + CopyButtonWidth;
+            var textWidth = Mathf.Min(RowLabel.CalcSize(new GUIContent(label)).x,
+                Mathf.Max(0f, rect.width - CopyButtonWidth - ChipGap));
+            GUI.Label(new Rect(copyRect.xMax + ChipGap, rect.y, textWidth, rect.height), label, RowLabel);
+            return CopyButtonWidth + ChipGap + textWidth;
         }
 
         /// <summary>横並びレイアウト中に置くキーチップ (<paramref name="minWidth"/> で列を揃えられる)。</summary>
