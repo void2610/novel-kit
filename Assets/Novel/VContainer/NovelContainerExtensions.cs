@@ -64,12 +64,16 @@ namespace Novel.Integration
                     var portrait = container.Resolve<IPortraitChannel>();
                     // ICharacterCatalog は game 側登録の契約だが、未登録構成でもキャプチャ全体を落とさない
                     container.TryResolve<ICharacterCatalog>(out var catalog);
+                    var sprites = container.Resolve<ISpriteLoader>();
                     NovelProjectCapture.Publish(new NovelProjectCapture.Snapshot(
                         new System.Collections.Generic.List<AudioKeyInfo>(audio.EnumerateKeys()),
                         new System.Collections.Generic.List<StageLayoutInfo>(portrait.EnumerateLayouts()),
                         new System.Collections.Generic.List<CharacterKeyInfo>(
                             catalog?.EnumerateEntries() ?? System.Array.Empty<CharacterKeyInfo>()),
-                        audio.GetType().Name, portrait.GetType().Name, catalog?.GetType().Name ?? "", DateTime.Now));
+                        audio.GetType().Name, portrait.GetType().Name, catalog?.GetType().Name ?? "", DateTime.Now,
+                        sprites.GetType().Name,
+                        // 名乗らないローダは「プレフィックス不明」として null のまま渡す (空文字の確定と区別する)
+                        (sprites as ISpriteKeyPrefix)?.KeyPrefix));
                 }
                 catch (Exception e)
                 {

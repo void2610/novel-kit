@@ -3,7 +3,7 @@ type: Decision
 title: プロジェクトリファレンス — キー列挙はチャンネル契約に統合・実体は DI ビルド時にキャプチャ
 description: ライター向けに「使える名前と構図」を一覧するエディタウィンドウを追加する。列挙の契約は IAudioChannel / IPortraitChannel / ICharacterCatalog 自身に統合し（音とキャラは明示実装必須・構図のみ default = 標準 5 構図）、実行時にしか実体がない情報は RegisterNovelKitCore が DI ビルド時にキャプチャしてエディタ側キャッシュへ渡す（game 側の追加記述ゼロ・種別ごとにマージ）。音の参考実装は追加しない。
 tags: [decision, editor, tooling, audio, portrait, layout, catalog, writer]
-timestamp: 2026-08-07T22:35:00Z
+timestamp: 2026-08-25T00:00:00Z
 status: 確定
 ---
 
@@ -157,6 +157,29 @@ public interface IPortraitChannel
   `ICharacterCatalog.EnumerateEntries()` の default（空）は、実装忘れが「再生しても一覧に出ない」という
   沈黙の空目録になるため削除し、明示実装をコンパイルエラーで要求する（当初の「既存実装無改修」より
   発見可能性を優先）。`IPortraitChannel.EnumerateLayouts()` は無指定でも標準 5 構図が実在するため default を維持。
+- **スプライトキーの root は ISpriteKeyPrefix でローダに名乗らせる**（2026-08-25・ユーザー要望）。
+  当初ウィンドウは Resources 相対パスをそのままキーとして表示していたが、`ResourcesSpriteLoader(root)` を
+  使う game では表示キーが実キーとズレ、「一覧のとおりに書いたのに出ない」を招く。`ISpriteLoader` 本体への
+  メンバ追加は既存実装を全て壊すため、任意実装のファセット `ISpriteKeyPrefix.KeyPrefix` を切り、
+  音キー・構図と同じく DI ビルド時にキャプチャする。ウィンドウは root を差し引いた実キーを表示し、
+  root 外のスプライトは「このシナリオからは読めない」と明示する。名乗らないローダでは従来の
+  Resources 相対パス表示に落とし、その旨をウィンドウ上部で断る（誤ったキーを断定しない）。
+  永続化では「root 不明（未実装）」と「root 空文字（プレフィックス無しが確定）」を区別する必要があるため、
+  空判定ではなくローダ型名の有無を presence マーカーにしてマージする。
+- **キャラタブは既定立ち絵 1 件でなくキャラごとの全立ち絵を並べる**（2026-08-25・ユーザー要望）。
+  ランタイムにキャラ単位のキー名前空間は無い（`portrait :alice, "smile"` はキー `smile` をそのまま読む）ため、
+  所在は推定になる。優先順は「既定立ち絵と同じフォルダ」→「パスセグメントがキャラ id と一致」→
+  「ファイル名が `<id>_` / `<id>-` で始まる」。カタログが宣言した既定立ち絵は実体が無くても先頭に載せる
+  （欠けていること自体が知りたい情報のため）。推定ロジックは `PortraitKeyGrouping` として Unity 非依存の
+  純ロジックに切り出し、EditMode テストで固定する。
+- **短縮表記は表示専用でコピー対象にしない**（2026-08-25・ユーザー要望）。キャラを特定する部分を落とした
+  短縮名（`Characters/aria/smile` → `smile`）を併記して一覧の可読性を上げるが、ランタイムは短縮キーを
+  解決しないため、コピーボタンが渡すのは常に実キー。「見やすい表示」と「そのまま貼れる文字列」を
+  分けることで、可読性のための加工が誤ったキーの温床にならないようにする。
+- **全タブの全行にコピーボタン**（2026-08-25・ユーザー要望）。ping と試聴だけでは結局キーを手で写す必要があり、
+  写し間違いが Validate Scenarios 頼みになっていた。画像キー・立ち絵キー・キャラ id・構図（`:single` と
+  表示どおりの形）・BGM / SE キーに `EditorGUIUtility.systemCopyBuffer` へ入れるボタンを置く。
+  root 外などコピーすべき実キーが無い行はボタンを無効化する。
 
 # 検討した代替案
 

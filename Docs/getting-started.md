@@ -178,10 +178,32 @@ public sealed class NovelLifetimeScope : LifetimeScope
 使える名前（キャラ・画像・BGM/SE）と構図を種別ごとのタブで一覧するエディタウィンドウです。キャラカタログと
 Resources の画像キーはアセットから常時表示され、音キーと構図は **一度再生したときの実際の DI 配線からキャプチャ**
 されて表示されます（game 側の登録作業は不要）。
-画像・既定立ち絵はサムネイル付きで、行クリックで Project 内のアセットを ping します。音キーは ▶ ボタンで
+画像・立ち絵はサムネイル付きで、行クリックで Project 内のアセットを ping します。各行の **コピー** ボタンで
+キーをクリップボードへ入れられます（コピーされるのは常に、シナリオにそのまま書ける実キーです）。音キーは ▶ ボタンで
 その場で試聴できます。試聴対象のクリップは、`EnumerateKeys()` が `AudioKeyInfo` の `asset` 引数に AudioClip を
 渡していればそれを使い（推奨。キー体系に依存せず GUID で永続化）、無ければキーを Resources 相対パスとして
 照合します。どちらでも特定できないキーは試聴ボタンが無効になります。
+キャラタブは、キャラごとにその子の立ち絵キーをすべて並べます。どの立ち絵がどのキャラのものかは
+「既定立ち絵と同じフォルダ」→「パスの途中にキャラ id がある」→「ファイル名が `<id>_` で始まる」の順で
+推定します。キャラを特定する部分を落とした短縮表記も併記しますが、これは読みやすさのための表示であり、
+シナリオに書くのは実キーの方です。
+
+画像キーは「シナリオにそのまま書ける文字列」として表示されます。`ISpriteLoader` が root を付ける構成
+（`new ResourcesSpriteLoader("Novel/")` など）では、その root を差し引いたキーが出て、root の外にある
+スプライトは「このシナリオからは読めない」と明示されます。この補正が効くのはローダが
+`ISpriteKeyPrefix` を実装している場合だけです（`ResourcesSpriteLoader` は実装済み）。自前ローダで
+root 相当の加工をしているなら、次のように名乗ってください。
+
+```csharp
+public sealed class MySpriteLoader : ISpriteLoader, ISpriteKeyPrefix
+{
+    public string KeyPrefix => "Art/Novel/";
+    // ...
+}
+```
+
+名乗らないローダの場合は Resources 相対パスがそのまま表示され、ウィンドウ上部にその旨の注意が出ます。
+
 自前実装を一覧に載せるには `IAudioChannel.EnumerateKeys()` / `ICharacterCatalog.EnumerateEntries()` で
 目録を返してください。この 2 つは default 実装を持ちません（実装忘れが「再生しても一覧に出ない」という
 沈黙の空目録になるため明示実装が必須です。一覧を持てない実装は空を返します）。構図は
