@@ -198,8 +198,8 @@ namespace Novel.Editor
 
             using (new EditorGUILayout.HorizontalScope())
             {
-                EditorGUILayout.LabelField($"{id}    表示名: {displayName}", EditorStyles.boldLabel);
-                DrawCopyButton(id);
+                DrawKeyChip(id, id);
+                EditorGUILayout.LabelField($"表示名: {displayName}", EditorStyles.miniLabel);
             }
             if (shown.Count == 0)
             {
@@ -391,12 +391,11 @@ namespace Novel.Editor
                 if (!Matches(layout.Id)) continue;
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    EditorGUILayout.LabelField($":{layout.Id}", GUILayout.Width(120));
+                    // stage :single と書ける形でコピーする (表示と同じ文字列)
+                    DrawKeyChip($":{layout.Id}", $":{layout.Id}", 120f);
                     DrawSlotDiagram(layout.SlotCount);
                     var note = string.IsNullOrEmpty(layout.Note) ? "" : $"  {layout.Note}";
                     EditorGUILayout.LabelField($"{layout.SlotCount} 人{note}");
-                    // stage :single と書ける形でコピーする (表示と同じ文字列)
-                    DrawCopyButton($":{layout.Id}");
                 }
             }
         }
@@ -482,15 +481,17 @@ namespace Novel.Editor
                 }
 
                 var duration = clip == null ? "" : $"  {(int)(clip.length / 60)}:{clip.length % 60:00.0}";
-                var rect = GUILayoutUtility.GetRect(new GUIContent(key.Key), RowLabel, GUILayout.MinWidth(120f));
-                GUI.Label(rect, key.Key, RowLabel);
-                if (clip != null && Event.current.type == EventType.MouseDown && rect.Contains(Event.current.mousePosition))
+                var chipWidth = Mathf.Max(180f, RowLabel.CalcSize(new GUIContent(key.Key)).x + ChipGap + CopyButtonWidth);
+                var rect = GUILayoutUtility.GetRect(chipWidth, EditorGUIUtility.singleLineHeight, GUILayout.Width(chipWidth));
+                DrawKeyChip(rect, key.Key, key.Key, out var copyRect);
+                // コピーボタン上のクリックは ping に取られないようにする
+                if (clip != null && Event.current.type == EventType.MouseDown && rect.Contains(Event.current.mousePosition)
+                    && !copyRect.Contains(Event.current.mousePosition))
                 {
                     EditorGUIUtility.PingObject(clip);
                     Event.current.Use();
                 }
                 EditorGUILayout.LabelField($"{key.Note ?? ""}{duration}", EditorStyles.miniLabel);
-                DrawCopyButton(key.Key);
             }
         }
 
@@ -523,15 +524,32 @@ namespace Novel.Editor
 
         // ---- 共通描画 ----
 
-        private const float CopyButtonWidth = 48f;
+        private const float CopyButtonWidth = 22f;
+        private const float ChipGap = 2f;
+
+        private static Texture? _copyIcon;
+        private static bool _copyIconResolved;
+
+        /// <summary>コピーボタンの絵柄。組み込みアイコンが無いバージョンではテキストへ落とす。</summary>
+        private static Texture? CopyIcon
+        {
+            get
+            {
+                if (_copyIconResolved) return _copyIcon;
+                _copyIconResolved = true;
+                _copyIcon = EditorGUIUtility.IconContent("Clipboard")?.image;
+                return _copyIcon;
+            }
+        }
 
         /// <summary>キーをクリップボードへ入れるボタン。コピーできるキーが無い行では無効化する。</summary>
         private void DrawCopyButton(Rect rect, string? key)
         {
             var empty = string.IsNullOrEmpty(key);
+            var tooltip = empty ? "コピーできるキーがありません" : $"「{key}」をクリップボードへコピー";
             using (new EditorGUI.DisabledScope(empty))
             {
-                var content = new GUIContent("コピー", empty ? "コピーできるキーがありません" : $"「{key}」をクリップボードへコピー");
+                var content = CopyIcon != null ? new GUIContent(CopyIcon, tooltip) : new GUIContent("C", tooltip);
                 if (GUI.Button(rect, content, EditorStyles.miniButton))
                 {
                     EditorGUIUtility.systemCopyBuffer = key;
@@ -540,11 +558,32 @@ namespace Novel.Editor
             }
         }
 
-        /// <summary>横並びレイアウト中に置くコピーボタン。</summary>
-        private void DrawCopyButton(string? key) =>
-            DrawCopyButton(
-                GUILayoutUtility.GetRect(CopyButtonWidth, EditorGUIUtility.singleLineHeight, GUILayout.Width(CopyButtonWidth)),
-                key);
+        /// <summary>
+        /// キー文字列とコピーボタンを隣接させた 1 つのまとまり。行の右端にボタンを寄せると
+        /// 読む位置と押す位置が離れて使いづらいため、必ずキーの直後に付ける。
+        /// </summary>
+        /// <returns>チップが消費した幅 (後続のラベルを続けて置くのに使う)。</returns>
+        private float DrawKeyChip(Rect rect, string label, string? copyKey, out Rect copyRect)
+        {
+            var textWidth = Mathf.Min(RowLabel.CalcSize(new GUIContent(label)).x,
+                Mathf.Max(0f, rect.width - CopyButtonWidth - ChipGap));
+            GUI.Label(new Rect(rect.x, rect.y, textWidth, rect.height), label, RowLabel);
+            copyRect = new Rect(rect.x + textWidth + ChipGap,
+                rect.y + (rect.height - EditorGUIUtility.singleLineHeight) / 2f,
+                CopyButtonWidth, EditorGUIUtility.singleLineHeight);
+            DrawCopyButton(copyRect, copyKey);
+            return textWidth + ChipGap + CopyButtonWidth;
+        }
+
+        /// <summary>横並びレイアウト中に置くキーチップ (<paramref name="minWidth"/> で列を揃えられる)。</summary>
+        private void DrawKeyChip(string label, string? copyKey, float minWidth = 0f)
+        {
+            // GUILayoutUtility.GetRect は EditorGUILayout のような左余白を取らず、行頭で枠に張り付く
+            const float leftPad = 4f;
+            var width = leftPad + Mathf.Max(minWidth, RowLabel.CalcSize(new GUIContent(label)).x + ChipGap + CopyButtonWidth);
+            var rect = GUILayoutUtility.GetRect(width, EditorGUIUtility.singleLineHeight, GUILayout.Width(width));
+            DrawKeyChip(new Rect(rect.x + leftPad, rect.y, rect.width - leftPad, rect.height), label, copyKey, out _);
+        }
 
         /// <summary>サムネイル付きの 1 行。クリックでアセットを ping する。</summary>
         private void DrawThumbnailRow(string? assetPath, string label, string subLabel, string? copyKey = null)
@@ -552,11 +591,7 @@ namespace Novel.Editor
             var size = Mathf.Round(_thumbSize);
             var rect = EditorGUILayout.GetControlRect(false, size);
             var thumbRect = new Rect(rect.x, rect.y + 1f, size, size - 2f);
-            var copyRect = new Rect(rect.xMax - CopyButtonWidth,
-                rect.y + (rect.height - EditorGUIUtility.singleLineHeight) / 2f,
-                CopyButtonWidth, EditorGUIUtility.singleLineHeight);
-            var labelRect = new Rect(thumbRect.xMax + 6f, rect.y,
-                Mathf.Max(0f, rect.width - size - 10f - CopyButtonWidth), rect.height);
+            var contentRect = new Rect(thumbRect.xMax + 6f, rect.y, Mathf.Max(0f, rect.width - size - 6f), rect.height);
 
             if (assetPath != null && IsRowVisible(rect))
             {
@@ -577,9 +612,10 @@ namespace Novel.Editor
                 EditorGUI.DrawRect(thumbRect, new Color(0.5f, 0.5f, 0.5f, 0.1f));
             }
 
-            var text = string.IsNullOrEmpty(subLabel) ? label : $"{label}    {subLabel}";
-            GUI.Label(labelRect, text, RowLabel);
-            DrawCopyButton(copyRect, copyKey);
+            var used = DrawKeyChip(contentRect, label, copyKey, out var copyRect);
+            if (!string.IsNullOrEmpty(subLabel))
+                GUI.Label(new Rect(contentRect.x + used + 8f, rect.y,
+                    Mathf.Max(0f, contentRect.width - used - 8f), rect.height), subLabel, RowLabel);
 
             // コピーボタン上のクリックは ping に取られないようにする
             if (assetPath != null && Event.current.type == EventType.MouseDown && rect.Contains(Event.current.mousePosition)
