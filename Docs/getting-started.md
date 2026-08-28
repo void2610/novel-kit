@@ -259,15 +259,16 @@ public sealed class NovelStarter : IStartable
 public sealed class MyErrorHandler : INovelErrorHandler
 {
     public void OnScenarioFaulted(NovelErrorInfo error)
-        => ShowOverlay($"{error.Message}\n{error.Detail}（{error.SayNumber} 番目のセリフ付近）");
+        => ShowOverlay($"{error.Message}\n{error.Detail}（直前のセリフ: {error.LastSayText}）");
 
     public void OnRuntimeIssue(NovelIssueInfo issue)
         => ShowToast(issue.Message);   // Kind で ScenarioNotFound / SpriteNotFound 等を判別できる
 }
 ```
 
-> `.rb` の行番号はエラーに出せません。バイトコードにデバッグ情報が含まれないためで、
-> 代わりに `NovelErrorInfo.SayNumber`（落ちる直前に処理した say の通し番号）が位置の手掛かりになります。
+> `.rb` の行番号はエラーに出せません。バイトコードにデバッグ情報が含まれないためで、代わりに
+> `NovelErrorInfo.SayNumber` / `LastSayText`（落ちる直前に処理した say の通し番号と原文）が
+> 位置の手掛かりになります。原文はタグ込み・未 resolve で渡るため、そのまま `.rb` を検索できます。
 
 ---
 

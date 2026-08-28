@@ -17,21 +17,38 @@ namespace Novel.Runtime
         /// </summary>
         public int SayNumber { get; }
 
-        public NovelErrorInfo(string scenarioKey, string message, string detail, Exception exception, int sayNumber = 0)
+        /// <summary>
+        /// 落ちる直前に処理した say の原文 (タグ込み・未 resolve。1 つも表示していなければ空)。
+        /// これで <c>.rb</c> を検索すれば、行番号が無くてもエラー箇所へ辿り着ける。
+        /// </summary>
+        public string LastSayText { get; }
+
+        public NovelErrorInfo(string scenarioKey, string message, string detail, Exception exception,
+            int sayNumber = 0, string lastSayText = "")
         {
             ScenarioKey = scenarioKey;
             Message = message;
             Detail = detail;
             Exception = exception;
             SayNumber = sayNumber;
+            LastSayText = lastSayText;
         }
 
         public override string ToString()
         {
             var where = SayNumber > 0
-                ? $"{SayNumber} 番目のセリフまで進んだ時点"
+                ? $"{SayNumber} 番目のセリフ{Quote(LastSayText)}まで進んだ時点"
                 : "セリフを 1 つも表示しないうちに";
             return $"[Novel] シナリオ '{ScenarioKey}' の {where}でエラー: {Message}\n{Detail}";
+        }
+
+        /// <summary>ログ 1 行に収まるようセリフを短く引用する (改行は潰し、長ければ省略)。</summary>
+        private static string Quote(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return "";
+            var oneLine = text.Replace('\n', ' ').Replace('\r', ' ');
+            const int limit = 30;
+            return oneLine.Length <= limit ? $"「{oneLine}」" : $"「{oneLine.Substring(0, limit)}…」";
         }
     }
 

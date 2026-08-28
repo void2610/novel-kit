@@ -70,7 +70,7 @@ namespace Novel.Runtime
         public async UniTask On(SayCommand cmd, CancellationToken ct)
         {
             // 早送り中は表示待ちだけ省く。立ち絵/バックログ/既読は実行し、復帰地点の盤面を再構築する
-            var fastForward = _progress.AdvanceSay();
+            var fastForward = _progress.AdvanceSay(cmd.Text);
 
             // PortraitKey が同時指定されていればここで切替（display_as で表示名を変えつつ、同一 speaker_id の立ち絵を 1 行で指定する糖衣）。
             // 未指定なら catalog の既定立ち絵へフォールバックし、話者が喋るたびにその人の絵が出る

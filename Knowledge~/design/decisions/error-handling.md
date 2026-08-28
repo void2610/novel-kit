@@ -67,7 +67,9 @@ Ruby backtrace を `Detail` に surface する。既定ハンドラを無音の 
 - **`.rb` の行番号は現状の依存では出せない**。`jp.hadashikick.mrubycs-compiler` の `MrbcsCompile` は
   ソースとバイト列しか受け渡さず、ファイル名も debug info も渡す口が無いため、backtrace は
   `raise in byte sequence: 0` の形にしかならない（複数行スクリプトでも行番号 0 を実測）。
-  代替として `NovelErrorInfo.SayNumber`（落ちる直前に処理した say の通し番号）を位置の手掛かりに載せた。
+  代替として `NovelErrorInfo.SayNumber` / `LastSayText`（落ちる直前に処理した say の通し番号と原文）を
+  位置の手掛かりに載せた。原文は resolve / 変数展開の前・タグ込みで持つ（訳文や展開後だと `.rb` の記述と
+  一致せず検索できないため）。通番より原文の方が実用的で、これで `.rb` を検索すれば該当行に辿り着ける。
   行番号を出すにはコンパイラパッケージ側の対応が要る（[残論点](/design/open-questions.md) 送り）。
 - **Core の既定ハンドラが無音だった**。2026-06-14 の「既定を DebugNovelErrorHandler へ変更した」は
   View ヘルパにしか適用されておらず、`RegisterNovelKitCore` は `NullErrorHandler` のままだった。

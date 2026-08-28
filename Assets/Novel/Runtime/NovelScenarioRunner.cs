@@ -171,7 +171,7 @@ namespace Novel.Runtime
             catch (Exception ex)
             {
                 // Ruby backtrace を含めて surface しつつフェイルセーフで Faulted を返す（error-handling）
-                _errorHandler?.OnScenarioFaulted(NovelErrorReport.Describe(scenarioKey, ex, _progress.SayNumber));
+                _errorHandler?.OnScenarioFaulted(NovelErrorReport.Describe(scenarioKey, ex, _progress.SayNumber, _progress.LastSayText));
                 return NovelResult.Faulted;
             }
         }

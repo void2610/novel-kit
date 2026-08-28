@@ -142,6 +142,8 @@ namespace Novel.Tests
             public string? Key;
             public string? Detail;
             public int SayNumber;
+            public string? LastSayText;
+            public string? Rendered;
             public readonly List<NovelIssueInfo> Issues = new();
 
             public void OnScenarioFaulted(NovelErrorInfo error)
@@ -150,6 +152,8 @@ namespace Novel.Tests
                 Key = error.ScenarioKey;
                 Detail = error.Detail;
                 SayNumber = error.SayNumber;
+                LastSayText = error.LastSayText;
+                Rendered = error.ToString();
             }
 
             public void OnRuntimeIssue(NovelIssueInfo issue) => Issues.Add(issue);
@@ -306,6 +310,9 @@ namespace Novel.Tests
             Assert.AreEqual("test_error", handler.Key);
             // .mrb にデバッグ情報が無く Ruby の行番号は得られないため、say 通番が位置の手掛かりになる
             Assert.AreEqual(2, handler.SayNumber, "2 行目の narration まで進んだ時点で落ちる");
+            // 行番号が出せない代わりに、この文字列で .rb を検索すればエラー箇所へ辿り着ける
+            Assert.AreEqual("2 行目", handler.LastSayText, "直近セリフは原文のまま渡す");
+            StringAssert.Contains("「2 行目」", handler.Rendered);
             StringAssert.Contains("raise", handler.Detail, "C# スタックではなく Ruby 側の backtrace を渡す");
         });
 

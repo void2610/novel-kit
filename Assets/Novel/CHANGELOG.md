@@ -22,8 +22,10 @@
   既存の実装は壊れない）。dev ビルドではライブラリが `Debug.LogWarning` も出すので、未実装でも無言にならない。
   現在の通知対象は `ScenarioNotFound` / `PreambleNotFound` / `SpriteNotFound`
   - `SpriteNotFound`: 画像キーを解決できないと従来は無言で空表示になり、「立ち絵が出ない」の原因が掴めなかった
-- `NovelErrorInfo.SayNumber`: 落ちる直前に処理した say の通し番号。`.mrb` にデバッグ情報が無く
-  Ruby の行番号を得られないため、これがエラー位置の手掛かりになる
+- `NovelErrorInfo.SayNumber` / `LastSayText`: 落ちる直前に処理した say の通し番号と原文。`.mrb` に
+  デバッグ情報が無く Ruby の行番号を得られないため、これがエラー位置の手掛かりになる
+  （原文で `.rb` を検索すれば該当行に辿り着ける）。ログは
+  `シナリオ 'chapter1' の 3 番目のセリフ「こんにちは」まで進んだ時点でエラー: ...` の形になる
 - `Novel/Project Reference` の立ち絵・キーまわりを実用強化 (project-reference ADR)
   - `ISpriteKeyPrefix`: `ISpriteLoader` が「キーの前に付ける root」をエディタへ名乗る任意ファセット
     (`ResourcesSpriteLoader` は実装済み)。DI ビルド時にキャプチャし、ウィンドウが
