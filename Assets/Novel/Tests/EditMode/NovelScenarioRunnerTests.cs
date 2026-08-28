@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using Novel.Assets;
@@ -11,6 +12,7 @@ using MRubyCS.Serializer;
 using Novel.Runtime;
 using Novel.View;
 using NUnit.Framework;
+using UnityEngine;
 using UnityEngine.TestTools;
 using VitalRouter;
 using VitalRouter.MRuby;
@@ -138,12 +140,32 @@ namespace Novel.Tests
         {
             public bool Called;
             public string? Key;
+            public string? Detail;
+            public int SayNumber;
+            public string? LastSayText;
+            public string? Rendered;
+            public readonly List<NovelIssueInfo> Issues = new();
 
             public void OnScenarioFaulted(NovelErrorInfo error)
             {
                 Called = true;
                 Key = error.ScenarioKey;
+                Detail = error.Detail;
+                SayNumber = error.SayNumber;
+                LastSayText = error.LastSayText;
+                Rendered = error.ToString();
             }
+
+            public void OnRuntimeIssue(NovelIssueInfo issue) => Issues.Add(issue);
+        }
+
+        // 常に解決できないローダ (キー誤記・アセット未配置の再現)
+        private sealed class NullSpriteLoaderStub : ISpriteLoader
+        {
+            public UniTask<UnityEngine.Sprite?> LoadAsync(string key, CancellationToken ct)
+                => UniTask.FromResult<UnityEngine.Sprite?>(null);
+
+            public void ReleaseAll() { }
         }
 
         private static NovelScenarioRunner NewRunner(INovelView view)
@@ -286,6 +308,62 @@ namespace Novel.Tests
             Assert.AreEqual(NovelResult.Faulted, result);
             Assert.IsTrue(handler.Called);
             Assert.AreEqual("test_error", handler.Key);
+            // .mrb にデバッグ情報が無く Ruby の行番号は得られないため、say 通番が位置の手掛かりになる
+            Assert.AreEqual(2, handler.SayNumber, "2 行目の narration まで進んだ時点で落ちる");
+            // 行番号が出せない代わりに、この文字列で .rb を検索すればエラー箇所へ辿り着ける
+            Assert.AreEqual("2 行目", handler.LastSayText, "直近セリフは原文のまま渡す");
+            StringAssert.Contains("「2 行目」", handler.Rendered);
+            StringAssert.Contains("raise", handler.Detail, "C# スタックではなく Ruby 側の backtrace を渡す");
+        });
+
+        // 無言で「一瞬で正常終了」する事故を防ぐ: シナリオが引けなければ Faulted + 不具合通知
+        [UnityTest]
+        public IEnumerator シナリオが見つからなければ_Faulted_を返し不具合を通知する() => UniTask.ToCoroutine(async () =>
+        {
+            var handler = new FakeErrorHandler();
+            var runner = new NovelScenarioRunner(
+                new ScenarioSource(new ResourcesTextAssetLoader()),
+                new Router(),
+                new FakeView(),
+                new IdentityTextResolver(),
+                new EmptyCatalog(),
+                errorHandler: handler,
+                preambleSources: new IPreambleSource[] { new PreambleSource(new ResourcesTextAssetLoader()) });
+
+            // 黙らせるのではなく「警告が出ること」を期待する (この PR の主題が無言失敗の解消のため)
+            LogAssert.Expect(LogType.Warning, new Regex("no_such_scenario.*バイトコードを取得できなかった"));
+            var result = await runner.PlayAsync("no_such_scenario", CancellationToken.None);
+
+            Assert.AreEqual(NovelResult.Faulted, result);
+            Assert.IsFalse(handler.Called, "例外ではないため OnScenarioFaulted は呼ばない");
+            var issue = handler.Issues.Single(i => i.Kind == NovelIssueKind.ScenarioNotFound);
+            Assert.AreEqual("no_such_scenario", issue.ScenarioKey);
+        });
+
+        // 「立ち絵が出ない」の原因を掴めるように、引けなかったキーを通知する
+        [UnityTest]
+        public IEnumerator 画像キーを解決できなければ不具合を通知する() => UniTask.ToCoroutine(async () =>
+        {
+            var handler = new FakeErrorHandler();
+            var runner = new NovelScenarioRunner(
+                new ScenarioSource(new ResourcesTextAssetLoader()),
+                new Router(),
+                new FakeView(),
+                new IdentityTextResolver(),
+                new EmptyCatalog(),
+                // ディレクタが無いと立ち絵コマンドがロードまで到達しない (未供給ファセットは別問題)
+                portraitDirector: new DefaultPortraitDirector(new NullPortraitChannel()),
+                errorHandler: handler,
+                sprites: new NullSpriteLoaderStub(),
+                preambleSources: new IPreambleSource[] { new PreambleSource(new ResourcesTextAssetLoader()) });
+
+            LogAssert.Expect(LogType.Warning, new Regex("missing_portrait.*解決できなかった"));
+            var result = await runner.PlayAsync("test_portrait_key", CancellationToken.None);
+
+            Assert.AreEqual(NovelResult.Completed, result, "キーが引けなくても再生は止めない");
+            var issue = handler.Issues.Single(i => i.Kind == NovelIssueKind.SpriteNotFound);
+            Assert.AreEqual("missing_portrait", issue.Subject);
+            Assert.AreEqual("test_portrait_key", issue.ScenarioKey);
         });
 
         // INovelCommandModule が独自コマンドの語彙束縛とハンドラ写像を差し込めることを検証（拡張口）

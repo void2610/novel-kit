@@ -3,7 +3,7 @@ type: Decision
 title: MRuby ランタイムエラー処理・サンドボックス
 description: シナリオ実行を try/catch で包み backtrace を surface。リリースはフェイルセーフで Faulted 終了。サンドボックスは v1 無し（一次コンテンツ前提）。
 tags: [decision, mruby, error-handling, sandbox, runner, result]
-timestamp: 2026-06-13T00:00:00Z
+timestamp: 2026-08-28T00:00:00Z
 status: 確定
 ---
 
@@ -56,6 +56,34 @@ Ruby backtrace を `Detail` に surface する。既定ハンドラを無音の 
 `Debug.LogError` する `DebugNovelErrorHandler`（View 層）へ変更した（明示的に黙らせたい game は `NullErrorHandler`
 を登録）。当初は既定が無音で作家にエラーが一切届かなかった（[実装レビュー](/design/implementation-review.md)
 `NK-ERROR-SILENT`）のを解消。`NovelResult` は enum のまま（情報はハンドラ経由で運ぶ）。
+
+## 実装で確定（2026-08-28, 無言失敗の一掃）
+
+- **Ruby backtrace は一度も出ていなかった**。`GetBacktraceString()` を「例外型」から探していたが、
+  実際は `MRubyState` のメソッドで、リフレクション検索が常に空振りして C# 例外文字列へフォールバックしていた
+  （2026-06-14 の「実装で確定」は誤った追認だった）。正しい経路は
+  `例外.ExceptionObject.Backtrace.ToString(state)`。`MRubyState.GetBacktraceString()` は VM を抜けた後では
+  空を返すため使えない。バージョン差の吸収という当初方針どおりリフレクションのまま辿り直した。
+- **`.rb` の行番号は現状の依存では出せない**。`jp.hadashikick.mrubycs-compiler` の `MrbcsCompile` は
+  ソースとバイト列しか受け渡さず、ファイル名も debug info も渡す口が無いため、backtrace は
+  `raise in byte sequence: 0` の形にしかならない（複数行スクリプトでも行番号 0 を実測）。
+  代替として `NovelErrorInfo.SayNumber` / `LastSayText`（落ちる直前に処理した say の通し番号と原文）を
+  位置の手掛かりに載せた。原文は resolve / 変数展開の前・タグ込みで持つ（訳文や展開後だと `.rb` の記述と
+  一致せず検索できないため）。通番より原文の方が実用的で、これで `.rb` を検索すれば該当行に辿り着ける。
+  行番号を出すにはコンパイラパッケージ側の対応が要る（[残論点](/design/open-questions.md) 送り）。
+- **Core の既定ハンドラが無音だった**。2026-06-14 の「既定を DebugNovelErrorHandler へ変更した」は
+  View ヘルパにしか適用されておらず、`RegisterNovelKitCore` は `NullErrorHandler` のままだった。
+  `DebugNovelErrorHandler` を `Novel.View` から `Novel.Runtime` へ移し（Runtime は UnityEngine を参照できる）、
+  Core の既定に据えて ADR の意図と実装を一致させた。
+- **例外にならない不具合に `OnRuntimeIssue` を追加**。「シナリオが引けない」「画像キーが解決できない」は
+  例外ではないため `OnScenarioFaulted` の意味と合わず、かといって黙ると原因が掴めない
+  （とくに画像キーは無言で空表示になり「立ち絵が出ない」の調査が手詰まりだった）。
+  `NovelIssueInfo{Kind, ScenarioKey, Subject, Message}` を default 実装付きメソッドで通知する
+  （音キー・構図の列挙で default を置かなかったのとは逆の判断。あちらは「実装忘れ = 沈黙」だったが、
+  こちらは未実装でもライブラリが dev ログを出すため沈黙しない）。dev ログとハンドラ通知は
+  `NovelDiagnostics` に集約し、検知点が増えても報告の作法がぶれないようにする。
+- **シナリオ未発見は `Completed` ではなく `Faulted`**。「一瞬で正常終了」は最も原因を掴みにくい失敗で、
+  game 側も成功と誤認する。破壊的変更だが、無言失敗を残すより優先した。
 
 # 検討した代替案
 

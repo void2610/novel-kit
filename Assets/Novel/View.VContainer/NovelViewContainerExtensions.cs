@@ -45,8 +45,6 @@ namespace Novel.Integration
             builder.Register<IBackgroundChannel, WarningBackgroundChannel>(lifetime);
             builder.Register<IStillChannel, WarningStillChannel>(lifetime);
             builder.Register<IAudioChannel, WarningAudioChannel>(lifetime);
-            // エラーは無音にしない（シナリオ名 + Ruby backtrace をログ。コアの NullErrorHandler を上書き）
-            builder.Register<INovelErrorHandler, DebugNovelErrorHandler>(lifetime);
         }
     }
 }

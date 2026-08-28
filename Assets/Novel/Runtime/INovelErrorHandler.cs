@@ -11,15 +11,45 @@ namespace Novel.Runtime
         public string Detail { get; }       // Ruby backtrace 等の詳細（無ければ C# 例外文字列）
         public Exception Exception { get; }
 
-        public NovelErrorInfo(string scenarioKey, string message, string detail, Exception exception)
+        /// <summary>
+        /// 落ちる直前に処理した say の通し番号（1 始まり。0 = セリフ表示前）。
+        /// .mrb にデバッグ情報が無く Ruby の行番号を得られないため、これが位置の手掛かりになる。
+        /// </summary>
+        public int SayNumber { get; }
+
+        /// <summary>
+        /// 落ちる直前に処理した say の原文 (タグ込み・未 resolve。1 つも表示していなければ空)。
+        /// これで <c>.rb</c> を検索すれば、行番号が無くてもエラー箇所へ辿り着ける。
+        /// </summary>
+        public string LastSayText { get; }
+
+        public NovelErrorInfo(string scenarioKey, string message, string detail, Exception exception,
+            int sayNumber = 0, string lastSayText = "")
         {
             ScenarioKey = scenarioKey;
             Message = message;
             Detail = detail;
             Exception = exception;
+            SayNumber = sayNumber;
+            LastSayText = lastSayText;
         }
 
-        public override string ToString() => $"[Novel] シナリオ '{ScenarioKey}' でエラー: {Message}\n{Detail}";
+        public override string ToString()
+        {
+            var where = SayNumber > 0
+                ? $"{SayNumber} 番目のセリフ{Quote(LastSayText)}まで進んだ時点"
+                : "セリフを 1 つも表示しないうちに";
+            return $"[Novel] シナリオ '{ScenarioKey}' の {where}でエラー: {Message}\n{Detail}";
+        }
+
+        /// <summary>ログ 1 行に収まるようセリフを短く引用する (改行は潰し、長ければ省略)。</summary>
+        private static string Quote(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return "";
+            var oneLine = text.Replace('\n', ' ').Replace('\r', ' ');
+            const int limit = 30;
+            return oneLine.Length <= limit ? $"「{oneLine}」" : $"「{oneLine.Substring(0, limit)}…」";
+        }
     }
 
     // MRuby 実行時例外の委譲先。リリースでは NovelResult.Faulted を返しつつここへ通知する。
@@ -27,5 +57,11 @@ namespace Novel.Runtime
     public interface INovelErrorHandler
     {
         void OnScenarioFaulted(NovelErrorInfo error);
+
+        /// <summary>
+        /// 例外にならない不具合（キー解決の失敗など）の通知。独自オーバーレイに出したい game だけ実装すればよく、
+        /// 未実装でもライブラリが dev ビルドでログを出すため無言にはならない（既存実装を壊さないための default）。
+        /// </summary>
+        void OnRuntimeIssue(NovelIssueInfo issue) { }
     }
 }

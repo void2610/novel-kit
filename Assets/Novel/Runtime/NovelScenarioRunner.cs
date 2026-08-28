@@ -25,6 +25,7 @@ namespace Novel.Runtime
         private readonly NovelPlaybackProgress _progress = new();
         private readonly List<IDisposable> _subscriptions;
         private bool _preambleLoaded;
+        private string _currentScenarioKey = "";
         private bool _disposed;
 
         // switch-latest 直列化用: 単一 MRubyState 共有のため前再生の完了通知を待ってから差し替える
@@ -79,7 +80,9 @@ namespace Novel.Runtime
             var handler = new NovelCommandHandler(view, _store, text, catalog,
                 portraitDirector: portraitDirector, background: background, still: still, audio: audio,
                 worldEffectSink: worldEffectSink, backlog: backlog, centerImage: centerImage,
-                progress: _progress, sprites: sprites, ruby: ruby, textVariables: textVariables);
+                progress: _progress, sprites: sprites, ruby: ruby, textVariables: textVariables,
+                // ハンドラは runner と同寿命だが報告にはその時再生中のキーが要るため、フィールド越しに読む
+                onSpriteNotFound: key => NovelDiagnostics.SpriteNotFound(errorHandler, _currentScenarioKey, key));
             _sprites = sprites;
             _subscriptions = new List<IDisposable> { handler.MapTo(_router) };
             // 独自コマンドハンドラを同じノベル専用 Router へ写像（購読は Dispose でまとめて解除）
@@ -140,6 +143,7 @@ namespace Novel.Runtime
         // 1 シナリオの実体。例外は握って NovelResult.Faulted/Cancelled に畳む（フェイルセーフ）。
         private async UniTask<NovelResult> RunOnceAsync(string scenarioKey, NovelResumePoint resume, CancellationToken ct)
         {
+            _currentScenarioKey = scenarioKey;
             try
             {
                 _progress.Reset(resume.SayNumber);
@@ -148,7 +152,12 @@ namespace Novel.Runtime
                 // 状態の復元/保存は runner が駆動しない。game が PlayAsync の外で RestoreState/CaptureState を
                 // 呼び、直列化と永続化を自前で行う（進行とセーブは game 所有・save-snapshot ADR）。
                 var bytecode = await _source.LoadBytecodeAsync(scenarioKey, ct);
-                if (bytecode == null || bytecode.Length == 0) return NovelResult.Completed;
+                if (bytecode == null || bytecode.Length == 0)
+                {
+                    // 「一瞬で正常終了」に見えるのが最も原因を掴みにくいため、Completed ではなく Faulted で返す
+                    NovelDiagnostics.ScenarioNotFound(_errorHandler, scenarioKey);
+                    return NovelResult.Faulted;
+                }
 
                 var irep = _state.ParseBytecode(bytecode);
                 await _state.ExecuteAsync(_router, irep, ct);
@@ -162,7 +171,7 @@ namespace Novel.Runtime
             catch (Exception ex)
             {
                 // Ruby backtrace を含めて surface しつつフェイルセーフで Faulted を返す（error-handling）
-                _errorHandler?.OnScenarioFaulted(NovelErrorReport.Describe(scenarioKey, ex));
+                _errorHandler?.OnScenarioFaulted(NovelErrorReport.Describe(scenarioKey, ex, _progress.SayNumber, _progress.LastSayText));
                 return NovelResult.Faulted;
             }
         }
@@ -176,6 +185,7 @@ namespace Novel.Runtime
             {
                 var bytecode = await preambleSource.LoadPreambleAsync(ct);
                 if (bytecode != null && bytecode.Length > 0) _state.LoadBytecode(bytecode);
+                else NovelDiagnostics.PreambleNotFound(_errorHandler, preambleSource.GetType().Name);
             }
             _preambleLoaded = true;   // 全 preamble ロード成功（または不在の確定結果）後にのみ確定
         }

@@ -31,6 +31,7 @@ namespace Novel.Runtime
         private readonly NovelPlaybackProgress _progress;
         private readonly Func<string, string?> _variableLookup;
         private readonly Action<string> _onMissingVariable;
+        private readonly Action<string>? _onSpriteNotFound;
 
         public NovelCommandHandler(INovelView view, IStateStore state, ITextResolver text, ICharacterCatalog catalog,
             IPortraitDirector? portraitDirector = null, IBackgroundChannel? background = null, IStillChannel? still = null,
@@ -38,8 +39,9 @@ namespace Novel.Runtime
             IWorldEffectSink? worldEffectSink = null, IBacklog? backlog = null,
             ICenterImageChannel? centerImage = null, NovelPlaybackProgress? progress = null,
             ISpriteLoader? sprites = null, IRubyDictionary? ruby = null,
-            ITextVariableProvider? textVariables = null)
+            ITextVariableProvider? textVariables = null, Action<string>? onSpriteNotFound = null)
         {
+            _onSpriteNotFound = onSpriteNotFound;
             _view = view;
             _state = state;
             _text = text;
@@ -68,7 +70,7 @@ namespace Novel.Runtime
         public async UniTask On(SayCommand cmd, CancellationToken ct)
         {
             // 早送り中は表示待ちだけ省く。立ち絵/バックログ/既読は実行し、復帰地点の盤面を再構築する
-            var fastForward = _progress.AdvanceSay();
+            var fastForward = _progress.AdvanceSay(cmd.Text);
 
             // PortraitKey が同時指定されていればここで切替（display_as で表示名を変えつつ、同一 speaker_id の立ち絵を 1 行で指定する糖衣）。
             // 未指定なら catalog の既定立ち絵へフォールバックし、話者が喋るたびにその人の絵が出る
@@ -257,7 +259,10 @@ namespace Novel.Runtime
         private async UniTask<ResolvedSprite> LoadSpriteAsync(string key, CancellationToken ct)
         {
             if (string.IsNullOrEmpty(key) || _sprites == null) return new ResolvedSprite(key, null);
-            return new ResolvedSprite(key, await _sprites.LoadAsync(key, ct));
+            var sprite = await _sprites.LoadAsync(key, ct);
+            // ローダがあるのに引けないキーは誤記か未配置。ローダ未供給は別問題 (未供給ファセット警告の領域) なので報告しない
+            if (sprite == null) _onSpriteNotFound?.Invoke(key);
+            return new ResolvedSprite(key, sprite);
         }
 
         private string? ResolveDisplayName(SayCommand cmd)

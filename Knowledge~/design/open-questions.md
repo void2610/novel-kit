@@ -87,4 +87,8 @@ lipsync は対象外）で確定。残るのは `se`/`bgm` コマンドの引数
 - `.rb` のホットリロード（編集 → 再 import なしの反復ループ）。
 - `Novel.View` の外部依存スタンス（`Void2610.UnityTemplate`/LitMotion を依存とするか vendoring するか）。
 - コンテキスト駆動セリフ選択（systemic barks、U1W 由来）を任意モジュール化。
+- **`.rb` の行番号をエラーに出す**。`jp.hadashikick.mrubycs-compiler` の `MrbcsCompile` にファイル名/debug info を
+  渡す口が無く、backtrace が `raise in byte sequence: 0` にしかならない（2026-08-28 実測）。
+  コンパイラパッケージ側の対応（`mrbc -g` 相当 + ファイル名）が要るため、上流への PR か fork が前提。
+  当面は `NovelErrorInfo.SayNumber` が位置の手掛かり（[エラー処理](/design/decisions/error-handling.md)）。
 - UGC（ユーザー生成）シナリオを許す場合の MRuby サンドボックス/capability 制限（[エラー処理](/design/decisions/error-handling.md) で v1 は一次コンテンツ前提）。
