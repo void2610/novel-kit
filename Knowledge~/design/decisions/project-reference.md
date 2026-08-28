@@ -3,7 +3,7 @@ type: Decision
 title: プロジェクトリファレンス — キー列挙はチャンネル契約に統合・実体は DI ビルド時にキャプチャ
 description: ライター向けに「使える名前と構図」を一覧するエディタウィンドウを追加する。列挙の契約は IAudioChannel / IPortraitChannel / ICharacterCatalog 自身に統合し（音とキャラは明示実装必須・構図のみ default = 標準 5 構図）、実行時にしか実体がない情報は RegisterNovelKitCore が DI ビルド時にキャプチャしてエディタ側キャッシュへ渡す（game 側の追加記述ゼロ・種別ごとにマージ）。音の参考実装は追加しない。
 tags: [decision, editor, tooling, audio, portrait, layout, catalog, writer]
-timestamp: 2026-08-25T00:00:00Z
+timestamp: 2026-08-29T00:00:00Z
 status: 確定
 ---
 
@@ -180,6 +180,10 @@ public interface IPortraitChannel
   写し間違いが Validate Scenarios 頼みになっていた。画像キー・立ち絵キー・キャラ id・構図（`:single` と
   表示どおりの形）・BGM / SE キーに `EditorGUIUtility.systemCopyBuffer` へ入れるボタンを置く。
   root 外などコピーすべき実キーが無い行はボタンを無効化する。
+- **opt-in アセンブリ向けの拡張点** (2026-08-29)。`IProjectReferenceSection` でタブを、
+  `IScenarioKeyExtension` で Validate Scenarios の語彙・preamble・正解集合を差し込める。CinematicEffect 連携
+  ([ADR](/design/decisions/cinematic-effect.md)) が `[InitializeOnLoad]` で登録する。コアの editor は
+  opt-in アセンブリを参照できない (asmdef の任意参照が扱いづらい) ため、依存の向きを逆にした。
 
 # 検討した代替案
 

@@ -245,6 +245,29 @@ public sealed class NovelStarter : IStartable
 
 ---
 
+## 4.4. CinematicEffect の演出をシナリオから呼ぶ（任意）
+
+[cinematic-effect](https://github.com/void2610/cinematic-effect) を導入していれば、演出アセットを置くだけで
+シナリオから呼べます。**コードも対応表も要りません。**
+
+1. `builder.RegisterNovelCinematicEffects();` を `RegisterNovelKit()` / `RegisterNovelKitCore()` の後に足す
+2. `Create > Cinematic > Sequence Asset` で演出を組み、`Resources/Novel/Effects/<key>.asset` に置く
+3. シナリオで `cinematic :key` / `cinematic_stop :key` と書く
+
+キーはアセット名（`Resources/Novel/Effects/` からの相対パス・拡張子なし）です。停止は
+`<key>_exit.asset` があればそれを再生し、無ければ Enter が `Play` したままのエフェクトを同じ config で
+`Stop` するシーケンスを自動で導出します。一回で終わる演出（自分で `Stop` まで持つもの）は停止不要です。
+使えるキーは `Novel > Project Reference` の「演出」タブに並び、`Novel > Validate Scenarios` が
+未定義キーを警告します。
+
+`CinematicEffectDirector` はシーンにあればそれを使い、無ければ自動生成します。`shake` / `flash` /
+`fade_out` / `fade_in` / `blackout` の標準 5 種も同時に `IWorldEffectSink` として登録されるので、
+これらは即座に動きます。ゲーム固有の `world_effect` キーを持つ場合は自前の sink を後勝ち登録し、標準 5 種は
+`BuiltinTransitionWorldEffectSink.TryBuild()` で組んで委譲してください。
+
+> Addressables 等に載せたい場合は `ICinematicSequenceLoader` を後勝ち登録します。ただしエディタの一覧・検証は
+> `Resources/Novel/Effects/` の規約で走査するため、その場合は一覧に出ません。
+
 ## 4.5. エラーの受け取り方
 
 既定では `DebugNovelErrorHandler` が登録され、シナリオ内の例外を `Debug.LogError` に出します
