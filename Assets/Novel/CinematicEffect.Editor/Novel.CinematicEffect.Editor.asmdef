@@ -1,0 +1,32 @@
+{
+    "name": "Novel.CinematicEffect.Editor",
+    "rootNamespace": "Novel.Cinematic.Editor",
+    "references": [
+        "Novel.Runtime",
+        "Novel.View",
+        "Novel.Editor",
+        "Novel.CinematicEffect",
+        "CinematicEffect",
+        "VitalRouter.Unity",
+        "UniTask"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "NOVEL_CINEMATIC_EFFECT"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.void2610.cinematic-effect",
+            "expression": "",
+            "define": "NOVEL_CINEMATIC_EFFECT"
+        }
+    ],
+    "noEngineReferences": false
+}
