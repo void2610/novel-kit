@@ -29,6 +29,7 @@ namespace Novel.Runtime
         /// <summary>解決できなかったキーなど、事象の対象 (無ければ空)。</summary>
         public string Subject { get; }
 
+        /// <summary>事象の説明。場所は <see cref="ScenarioKey"/> が持つため、ここでは繰り返さない。</summary>
         public string Message { get; }
 
         public NovelIssueInfo(NovelIssueKind kind, string scenarioKey, string subject, string message)

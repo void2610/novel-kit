@@ -19,7 +19,7 @@ namespace Novel.Runtime
 
         public static void ScenarioNotFound(INovelErrorHandler? handler, string scenarioKey) =>
             Report(handler, new NovelIssueInfo(NovelIssueKind.ScenarioNotFound, scenarioKey, scenarioKey,
-                $"シナリオ '{scenarioKey}' のバイトコードを取得できなかったため、何も再生せずに終了しました。" +
+                "バイトコードを取得できなかったため、何も再生せずに終了しました。" +
                 "シナリオキーの誤記か、.rb アセットの未配置が考えられます。"));
 
         public static void PreambleNotFound(INovelErrorHandler? handler, string sourceType) =>
