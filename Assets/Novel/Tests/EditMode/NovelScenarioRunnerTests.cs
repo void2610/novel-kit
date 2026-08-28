@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using Novel.Assets;
@@ -11,6 +12,7 @@ using MRubyCS.Serializer;
 using Novel.Runtime;
 using Novel.View;
 using NUnit.Framework;
+using UnityEngine;
 using UnityEngine.TestTools;
 using VitalRouter;
 using VitalRouter.MRuby;
@@ -321,7 +323,8 @@ namespace Novel.Tests
                 errorHandler: handler,
                 preambleSources: new IPreambleSource[] { new PreambleSource(new ResourcesTextAssetLoader()) });
 
-            LogAssert.ignoreFailingMessages = true;   // dev ログ (LogWarning) 自体は検証対象でない
+            // 黙らせるのではなく「警告が出ること」を期待する (この PR の主題が無言失敗の解消のため)
+            LogAssert.Expect(LogType.Warning, new Regex("no_such_scenario.*バイトコードを取得できなかった"));
             var result = await runner.PlayAsync("no_such_scenario", CancellationToken.None);
 
             Assert.AreEqual(NovelResult.Faulted, result);
@@ -347,7 +350,7 @@ namespace Novel.Tests
                 sprites: new NullSpriteLoaderStub(),
                 preambleSources: new IPreambleSource[] { new PreambleSource(new ResourcesTextAssetLoader()) });
 
-            LogAssert.ignoreFailingMessages = true;
+            LogAssert.Expect(LogType.Warning, new Regex("missing_portrait.*解決できなかった"));
             var result = await runner.PlayAsync("test_portrait_key", CancellationToken.None);
 
             Assert.AreEqual(NovelResult.Completed, result, "キーが引けなくても再生は止めない");
