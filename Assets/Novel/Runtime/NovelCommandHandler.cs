@@ -31,6 +31,7 @@ namespace Novel.Runtime
         private readonly NovelPlaybackProgress _progress;
         private readonly Func<string, string?> _variableLookup;
         private readonly Action<string> _onMissingVariable;
+        private readonly Action<string>? _onSpriteNotFound;
 
         public NovelCommandHandler(INovelView view, IStateStore state, ITextResolver text, ICharacterCatalog catalog,
             IPortraitDirector? portraitDirector = null, IBackgroundChannel? background = null, IStillChannel? still = null,
@@ -38,8 +39,9 @@ namespace Novel.Runtime
             IWorldEffectSink? worldEffectSink = null, IBacklog? backlog = null,
             ICenterImageChannel? centerImage = null, NovelPlaybackProgress? progress = null,
             ISpriteLoader? sprites = null, IRubyDictionary? ruby = null,
-            ITextVariableProvider? textVariables = null)
+            ITextVariableProvider? textVariables = null, Action<string>? onSpriteNotFound = null)
         {
+            _onSpriteNotFound = onSpriteNotFound;
             _view = view;
             _state = state;
             _text = text;
@@ -257,7 +259,10 @@ namespace Novel.Runtime
         private async UniTask<ResolvedSprite> LoadSpriteAsync(string key, CancellationToken ct)
         {
             if (string.IsNullOrEmpty(key) || _sprites == null) return new ResolvedSprite(key, null);
-            return new ResolvedSprite(key, await _sprites.LoadAsync(key, ct));
+            var sprite = await _sprites.LoadAsync(key, ct);
+            // ローダがあるのに引けないキーは誤記か未配置。ローダ未供給は別問題 (未供給ファセット警告の領域) なので報告しない
+            if (sprite == null) _onSpriteNotFound?.Invoke(key);
+            return new ResolvedSprite(key, sprite);
         }
 
         private string? ResolveDisplayName(SayCommand cmd)
