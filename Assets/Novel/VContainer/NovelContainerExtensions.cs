@@ -41,7 +41,8 @@ namespace Novel.Integration
             builder.Register<IWorldEffectSink, NullWorldEffectSink>(lifetime);
             // スプライト解決の no-op 既定 (常に null)。Resources/Addressables 実装は game か View ヘルパが上書きする
             builder.Register<ISpriteLoader, NullSpriteLoader>(lifetime);
-            builder.Register<INovelErrorHandler, NullErrorHandler>(lifetime);
+            // エラーは無音にしない (error-handling ADR)。明示的に黙らせたい game は NullErrorHandler を後勝ち登録する
+            builder.Register<INovelErrorHandler, DebugNovelErrorHandler>(lifetime);
             // ルビ辞書の no-op 既定 (本文をそのまま返す)。Resources ベース実装は View ヘルパが上書きする
             builder.Register<IRubyDictionary, NullRubyDictionary>(lifetime);
             // テキスト変数 %{key} の game 固有値供給の no-op 既定 (常に IStateStore の変数値へフォールバック)。
