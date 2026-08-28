@@ -6,9 +6,9 @@ namespace Novel.Runtime
     /// <summary>
     /// 「動いてはいるが指定が効いていない」事象の報告口 (error-handling ADR)。
     /// dev ビルドでのログと <see cref="INovelErrorHandler"/> への通知をここ 1 か所に集約し、
-    /// 検知点が増えても報告の作法がぶれないようにする。
+    /// 検知点が増えても報告の作法がぶれないようにする。独自コマンドモジュール (opt-in アセンブリ) からも使う。
     /// </summary>
-    internal static class NovelDiagnostics
+    public static class NovelDiagnostics
     {
         public static void Report(INovelErrorHandler? handler, NovelIssueInfo issue)
         {
@@ -31,5 +31,9 @@ namespace Novel.Runtime
                 $"画像キー '{key}' を解決できなかったため、その表示は空になります。" +
                 "キーの誤記か、ローダの root 違い、アセットの未配置が考えられます " +
                 "(使えるキーは Novel > Project Reference で確認できます)。"));
+
+        public static void EffectNotFound(INovelErrorHandler? handler, string scenarioKey, string key, string hint) =>
+            Report(handler, new NovelIssueInfo(NovelIssueKind.EffectNotFound, scenarioKey, key,
+                $"演出キー '{key}' に対応する定義が見つからなかったため、何も再生しません。{hint}"));
     }
 }

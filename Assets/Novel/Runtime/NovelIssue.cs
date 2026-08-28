@@ -13,6 +13,9 @@ namespace Novel.Runtime
 
         /// <summary>画像キーからスプライトを解決できなかった (キーの誤記・root 違い・アセット未配置)。</summary>
         SpriteNotFound,
+
+        /// <summary>演出キーに対応する定義 (アセット等) が無かった (キーの誤記・未配置)。</summary>
+        EffectNotFound,
     }
 
     /// <summary>

@@ -4,6 +4,9 @@ namespace Novel.Runtime
     // say 通し番号と早送り状態を runner とハンドラで共有する (セリフ単位セーブのカーソルの源)
     public sealed class NovelPlaybackProgress
     {
+        // 再生中のシナリオキー (未再生なら空)。独自コマンドモジュールが診断に添える位置情報
+        public string ScenarioKey { get; private set; } = "";
+
         // 現在の再生（PlayAsync 1 回）内で処理を開始した say の通し番号（1 始まり。0 = 未開始）
         public int SayNumber { get; private set; }
 
@@ -17,8 +20,9 @@ namespace Novel.Runtime
         // 通常表示へ戻す say 番号。0 = 早送りなし
         private int _fastForwardTarget;
 
-        internal void Reset(int fastForwardTarget)
+        internal void Reset(string scenarioKey, int fastForwardTarget)
         {
+            ScenarioKey = scenarioKey;
             SayNumber = 0;
             LastSayText = "";
             _fastForwardTarget = fastForwardTarget;

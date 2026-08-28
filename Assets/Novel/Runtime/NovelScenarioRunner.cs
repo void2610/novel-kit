@@ -22,10 +22,9 @@ namespace Novel.Runtime
         private readonly ISpriteLoader? _sprites;
         private readonly MRubyState _state;
         private readonly MRubyStateStore _store;
-        private readonly NovelPlaybackProgress _progress = new();
+        private readonly NovelPlaybackProgress _progress;
         private readonly List<IDisposable> _subscriptions;
         private bool _preambleLoaded;
-        private string _currentScenarioKey = "";
         private bool _disposed;
 
         // switch-latest 直列化用: 単一 MRubyState 共有のため前再生の完了通知を待ってから差し替える
@@ -43,8 +42,10 @@ namespace Novel.Runtime
             IEnumerable<INovelCommandModule>? commandModules = null,
             IBacklog? backlog = null,
             ICenterImageChannel? centerImage = null, ISpriteLoader? sprites = null, IRubyDictionary? ruby = null,
-            ITextVariableProvider? textVariables = null)
+            ITextVariableProvider? textVariables = null, NovelPlaybackProgress? progress = null)
         {
+            // 独自コマンドモジュールが早送り状態や再生中キーを読めるよう、DI から共有インスタンスを受け取れる
+            _progress = progress ?? new NovelPlaybackProgress();
             _source = source;
             _router = router;
             _errorHandler = errorHandler;
@@ -82,7 +83,7 @@ namespace Novel.Runtime
                 worldEffectSink: worldEffectSink, backlog: backlog, centerImage: centerImage,
                 progress: _progress, sprites: sprites, ruby: ruby, textVariables: textVariables,
                 // ハンドラは runner と同寿命だが報告にはその時再生中のキーが要るため、フィールド越しに読む
-                onSpriteNotFound: key => NovelDiagnostics.SpriteNotFound(errorHandler, _currentScenarioKey, key));
+                onSpriteNotFound: key => NovelDiagnostics.SpriteNotFound(errorHandler, _progress.ScenarioKey, key));
             _sprites = sprites;
             _subscriptions = new List<IDisposable> { handler.MapTo(_router) };
             // 独自コマンドハンドラを同じノベル専用 Router へ写像（購読は Dispose でまとめて解除）
@@ -143,10 +144,9 @@ namespace Novel.Runtime
         // 1 シナリオの実体。例外は握って NovelResult.Faulted/Cancelled に畳む（フェイルセーフ）。
         private async UniTask<NovelResult> RunOnceAsync(string scenarioKey, NovelResumePoint resume, CancellationToken ct)
         {
-            _currentScenarioKey = scenarioKey;
             try
             {
-                _progress.Reset(resume.SayNumber);
+                _progress.Reset(scenarioKey, resume.SayNumber);
                 await EnsurePreambleLoadedAsync(ct);
 
                 // 状態の復元/保存は runner が駆動しない。game が PlayAsync の外で RestoreState/CaptureState を

@@ -52,6 +52,8 @@ namespace Novel.Integration
             // ファクトリ登録で既定容量を使う (容量を変えたい game は後勝ちで登録すればよい)。
             builder.Register<IBacklog>(_ => new RingBufferBacklog(), lifetime);
 
+            // 早送り状態・再生中キーを独自コマンドモジュールと共有する (runner と同寿命)
+            builder.Register<NovelPlaybackProgress>(lifetime);
             builder.Register<INovelScenarioRunner, NovelScenarioRunner>(lifetime);
 
 #if UNITY_EDITOR
