@@ -236,10 +236,38 @@ public sealed class NovelStarter : IStartable
     {
         NovelResult result = await _runner.PlayAsync("intro", default);
         // result: Completed / Cancelled / Faulted
+        // Faulted は「シナリオ内で例外が起きた」か「シナリオが見つからなかった」。
+        // 詳細（Ruby backtrace・落ちた時点の say 通番）は INovelErrorHandler へ届く
         // 分岐に必要な結果はフラグとして state に残るので、game はそれを読んで次を決める
     }
 }
 ```
+
+---
+
+## 4.5. エラーの受け取り方
+
+既定では `DebugNovelErrorHandler` が登録され、シナリオ内の例外を `Debug.LogError` に出します
+（`RegisterNovelKitCore` / `RegisterNovelKit` のどちらでも同じ）。黙らせたい場合だけ
+`NullErrorHandler` を後勝ち登録してください。
+
+例外にならない不具合（シナリオが見つからない・画像キーが解決できない等）は、dev ビルドでは
+ライブラリが `Debug.LogWarning` を出します。ゲーム独自のオーバーレイに出したい場合は
+`OnRuntimeIssue` を実装します（default 実装があるので、必要なときだけ書けば済みます）。
+
+```csharp
+public sealed class MyErrorHandler : INovelErrorHandler
+{
+    public void OnScenarioFaulted(NovelErrorInfo error)
+        => ShowOverlay($"{error.Message}\n{error.Detail}（{error.SayNumber} 番目のセリフ付近）");
+
+    public void OnRuntimeIssue(NovelIssueInfo issue)
+        => ShowToast(issue.Message);   // Kind で ScenarioNotFound / SpriteNotFound 等を判別できる
+}
+```
+
+> `.rb` の行番号はエラーに出せません。バイトコードにデバッグ情報が含まれないためで、
+> 代わりに `NovelErrorInfo.SayNumber`（落ちる直前に処理した say の通し番号）が位置の手掛かりになります。
 
 ---
 

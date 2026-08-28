@@ -5,7 +5,25 @@
 
 ## [Unreleased]
 
+### Fixed
+- **Ruby の backtrace が一度も surface されていなかったのを修正**。`NovelErrorReport` は
+  `GetBacktraceString()` を例外型から探していたが、実際は `MRubyState` 側のメソッドで常に見つからず、
+  作家には C# のスタックトレースだけが届いていた。`例外.ExceptionObject.Backtrace.ToString(state)` へ
+  辿り直した（`MRubyState.GetBacktraceString()` は VM を抜けた後だと空を返すため使えない）
+- **`RegisterNovelKitCore` の既定エラーハンドラが無音だった**のを修正。error-handling ADR は既定を
+  `DebugNovelErrorHandler` に変えたと記録していたが、実際に変わっていたのは View ヘルパだけで、
+  Core だけを使う構成では MRuby 例外が一切ログに出なかった。`DebugNovelErrorHandler` を
+  `Novel.View` から `Novel.Runtime` へ移し、Core の既定に据えた（**破壊的**: 名前空間が変わる）
+- **シナリオが見つからないときに `NovelResult.Completed` を返していた**のを `Faulted` に変更（**破壊的**）。
+  キーの誤記やアセット未配置が「一瞬で正常終了」に見え、最も原因を掴みにくい失敗になっていた
+
 ### Added
+- 例外にならない不具合の通知口 `INovelErrorHandler.OnRuntimeIssue(NovelIssueInfo)`（default 実装付きのため
+  既存の実装は壊れない）。dev ビルドではライブラリが `Debug.LogWarning` も出すので、未実装でも無言にならない。
+  現在の通知対象は `ScenarioNotFound` / `PreambleNotFound` / `SpriteNotFound`
+  - `SpriteNotFound`: 画像キーを解決できないと従来は無言で空表示になり、「立ち絵が出ない」の原因が掴めなかった
+- `NovelErrorInfo.SayNumber`: 落ちる直前に処理した say の通し番号。`.mrb` にデバッグ情報が無く
+  Ruby の行番号を得られないため、これがエラー位置の手掛かりになる
 - `Novel/Project Reference` の立ち絵・キーまわりを実用強化 (project-reference ADR)
   - `ISpriteKeyPrefix`: `ISpriteLoader` が「キーの前に付ける root」をエディタへ名乗る任意ファセット
     (`ResourcesSpriteLoader` は実装済み)。DI ビルド時にキャプチャし、ウィンドウが
