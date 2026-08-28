@@ -33,7 +33,9 @@ namespace Novel.Editor
 
         private Vector2 _scroll;
         private string _search = "";
-        private Tab _tab;
+        private int _tabIndex;
+        private Tab _tab => (Tab)_tabIndex;
+        private Rows? _rows;
         private float _thumbSize = 48f;
 
         // スキャン結果キャッシュ。null なら次の描画で再構築
@@ -80,6 +82,7 @@ namespace Novel.Editor
 
         private void Invalidate()
         {
+            foreach (var section in ProjectReferenceSections.All) section.Invalidate();
             _characters = null;
             _imageGroups = null;
             _spritePathByKey = null;
@@ -99,7 +102,7 @@ namespace Novel.Editor
             {
                 if (GUILayout.Button("更新", EditorStyles.toolbarButton, GUILayout.Width(60))) Invalidate();
                 _search = GUILayout.TextField(_search, EditorStyles.toolbarSearchField);
-                if (_tab is Tab.Characters or Tab.Images)
+                if (_tabIndex >= BuiltinTabCount || _tab is Tab.Characters or Tab.Images)
                     _thumbSize = GUILayout.HorizontalSlider(_thumbSize, 24f, 96f, GUILayout.Width(80));
             }
 
@@ -123,30 +126,59 @@ namespace Novel.Editor
             var characterCount = _characters.Count == 0
                 ? snapshot?.Characters.Count ?? 0
                 : _characters.Sum(c => c.Entries.Count);
-            var labels = new[]
+            var sections = ProjectReferenceSections.All;
+            var labels = new List<string>
             {
                 $"キャラ ({characterCount})",
                 $"画像 ({_imageGroups.Sum(g => g.Keys.Count)})",
                 $"構図 ({layouts.Count})",
                 $"BGM / SE ({audioKeys.Count})",
             };
-            var tab = (Tab)GUILayout.Toolbar((int)_tab, labels);
-            if (tab != _tab)
+            foreach (var section in sections) labels.Add($"{section.Title} ({section.Count})");
+            var index = Mathf.Clamp(GUILayout.Toolbar(_tabIndex, labels.ToArray()), 0, labels.Count - 1);
+            if (index != _tabIndex)
             {
-                _tab = tab;
+                _tabIndex = index;
                 _scroll = Vector2.zero;
                 GUI.FocusControl(null);
             }
 
             _scroll = EditorGUILayout.BeginScrollView(_scroll);
-            switch (_tab)
+            if (_tabIndex >= BuiltinTabCount)
             {
-                case Tab.Characters: DrawCharacters(snapshot); break;
-                case Tab.Images: DrawImages(); break;
-                case Tab.Layouts: DrawLayouts(snapshot, layouts); break;
-                case Tab.Audio: DrawAudio(snapshot, audioKeys); break;
+                sections[_tabIndex - BuiltinTabCount].Draw(_rows ??= new Rows(this));
+            }
+            else
+            {
+                switch (_tab)
+                {
+                    case Tab.Characters: DrawCharacters(snapshot); break;
+                    case Tab.Images: DrawImages(); break;
+                    case Tab.Layouts: DrawLayouts(snapshot, layouts); break;
+                    case Tab.Audio: DrawAudio(snapshot, audioKeys); break;
+                }
             }
             EditorGUILayout.EndScrollView();
+        }
+
+        private const int BuiltinTabCount = 4;
+
+        /// <summary>拡張セクション (opt-in アセンブリ) が組込タブと同じ見た目で行を描くための口。</summary>
+        public sealed class Rows
+        {
+            private readonly ProjectReferenceWindow _window;
+            internal Rows(ProjectReferenceWindow window) => _window = window;
+
+            /// <summary>検索欄に一致するか。</summary>
+            public bool Matches(string text) => _window.Matches(text);
+
+            /// <summary>サムネイル (アセットがあれば) + キーチップ + 補足ラベルの 1 行。クリックで ping。</summary>
+            public void DrawKeyRow(string key, string subLabel, string? assetPath) =>
+                _window.DrawThumbnailRow(assetPath, key, subLabel, key);
+
+            public void DrawGroupHeader(string text) => EditorGUILayout.LabelField(text, EditorStyles.miniBoldLabel);
+            public void DrawNote(string text) => EditorGUILayout.LabelField(text, EditorStyles.miniLabel);
+            public void DrawInfo(string text) => EditorGUILayout.HelpBox(text, MessageType.Info);
         }
 
         private bool Matches(string text) =>

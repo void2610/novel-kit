@@ -101,6 +101,9 @@ namespace Novel.Editor
 
             // 選択肢数が実行上限を超え、回さなかった回答の分岐が残っている場合の選択肢数 (0 = 全回答を実行済み)
             public int UncoveredChoiceOptions { get; set; }
+
+            // opt-in 語彙 (cinematic 等) が記録したキー。拡張ごとに分ける
+            public Dictionary<IScenarioKeyExtension, HashSet<string>> ExternalKeys { get; } = new();
         }
 
         // 正解データ。null はその種別の検証をスキップ (情報源が無い = 白黒つけられない)
@@ -111,6 +114,7 @@ namespace Novel.Editor
             public HashSet<string>? SeKeys;
             public HashSet<string>? BgmKeys;
             public HashSet<string>? Layouts;
+            public Dictionary<IScenarioKeyExtension, HashSet<string>?> External = new();
         }
 
         /// <summary>
@@ -129,18 +133,34 @@ namespace Novel.Editor
                     var errors = new CaptureErrorHandler();
                     var router = new Router();
                     using var subscription = recorder.MapTo(router);
+                    // opt-in 語彙は本物のハンドラではなく記録用モジュールで受ける (Director 等の実体を要求しない)
+                    var externalKeys = new Dictionary<IScenarioKeyExtension, HashSet<string>>();
+                    var modules = new List<INovelCommandModule>();
+                    var preambles = new List<IPreambleSource> { new PreambleSource(new ResourcesTextAssetLoader()) };
+                    foreach (var extension in ScenarioKeyExtensions.All)
+                    {
+                        var keys = new HashSet<string>();
+                        externalKeys[extension] = keys;
+                        modules.Add(extension.CreateRecorder(keys));
+                        preambles.AddRange(extension.PreambleSources());
+                    }
+                    // stub は最後 (拡張の糖衣が定義済みのうえで、なお未定義な名前だけを no-op にする)
+                    preambles.Add(new BytesPreambleSource(StubPreamble(result.UnknownCommands)));
                     using var runner = new NovelScenarioRunner(source, router,
                         new AnswerView(answer), new IdentityTextResolver(), new EmptyCatalog(),
                         errorHandler: errors,
-                        preambleSources: new IPreambleSource[]
-                        {
-                            new PreambleSource(new ResourcesTextAssetLoader()),
-                            new BytesPreambleSource(StubPreamble(result.UnknownCommands)),
-                        });
+                        preambleSources: preambles,
+                        commandModules: modules);
 
                     await runner.PlayAsync(scenarioKey, NovelResumePoint.End, CancellationToken.None);
 
                     result.Keys.UnionWith(recorder.Keys);
+                    foreach (var (extension, keys) in externalKeys)
+                    {
+                        if (!result.ExternalKeys.TryGetValue(extension, out var all))
+                            result.ExternalKeys[extension] = all = new HashSet<string>();
+                        all.UnionWith(keys);
+                    }
                     result.GuestSpeakers.UnionWith(recorder.GuestSpeakers);
                     maxOptions = Math.Max(maxOptions, recorder.MaxChoiceOptions);
 
@@ -223,12 +243,26 @@ namespace Novel.Editor
                 var at = line > 0 ? $"{path}:{line}" : path;
                 Debug.LogWarning($"[Novel] {at} 未定義の{label} '{key}'");
             }
+            foreach (var (extension, keys) in collected.ExternalKeys)
+            {
+                if (!known.External.TryGetValue(extension, out var set) || set == null) continue;
+                foreach (var key in keys)
+                {
+                    if (set.Contains(key)) continue;
+                    count++;
+                    var line = FindLine(rubySource, key);
+                    var at = line > 0 ? $"{path}:{line}" : path;
+                    Debug.LogWarning($"[Novel] {at} 未定義の{extension.Label} '{key}'");
+                }
+            }
             return count;
         }
 
         public static KnownKeys BuildKnownKeys()
         {
             var known = new KnownKeys { Speakers = ScanSpeakers(), ImageKeys = ScanImageKeySuffixes() };
+            foreach (var extension in ScenarioKeyExtensions.All)
+                known.External[extension] = extension.ScanKnownKeys();
 
             // 音と構図は実行時にしか実体がないため、キャプチャがあるときだけ検証する。
             // キャプチャがあっても種別のキーが 0 件なら「列挙未提供 (EnumerateKeys が空)」とみなし
