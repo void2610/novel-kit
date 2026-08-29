@@ -3,7 +3,7 @@ type: Decision
 title: CinematicEffect 連携 — アセットを置くことが登録・対応表は持たない
 description: cinematic-effect パッケージの CinematicSequenceAsset を、Resources/Novel/Effects/<key>.asset の配置規約だけでシナリオから呼べるようにする (opt-in アセンブリ)。DSL は world_effect と別の cinematic / cinematic_stop。停止は <key>_exit か Enter からの自動導出。標準 5 種は内蔵 sink。エディタの一覧・検証は規約フォルダを直接走査する。
 tags: [decision, cinematic, effect, editor, opt-in, writer]
-timestamp: 2026-08-29T00:00:00Z
+timestamp: 2026-08-30T00:00:00Z
 status: 確定
 ---
 
@@ -38,8 +38,10 @@ key → `CinematicSequenceAsset` の対応表 SO (`CrWorldEffectLibrary`)、そ�
   `IProjectReferenceSection` / `IScenarioKeyExtension` の拡張点を切った。後者は語彙・記録モジュール・
   **preamble**・正解集合を提供する (preamble を渡さないとスタブ実行で糖衣が未定義 → no-op stub 化されて
   キーが記録されない。テストで発覚)。
-- Director は `ICinematicRunner` で抽象化 (EditMode テストで MonoBehaviour を立てない)。シーンにあれば
-  それを使い、無ければ生成する (各エフェクトは自己生成シングルトンで事前配置不要)。
+- **Director はそのまま使い、テスト都合の抽象は置かない**。当初 `ICinematicRunner` で Director を偽装していたが、
+  ユーザーの「テストのためだけに層を増やすと可読性が落ちる」で撤回。代わりにキー → シーケンスの解決を
+  純粋な `CinematicSequenceResolver` に分離してそこをテストし、モジュールは「解決して Director で再生」の
+  2 行にした。Director (Awake で全エフェクトを構築する MonoBehaviour) はシーンにあればそれを使い、無ければ生成する。
 - `NovelPlaybackProgress` を DI 登録し、モジュールが早送り状態と再生中キーを読めるようにした
   (`cinematic` は world_effect と同じく早送りでは再現しない)。
 

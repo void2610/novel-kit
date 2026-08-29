@@ -14,22 +14,14 @@ using Novel.View;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
-using VitalRouter;
 using Void2610.CinematicEffect;
 
 namespace Novel.Tests
 {
-    // 配置規約 + cinematic 語彙 + Exit 導出の契約を固定する (Director の MonoBehaviour は立てず ICinematicRunner を偽装)
+    // 配置規約 + cinematic 語彙 + Exit 導出の契約を固定する。
+    // Director (MonoBehaviour・Awake で全エフェクトを構築) は立てず、キー → シーケンスの解決を純粋ロジック側で検証する
     public sealed class CinematicEffectTests
     {
-        private sealed class RecordingRunner : ICinematicRunner
-        {
-            public readonly List<CinematicSequence> Runs = new();
-            public readonly HashSet<Type> Playing = new();
-            public UniTask RunAsync(CinematicSequence sequence, CancellationToken ct) { Runs.Add(sequence); return UniTask.CompletedTask; }
-            public bool IsPlaying(Type effectType) => Playing.Contains(effectType);
-        }
-
         private sealed class DictLoader : ICinematicSequenceLoader
         {
             public readonly Dictionary<string, CinematicSequenceAsset> Assets = new();
@@ -42,20 +34,6 @@ namespace Novel.Tests
             public readonly List<NovelIssueInfo> Issues = new();
             public void OnScenarioFaulted(NovelErrorInfo error) { }
             public void OnRuntimeIssue(NovelIssueInfo issue) => Issues.Add(issue);
-        }
-
-        private sealed class NullView : INovelView
-        {
-            public UniTask ShowMessageAsync(NovelLine line, CancellationToken ct) => UniTask.CompletedTask;
-            public UniTask<int> ShowChoicesAsync(IReadOnlyList<string> options, CancellationToken ct) => UniTask.FromResult(0);
-            public void SetMessageWindowVisible(bool visible) { }
-            public void ClearMessage() { }
-        }
-
-        private sealed class EmptyCatalog : ICharacterCatalog
-        {
-            public bool TryGet(string speakerId, out CharacterEntry entry) { entry = default; return false; }
-            public IEnumerable<CharacterKeyInfo> EnumerateEntries() => Array.Empty<CharacterKeyInfo>();
         }
 
         private static CinematicSequenceAsset.Step Step(CinematicSequence.StepKind kind, CinematicSequenceAsset.EffectKind effect, bool custom = false)
@@ -120,40 +98,29 @@ namespace Novel.Tests
         }
 
         [UnityTest]
-        public IEnumerator cinematic語彙がアセットを引いて再生し_停止は導出し_未定義は通知する() => UniTask.ToCoroutine(async () =>
+        public IEnumerator 解決はEnterを引き_停止は導出し_未定義は通知する() => UniTask.ToCoroutine(async () =>
         {
-            var runner = new RecordingRunner();
             var loader = new DictLoader();
             loader.Assets["vignette"] = Asset(Step(CinematicSequence.StepKind.Play, CinematicSequenceAsset.EffectKind.Vignette, custom: true));
-            runner.Playing.Add(typeof(VignetteEffect));
             var progress = new NovelPlaybackProgress();
             var handler = new IssueHandler();
-            var module = new CinematicCommandModule(runner, loader, progress, handler);
+            var resolver = new CinematicSequenceResolver(loader, progress, handler);
+            var ct = CancellationToken.None;
 
-            using var scenario = new NovelScenarioRunner(
-                new ScenarioSource(new ResourcesTextAssetLoader()), new Router(), new NullView(),
-                new IdentityTextResolver(), new EmptyCatalog(),
-                errorHandler: handler,
-                preambleSources: new IPreambleSource[]
-                {
-                    new PreambleSource(new ResourcesTextAssetLoader()),
-                    new PreambleSource(new ResourcesTextAssetLoader(), CinematicCommandModule.PreambleKey),
-                },
-                commandModules: new INovelCommandModule[] { module },
-                progress: progress);
+            var enter = await resolver.ResolveAsync("vignette", stop: false, isPlaying: null, ct);
+            Assert.That(StepsOf(enter!).Single().Kind, Is.EqualTo(CinematicSequence.StepKind.Play));
+
+            var exit = await resolver.ResolveAsync("vignette", stop: true, isPlaying: t => t == typeof(VignetteEffect), ct);
+            var exitStep = StepsOf(exit!).Single();
+            Assert.That(exitStep.Kind, Is.EqualTo(CinematicSequence.StepKind.Stop));
+            Assert.That(exitStep.Config, Is.SameAs(loader.Assets["vignette"].steps[0].vignetteConfig), "Enter の config で止める");
+
+            Assert.That(await resolver.ResolveAsync("vignette", stop: true, isPlaying: _ => false, ct), Is.Null, "止まっていれば何もしない");
 
             LogAssert.Expect(LogType.Warning, new Regex("missing_effect"));
-            var result = await scenario.PlayAsync("test_cinematic", CancellationToken.None);
-
-            Assert.That(result, Is.EqualTo(NovelResult.Completed));
-            Assert.That(runner.Runs.Count, Is.EqualTo(2), "Enter + 導出 Exit。未定義キーは再生しない");
-            var exit = StepsOf(runner.Runs[1]).Single();
-            Assert.That(exit.Kind, Is.EqualTo(CinematicSequence.StepKind.Stop));
-            Assert.That(exit.Type, Is.EqualTo(typeof(VignetteEffect)));
-
+            Assert.That(await resolver.ResolveAsync("missing_effect", stop: false, isPlaying: null, ct), Is.Null);
             var issue = handler.Issues.Single(i => i.Kind == NovelIssueKind.EffectNotFound);
             Assert.That(issue.Subject, Is.EqualTo("missing_effect"));
-            Assert.That(issue.ScenarioKey, Is.EqualTo("test_cinematic"), "progress 経由で再生中キーが添えられる");
         });
 
         // Validate Scenarios が opt-in 語彙のキーを (Director 無しで) 収集できることを固定する

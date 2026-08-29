@@ -16,14 +16,14 @@ namespace Novel.Cinematic
     /// </summary>
     public sealed class BuiltinTransitionWorldEffectSink : IWorldEffectSink
     {
-        private readonly ICinematicRunner _runner;
+        private readonly CinematicEffectDirector _director;
         private readonly NovelPlaybackProgress _progress;
         private readonly INovelErrorHandler? _errorHandler;
 
-        public BuiltinTransitionWorldEffectSink(ICinematicRunner runner, NovelPlaybackProgress progress,
+        public BuiltinTransitionWorldEffectSink(CinematicEffectDirector director, NovelPlaybackProgress progress,
             INovelErrorHandler? errorHandler = null)
         {
-            _runner = runner;
+            _director = director;
             _progress = progress;
             _errorHandler = errorHandler;
         }
@@ -38,7 +38,7 @@ namespace Novel.Cinematic
                     "world_effect の標準キーは shake / flash / fade_out / fade_in / blackout です。アセット化した演出は cinematic :key で呼びます。");
                 return;
             }
-            await _runner.RunAsync(sequence, ct);
+            await _director.RunAsync(sequence, ct);
         }
 
         /// <summary>標準 5 種を組む。該当しないキーは null。</summary>
