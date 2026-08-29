@@ -129,7 +129,7 @@ namespace Novel.Tests
             dictionary.Load("ruby '庭', 'にわ', :first");
             var view = new RecordingView();
             var progress = new NovelPlaybackProgress();
-            progress.Reset(fastForwardTarget: 2);
+            progress.Reset("", fastForwardTarget: 2);
             var handler = new NovelCommandHandler(view, new StubStateStore(), new IdentityTextResolver(), new StubCatalog(),
                 progress: progress, ruby: dictionary);
 

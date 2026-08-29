@@ -13,7 +13,9 @@
         "UniTask",
         "Novel.Addressables",
         "Novel.Assets",
-        "Novel.Localization"
+        "Novel.Localization",
+        "Novel.CinematicEffect",
+        "CinematicEffect"
     ],
     "includePlatforms": [
         "Editor"
@@ -36,6 +38,11 @@
             "name": "com.unity.localization",
             "expression": "",
             "define": "NOVEL_LOCALIZATION"
+        },
+        {
+            "name": "com.void2610.cinematic-effect",
+            "expression": "",
+            "define": "NOVEL_CINEMATIC_EFFECT"
         }
     ],
     "noEngineReferences": false

@@ -1,0 +1,28 @@
+{
+    "name": "Novel.CinematicEffect",
+    "rootNamespace": "Novel.Cinematic",
+    "references": [
+        "Novel.Runtime",
+        "CinematicEffect",
+        "LitMotion",
+        "UniTask",
+        "VitalRouter.Unity"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "NOVEL_CINEMATIC_EFFECT"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.void2610.cinematic-effect",
+            "expression": "",
+            "define": "NOVEL_CINEMATIC_EFFECT"
+        }
+    ],
+    "noEngineReferences": false
+}

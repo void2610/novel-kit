@@ -5,6 +5,23 @@
 
 ## [Unreleased]
 
+### Added
+- **CinematicEffect 連携 (opt-in・`com.void2610.cinematic-effect` 導入時のみコンパイル)**。
+  `Resources/Novel/Effects/<key>.asset` に `CinematicSequenceAsset` を置くだけで、シナリオから
+  `cinematic :key` / `cinematic_stop :key` で呼べる。対応表 (SO) は持たない — アセット名がキー
+  - 停止 (`cinematic_stop :key`) は `<key>_exit.asset` を再生する。止め方も演出の一部としてプロジェクトが
+    アセットで決め、ライブラリは Enter から推測しない
+  - `RegisterNovelCinematicEffects()` (`Novel.CinematicEffect.VContainer`) で配線。Director はシーンに
+    あれば使い、無ければ生成する。標準 5 種 (`shake` / `flash` / `fade_out` / `fade_in` / `blackout`) の
+    `IWorldEffectSink` (`BuiltinTransitionWorldEffectSink`) も既定登録する (後勝ちで差し替え可)
+  - `Novel/Project Reference` に「演出」タブ、`Novel/Validate Scenarios` に `cinematic` キーの検証を追加
+- エディタの拡張点: `IProjectReferenceSection` (プロジェクトリファレンスのタブ追加) と
+  `IScenarioKeyExtension` (Validate Scenarios の語彙・preamble・正解集合の追加)。opt-in アセンブリが
+  `[InitializeOnLoad]` で登録する
+- `NovelPlaybackProgress` を DI 登録し、独自コマンドモジュールが早送り状態と再生中シナリオキーを読めるようにした
+  (`NovelScenarioRunner` のコンストラクタ引数 `progress` で共有)。`NovelDiagnostics` を public 化し
+  `NovelIssueKind.EffectNotFound` を追加
+
 ### Fixed
 - **Ruby の backtrace が一度も surface されていなかったのを修正**。`NovelErrorReport` は
   `GetBacktraceString()` を例外型から探していたが、実際は `MRubyState` 側のメソッドで常に見つからず、

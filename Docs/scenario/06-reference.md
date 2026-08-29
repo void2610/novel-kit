@@ -59,6 +59,8 @@
 | `fade_out 1.0` / `fade_in 1.0` | フェードアウト/イン。数字は秒数（省略時 1.0）※同上 |
 | `blackout` | 一瞬で真っ暗にする ※同上 |
 | `world_effect :zoom, 1.5` | プロジェクト定義の画面効果を名前で呼ぶ ※同上 |
+| `cinematic :flashback` | 用意された演出を名前で始める ※要ゲーム側対応。名前は Project Reference の「演出」タブ |
+| `cinematic_stop :flashback` | その演出を終える |
 | `cmd :screen_shake, power: 2.0` | プロジェクト独自の命令を直接呼ぶ |
 
 ## 文中タグ一覧（[2 章](./02-text.md)）
