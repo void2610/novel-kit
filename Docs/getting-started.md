@@ -388,6 +388,7 @@ await resolver.InitializeAsync(ct);
 
 ## さらに詳しく
 
+差し替え口・語彙の拡張・opt-in アセンブリの作法は [`Docs/extending.md`](./extending.md) にまとめています。
 シナリオ記述（DSL）のリファレンスは [`Docs/scenario/`](./scenario/index.md)（シナリオライターズガイド）を参照。
 設計の意図・意思決定の理由は [`Knowledge~/design/`](../Knowledge~/design/index.md)（OKF 知識ベース）に
 記録しています。公開 API の集約は [`Knowledge~/design/api-surface.md`](../Knowledge~/design/api-surface.md) を参照。

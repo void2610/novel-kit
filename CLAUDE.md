@@ -12,14 +12,15 @@ EditMode テスト・サンプルシーンで全パイプラインの動作を�
 - 本体は `Assets/Novel/` 配下。アセンブリ:
   - `Novel.Commands` — コマンド語彙（`SayCommand` ほか `NovelVocabulary`、`[MRubyObject] record struct : ICommand`）。
   - `Novel.Runtime` — 純 C# コア（`NovelScenarioRunner` / `NovelCommandHandler` / `NovelTagLexer` / `IBacklog`+`RingBufferBacklog` / 各 interface）。MonoBehaviour 非依存。
-  - `Novel.View` — 参考 TMP View・`UnityFrameClock`・`RubyMarkup`（`<ruby>` 展開）・Resources ローダ・SO カタログ・dev 警告ファセット/`DebugNovelErrorHandler`（省略可）。
+  - `Novel.View` — 参考 TMP View・`UnityFrameClock`・`RubyMarkup`（`<ruby>` 展開）・Resources ローダ・SO カタログ・dev 警告ファセット（省略可）。既定エラーハンドラ `DebugNovelErrorHandler` は `Novel.Runtime`。
   - `Novel.VContainer` — `RegisterNovelKitCore()` 一括登録ヘルパ（純 `Novel.Runtime` 依存・View/Resources 非依存）。独自コマンドは `RegisterNovelCommand<TModule>()`（`INovelCommandModule`）で差し込む。
   - `Novel.Localization` / `Novel.Localization.Editor` — 多言語対応（opt-in・`com.unity.localization` 導入時のみコンパイル）。原文キーの `LocalizedTableTextResolver` と追従抽出（`Novel/Localization/Extract Strings`）。純ロジック（走査/diff/計画立案/適用）は `Novel.Editor/Localization/` にあり Unity Localization 非依存（テーブル操作は `ITextTableEditor` 抽象、Unity 実装はアダプタ 1 クラス）。
-  - `Novel.View.VContainer` — `RegisterNovelKit()` 箱出し登録ヘルパ（Core + Resources ローダ + 警告ファセット + Debug エラーログ）。
+  - `Novel.View.VContainer` — `RegisterNovelKit()` 箱出し登録ヘルパ（Core + Resources ローダ + 警告ファセット）。
+  - opt-in（依存パッケージ導入時のみコンパイル）: `Novel.Addressables`（Addressables ローダ）・`Novel.CinematicEffect` / `.VContainer` / `.Editor`（`Resources/Novel/Effects/<key>.asset` の配置規約で `cinematic :key`。`RegisterNovelCinematicEffects()`）。
   - `Novel.Editor` — シナリオ検証メニュー（`Novel/Validate Scenarios`）・プロジェクトリファレンス
     （`Novel/Project Reference`。使える名前/構図の一覧。実行時実体は DI ビルド時キャプチャ）。
   - `Novel.Samples` / `Novel.Tests.EditMode` — 動作確認シーンと EditMode テスト。
-- 利用手順は `Docs/getting-started.md`。シナリオライター向け DSL リファレンスは `Docs/scenario/`
+- 利用手順は `Docs/getting-started.md`。差し替え口・語彙拡張・opt-in アセンブリの作法は `Docs/extending.md`。シナリオライター向け DSL リファレンスは `Docs/scenario/`
   （命令・タグ・preamble 糖衣を変更したら追随して更新すること）。
 
 ## 前提
