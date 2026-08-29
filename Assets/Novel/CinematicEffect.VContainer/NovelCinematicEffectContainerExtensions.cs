@@ -19,7 +19,6 @@ namespace Novel.Integration
             // Director はシーンにあればそれを使い、無ければ生成する (Resolve 時 = シーンロード後に探す)
             builder.Register(_ => FindOrCreateDirector(), lifetime);
             builder.Register<ICinematicSequenceLoader, ResourcesCinematicSequenceLoader>(lifetime);
-            builder.Register<CinematicSequenceResolver>(lifetime);
             builder.RegisterNovelCommand<CinematicCommandModule>(lifetime);
             builder.Register<IPreambleSource>(_ => new PreambleSource(new ResourcesTextAssetLoader(), CinematicCommandModule.PreambleKey), lifetime);
             // 標準 5 種 (shake 等) の既定。独自の world_effect を持つ game は後勝ちで差し替える
