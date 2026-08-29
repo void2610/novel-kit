@@ -9,8 +9,8 @@
 - **CinematicEffect 連携 (opt-in・`com.void2610.cinematic-effect` 導入時のみコンパイル)**。
   `Resources/Novel/Effects/<key>.asset` に `CinematicSequenceAsset` を置くだけで、シナリオから
   `cinematic :key` / `cinematic_stop :key` で呼べる。対応表 (SO) は持たない — アセット名がキー
-  - 停止は `<key>_exit.asset` があればそれを再生。無ければ Enter が `Play` したままのエフェクトを
-    同じ config で `Stop` するシーケンスを導出する (`CinematicExitDeriver`)。一発物は何もしない
+  - 停止 (`cinematic_stop :key`) は `<key>_exit.asset` を再生する。止め方も演出の一部としてプロジェクトが
+    アセットで決め、ライブラリは Enter から推測しない
   - `RegisterNovelCinematicEffects()` (`Novel.CinematicEffect.VContainer`) で配線。Director はシーンに
     あれば使い、無ければ生成する。標準 5 種 (`shake` / `flash` / `fade_out` / `fade_in` / `blackout`) の
     `IWorldEffectSink` (`BuiltinTransitionWorldEffectSink`) も既定登録する (後勝ちで差し替え可)

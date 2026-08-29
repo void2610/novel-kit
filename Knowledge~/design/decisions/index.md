@@ -4,7 +4,7 @@
 各ファイルは `type: Decision`。ステータスは `確定` / `暫定` / `保留`。
 
 ## 確定済み（2026-08-29・ユーザーとの議論で合意）
-* [CinematicEffect 連携](/design/decisions/cinematic-effect.md) - `Resources/Novel/Effects/<key>.asset` の配置規約だけで `cinematic :key` / `cinematic_stop :key` が使える opt-in アセンブリ。対応表は持たない・停止は Enter から自動導出・標準 5 種は内蔵 sink・エディタは規約フォルダを直接走査
+* [CinematicEffect 連携](/design/decisions/cinematic-effect.md) - `Resources/Novel/Effects/<key>.asset` の配置規約だけで `cinematic :key` / `cinematic_stop :key` が使える opt-in アセンブリ。対応表は持たない・停止は `<key>_exit.asset` (ライブラリは推測しない)・標準 5 種は内蔵 sink・エディタは規約フォルダを直接走査
 
 ## 確定済み（2026-08-08・ユーザーとの議論で合意）
 * [多言語化は原文キー + 追従抽出](/design/decisions/localization-unity-package.md) - `ITextResolver` seam に原文キーの訳テーブル resolve を差し込む。原文変更は追跡エンジン（位置 + 類似度・原稿不変・既定）がキーリネーム + fuzzy 分類で訳を追従させ、annotate モード（行末 ID コメント・対応付けの決定的化）は並行翻訳の実需要が出た時の opt-in として仕様保持。後追い翻訳前提を確認し既定はエンジンのみで確定。バックエンド中立で第一実装は Unity Localization。先行コア変更は既読 ID の raw 基準化のみ

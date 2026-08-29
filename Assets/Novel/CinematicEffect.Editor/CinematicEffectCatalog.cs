@@ -15,7 +15,7 @@ namespace Novel.Cinematic.Editor
             public string Key = "";
             public string AssetPath = "";
             public int StepCount;
-            public string ExitKind = "";   // 専用 / 導出 / なし
+            public bool HasExit;
         }
 
         private const string Marker = "/Resources/" + ResourcesCinematicSequenceLoader.Root;
@@ -39,10 +39,11 @@ namespace Novel.Cinematic.Editor
                 if (key.EndsWith(CinematicCommandModule.ExitSuffix, StringComparison.Ordinal)) continue;   // Exit は Enter 側の行に畳む
                 var asset = AssetDatabase.LoadAssetAtPath<CinematicSequenceAsset>(path);
                 if (asset == null) continue;
-                var exitKind = pathByKey.ContainsKey(key + CinematicCommandModule.ExitSuffix) ? "専用"
-                    : CinematicExitDeriver.Derive(asset) != null ? "導出"
-                    : "なし (一発物)";
-                entries.Add(new Entry { Key = key, AssetPath = path, StepCount = asset.steps.Count, ExitKind = exitKind });
+                entries.Add(new Entry
+                {
+                    Key = key, AssetPath = path, StepCount = asset.steps.Count,
+                    HasExit = pathByKey.ContainsKey(key + CinematicCommandModule.ExitSuffix),
+                });
             }
             return entries.OrderBy(e => e.Key, StringComparer.Ordinal).ToList();
         }

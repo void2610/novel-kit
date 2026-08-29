@@ -40,7 +40,7 @@ namespace Novel.Cinematic.Editor
                 foreach (var e in Entries)
                 {
                     if (!rows.Matches(e.Key)) continue;
-                    rows.DrawKeyRow(e.Key, $"{e.StepCount} ステップ    停止: {e.ExitKind}", e.AssetPath);
+                    rows.DrawKeyRow(e.Key, $"{e.StepCount} ステップ    {(e.HasExit ? "cinematic_stop 可 (_exit あり)" : "_exit なし")}", e.AssetPath);
                 }
             }
         }

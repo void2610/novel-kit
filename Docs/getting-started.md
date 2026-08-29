@@ -254,9 +254,10 @@ public sealed class NovelStarter : IStartable
 2. `Create > Cinematic > Sequence Asset` で演出を組み、`Resources/Novel/Effects/<key>.asset` に置く
 3. シナリオで `cinematic :key` / `cinematic_stop :key` と書く
 
-キーはアセット名（`Resources/Novel/Effects/` からの相対パス・拡張子なし）です。停止は
-`<key>_exit.asset` があればそれを再生し、無ければ Enter が `Play` したままのエフェクトを同じ config で
-`Stop` するシーケンスを自動で導出します。一回で終わる演出（自分で `Stop` まで持つもの）は停止不要です。
+キーはアセット名（`Resources/Novel/Effects/` からの相対パス・拡張子なし）です。`cinematic_stop :key` は
+`<key>_exit.asset` を再生します。止め方 (どのエフェクトをどう戻すか) も演出の一部なので、Enter と同じく
+プロジェクトがアセットで決めます。ライブラリが Enter の中身から止め方を推測することはしません。
+一回で終わる演出（自分で `Stop` まで持つもの）に `_exit` は不要です。
 使えるキーは `Novel > Project Reference` の「演出」タブに並び、`Novel > Validate Scenarios` が
 未定義キーを警告します。
 

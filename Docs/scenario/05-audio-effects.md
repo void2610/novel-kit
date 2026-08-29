@@ -74,7 +74,7 @@ cinematic_stop :flashback   # 演出「flashback」を終える（元に戻す�
 ```
 
 - 使える演出の名前は **Novel > Project Reference** の「演出」タブで確認できる。
-  一覧の「停止」列が「なし」の演出は一回で終わるもので、`cinematic_stop` は要らない。
+  `cinematic_stop` が使えるのは一覧に「_exit あり」と出ている演出だけ。一回で終わる演出には要らない。
 - 終わりを待つかどうかは演出ごとの作り次第。
 - 存在しない名前を書くと何も起きないが、開発中は Console に警告が出る。
 

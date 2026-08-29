@@ -11,8 +11,8 @@ using Void2610.CinematicEffect;
 namespace Novel.Cinematic
 {
     /// <summary>
-    /// <c>cinematic</c> 語彙の実体。キー → アセット (Enter / Exit) を引いて Director で再生する。
-    /// Exit は <c>&lt;key&gt;_exit</c> があればそれ、無ければ Enter から導出する (<see cref="CinematicExitDeriver"/>)。
+    /// <c>cinematic</c> 語彙の実体。キー → アセット (<c>&lt;key&gt;</c> / <c>&lt;key&gt;_exit</c>) を引いて Director で再生する。
+    /// 止め方を Enter から推測して代行することはしない (演出の中身と同じくプロジェクトが決める)。
     /// </summary>
     [Routes]
     public sealed partial class CinematicCommandModule : INovelCommandModule
@@ -45,34 +45,15 @@ namespace Novel.Cinematic
             if (_progress.IsFastForwarding) return;
             if (string.IsNullOrEmpty(cmd.Key)) return;
 
-            var sequence = cmd.Stop ? await ResolveExitAsync(cmd.Key, ct) : await ResolveEnterAsync(cmd.Key, ct);
-            if (sequence != null) await _director.RunAsync(sequence, ct);
-        }
-
-        private async UniTask<CinematicSequence?> ResolveEnterAsync(string key, CancellationToken ct)
-        {
-            var asset = await _loader.LoadAsync(key, ct);
-            if (asset != null) return asset.Build();
-            NotFound(key, $"Resources/{ResourcesCinematicSequenceLoader.Root}{key}.asset を置いてください (使えるキーは Novel > Project Reference で確認できます)。");
-            return null;
-        }
-
-        private async UniTask<CinematicSequence?> ResolveExitAsync(string key, CancellationToken ct)
-        {
-            var exit = await _loader.LoadAsync(key + ExitSuffix, ct);
-            if (exit != null) return exit.Build();
-
-            var enter = await _loader.LoadAsync(key, ct);
-            if (enter == null)
+            var assetKey = cmd.Stop ? cmd.Key + ExitSuffix : cmd.Key;
+            var asset = await _loader.LoadAsync(assetKey, ct);
+            if (asset == null)
             {
-                NotFound(key, $"停止対象の {key} も {key}{ExitSuffix} も Resources/{ResourcesCinematicSequenceLoader.Root} にありません。");
-                return null;
+                NovelDiagnostics.EffectNotFound(_errorHandler, _progress.ScenarioKey, assetKey,
+                    $"Resources/{ResourcesCinematicSequenceLoader.Root}{assetKey}.asset を置いてください (使えるキーは Novel > Project Reference で確認できます)。");
+                return;
             }
-            // 導出結果が空 (一発物・既に停止済み) なら何もしないのが正しいので警告しない
-            return CinematicExitDeriver.Derive(enter, _director.IsPlaying);
+            await _director.RunAsync(asset.Build(), ct);
         }
-
-        private void NotFound(string key, string hint) =>
-            NovelDiagnostics.EffectNotFound(_errorHandler, _progress.ScenarioKey, key, hint);
     }
 }

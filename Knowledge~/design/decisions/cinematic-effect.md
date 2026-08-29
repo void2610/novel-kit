@@ -1,7 +1,7 @@
 ---
 type: Decision
 title: CinematicEffect 連携 — アセットを置くことが登録・対応表は持たない
-description: cinematic-effect パッケージの CinematicSequenceAsset を、Resources/Novel/Effects/<key>.asset の配置規約だけでシナリオから呼べるようにする (opt-in アセンブリ)。DSL は world_effect と別の cinematic / cinematic_stop。停止は <key>_exit か Enter からの自動導出。標準 5 種は内蔵 sink。エディタの一覧・検証は規約フォルダを直接走査する。
+description: cinematic-effect パッケージの CinematicSequenceAsset を、Resources/Novel/Effects/<key>.asset の配置規約だけでシナリオから呼べるようにする (opt-in アセンブリ)。DSL は world_effect と別の cinematic / cinematic_stop。停止は <key>_exit.asset (プロジェクトが置く。ライブラリは推測しない)。標準 5 種は内蔵 sink。エディタの一覧・検証は規約フォルダを直接走査する。
 tags: [decision, cinematic, effect, editor, opt-in, writer]
 timestamp: 2026-08-30T00:00:00Z
 status: 確定
@@ -25,11 +25,11 @@ key → `CinematicSequenceAsset` の対応表 SO (`CrWorldEffectLibrary`)、そ�
 - **DSL は `world_effect` とは別のメソッド** `cinematic :key` / `cinematic_stop :key` (ユーザー指示)。
   `world_effect` はゲーム側 sink の解釈、`cinematic` はアセット駆動で、意味が違うものを同じ語彙に
   乗せない。実体は `CinematicCommand{Key, Stop}` を `INovelCommandModule` で差し込む (コア無改変)。
-- **停止は `<key>_exit.asset` → 無ければ Enter から導出**。Enter が `Play` (撃ちっぱなし = サスティン) した
-  まま `Stop` していないエフェクトを、**その Play と同じ config で** `Stop` する。Director は Stop の config が
-  null だと既定にリセットしてから止めるため、設計者が Play 側に詰めた exit 尺を引き継ぐには同じ config が
-  要る。`PlayAndAwait` は一回完結で対象外。color-recollection の `_Exit` 10 個は全てこの形だった
-  (実データで確認)。既に止まっているエフェクトには撃たない (`IsPlaying` で除外)。
+- **停止は `<key>_exit.asset`。ライブラリは止め方を推測しない**。当初「`_exit` が無ければ Enter が `Play` した
+  ままのエフェクトを同じ config で `Stop` する導出」を実装した (CR の `_Exit` 10 個が全てその形で、Director が
+  Stop の config null で既定リセットする都合も踏まえて config を引き継ぐ形にしていた) が、ユーザーが
+  「止め方は演出の一部で、プロジェクトが自分で決めるもの。ライブラリが Enter の中身から代行する責務はない」と
+  棄却。`_exit` が無ければ `EffectNotFound` を出すだけにした。一回で終わる演出に `_exit` は不要。
 - **標準 5 種 (shake / flash / fade_out / fade_in / blackout) はライブラリ内蔵のコード** (`IWorldEffectSink`
   実装として既定登録・後勝ちで差し替え可)。尺・強度を引数で受けるためアセットでは表現できない。
   ライブラリ内部の話なので「ゲーム側がコードを書かない」は守られる。
@@ -41,7 +41,7 @@ key → `CinematicSequenceAsset` の対応表 SO (`CrWorldEffectLibrary`)、そ�
 - **Director はそのまま使い、テスト都合の抽象・分離は置かない**。当初 `ICinematicRunner` で Director を偽装し、
   次にキー解決を `CinematicSequenceResolver` へ分離したが、いずれも「Director を立てずにテストしたい」だけが
   動機で本番の読み手には層が増えるだけ (ユーザー指摘で 2 度撤回)。モジュールが Director・ローダ・進行・
-  ハンドラを直接持つ素直な形にし、テストは「テストが要るロジック」だけに絞る: Exit 導出 (純粋ロジック) と
+  ハンドラを直接持つ素直な形にし、テストは「テストが要るロジック」だけに絞る: 標準 5 種の組み立てと
   Validate 連携 (実際に欠陥を捕まえた)。「アセットを引いて RunAsync」は配管なので Director を立ててまで
   検証しない。Director (Awake で全エフェクトを構築する MonoBehaviour) はシーンにあればそれを使い、無ければ生成する。
 - `NovelPlaybackProgress` を DI 登録し、モジュールが早送り状態と再生中キーを読めるようにした
