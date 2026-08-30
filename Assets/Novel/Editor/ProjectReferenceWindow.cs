@@ -589,7 +589,8 @@ namespace Novel.Editor
                 return;
             }
             EditorGUILayout.LabelField(
-                $"{FormatTime(snapshot.CapturedAt)} の再生時に取得。コピーはそのまま書ける呼び出し形 (必須引数は名前、省略可は既定値のプレースホルダー)。",
+                $"{FormatTime(snapshot.CapturedAt)} の再生時に取得。コピーはそのまま書ける呼び出し形 " +
+                "(糖衣: 必須引数は名前・省略可は既定値 / コマンド: 型ごとの空値 / world_effect: キーのみ)。",
                 EditorStyles.miniLabel);
 
             DrawPreambleSugars(snapshot.Preambles);
