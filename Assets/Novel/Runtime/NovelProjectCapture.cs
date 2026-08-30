@@ -22,6 +22,13 @@ namespace Novel.Runtime
 
             /// <summary>プロジェクト定義コマンド (INovelCommandModule の語彙)。</summary>
             public IReadOnlyList<CommandKeyInfo> Commands { get; }
+
+            /// <summary>再生時に読み込んだ preamble (糖衣の定義元)。再生 1 回目の preamble ロード時にキャプチャされる。</summary>
+            public IReadOnlyList<PreambleInfo> Preambles { get; }
+
+            /// <summary>world_effect キーの目録 (IWorldEffectSink.EnumerateKeys)。</summary>
+            public IReadOnlyList<WorldEffectKeyInfo> WorldEffectKeys { get; }
+            public string WorldEffectSinkType { get; }
             public string AudioChannelType { get; }
             public string PortraitChannelType { get; }
             public string CharacterCatalogType { get; }
@@ -41,9 +48,14 @@ namespace Novel.Runtime
                 IReadOnlyList<CharacterKeyInfo> characters,
                 string audioChannelType, string portraitChannelType, string characterCatalogType, DateTime capturedAt,
                 string spriteLoaderType = "", string? spriteKeyPrefix = null,
-                IReadOnlyList<CommandKeyInfo>? commands = null)
+                IReadOnlyList<CommandKeyInfo>? commands = null,
+                IReadOnlyList<PreambleInfo>? preambles = null,
+                IReadOnlyList<WorldEffectKeyInfo>? worldEffectKeys = null, string worldEffectSinkType = "")
             {
                 Commands = commands ?? Array.Empty<CommandKeyInfo>();
+                Preambles = preambles ?? Array.Empty<PreambleInfo>();
+                WorldEffectKeys = worldEffectKeys ?? Array.Empty<WorldEffectKeyInfo>();
+                WorldEffectSinkType = worldEffectSinkType;
                 AudioKeys = audioKeys;
                 Layouts = layouts;
                 Characters = characters;

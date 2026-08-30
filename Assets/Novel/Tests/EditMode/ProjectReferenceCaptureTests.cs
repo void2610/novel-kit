@@ -56,6 +56,15 @@ namespace Novel.Tests
             }
         }
 
+        private sealed class EnumeratingWorldEffectSink : IWorldEffectSink
+        {
+            public UniTask DispatchAsync(IWorldEffect effect, CancellationToken ct) => UniTask.CompletedTask;
+            public IEnumerable<WorldEffectKeyInfo> EnumerateKeys()
+            {
+                yield return new WorldEffectKeyInfo("time_lapse", "時間経過");
+            }
+        }
+
         private sealed class EnumeratingPortraitChannel : IPortraitChannel
         {
             public UniTask SwitchLayoutAsync(PortraitLayout layout, CancellationToken ct) => UniTask.CompletedTask;
@@ -182,9 +191,10 @@ namespace Novel.Tests
         private static NovelProjectCapture.Snapshot Snap(
             AudioKeyInfo[] audio, StageLayoutInfo[] layouts, CharacterKeyInfo[] characters,
             string audioType, string portraitType, string catalogType,
-            string spriteLoaderType = "", string? spriteKeyPrefix = null, CommandKeyInfo[]? commands = null) =>
+            string spriteLoaderType = "", string? spriteKeyPrefix = null, CommandKeyInfo[]? commands = null,
+            WorldEffectKeyInfo[]? worldEffectKeys = null, string worldEffectSinkType = "") =>
             new(audio, layouts, characters, audioType, portraitType, catalogType, System.DateTime.Now,
-                spriteLoaderType, spriteKeyPrefix, commands);
+                spriteLoaderType, spriteKeyPrefix, commands, null, worldEffectKeys, worldEffectSinkType);
 
         private static NovelProjectCapture.Snapshot RealCapture() => Snap(
             new[] { new AudioKeyInfo("daily", AudioKeyKind.Bgm, "日常シーン") },
@@ -246,6 +256,55 @@ namespace Novel.Tests
             Assert.That(merged.AudioKeys, Is.Empty);
             Assert.That(merged.Layouts.Select(l => l.Id),
                 Is.EqualTo(new[] { "single", "pair", "trio", "quad", "penta" }));
+        }
+
+        [Test]
+        public void Build時にworld_effectキーの目録をキャプチャする()
+        {
+            var builder = MakeBuilder();
+            builder.RegisterInstance<IWorldEffectSink>(new EnumeratingWorldEffectSink());
+
+            using var container = builder.Build();
+
+            var snapshot = NovelProjectCapture.Latest!;
+            Assert.That(snapshot.WorldEffectSinkType, Is.EqualTo(nameof(EnumeratingWorldEffectSink)));
+            Assert.That(snapshot.WorldEffectKeys.Single().Key, Is.EqualTo("time_lapse"));
+        }
+
+        [UnityEngine.TestTools.UnityTest]
+        public System.Collections.IEnumerator 初回再生のpreambleロードで糖衣の目録をキャプチャする() => UniTask.ToCoroutine(async () =>
+        {
+            using var runner = new NovelScenarioRunner(
+                new ScenarioSource(new Novel.View.ResourcesTextAssetLoader()), new VitalRouter.Router(),
+                new StubView(), new IdentityTextResolver(), new StubCatalog(),
+                preambleSources: new IPreambleSource[] { new PreambleSource(new Novel.View.ResourcesTextAssetLoader()) });
+
+            await runner.PlayAsync("test_variables", CancellationToken.None);
+
+            var preamble = NovelProjectCapture.Latest!.Preambles.Single();
+            Assert.That(preamble.SourceType, Is.EqualTo(nameof(PreambleSource)));
+            Assert.That(preamble.BytecodeHash, Has.Length.EqualTo(40));
+            Assert.That(preamble.MethodNames, Does.Contain("say").And.Contain("se_loop").And.Contain("choose"));
+            Assert.That(preamble.MethodNames, Does.Not.Contain("cmd"), "呼び出し先 (組込) は定義ではない");
+        });
+
+        [Test]
+        public void 部分スナップショットのpreambleとworld_effectは往復しモジュール未登録の配線に消されない()
+        {
+            var full = Snap(
+                new[] { new AudioKeyInfo("daily", AudioKeyKind.Bgm) }, System.Array.Empty<StageLayoutInfo>(),
+                System.Array.Empty<CharacterKeyInfo>(), "A", "P", "C",
+                worldEffectKeys: new[] { new WorldEffectKeyInfo("time_lapse", "時間経過") }, worldEffectSinkType: "CrWorldEffectSink");
+            var preambleOnly = new NovelProjectCapture.Snapshot(
+                System.Array.Empty<AudioKeyInfo>(), System.Array.Empty<StageLayoutInfo>(), System.Array.Empty<CharacterKeyInfo>(),
+                "", "", "", System.DateTime.Now, preambles: new[] { new PreambleInfo("PreambleSource", "abc", new[] { "say" }) });
+
+            var merged = ProjectReferenceCaptureStore.MergeForTest(full, preambleOnly);
+
+            Assert.That(merged.AudioKeys.Single().Key, Is.EqualTo("daily"), "部分スナップショットは他種別を消さない");
+            Assert.That(merged.WorldEffectKeys.Single().Note, Is.EqualTo("時間経過"));
+            Assert.That(merged.WorldEffectSinkType, Is.EqualTo("CrWorldEffectSink"));
+            Assert.That(merged.Preambles.Single().MethodNames.Single(), Is.EqualTo("say"));
         }
 
         [Test]

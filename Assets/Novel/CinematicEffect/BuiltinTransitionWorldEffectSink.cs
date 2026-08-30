@@ -1,4 +1,5 @@
 #nullable enable
+using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using LitMotion;
@@ -27,6 +28,18 @@ namespace Novel.Cinematic
             _progress = progress;
             _errorHandler = errorHandler;
         }
+
+        /// <summary>標準 5 種の目録。独自 sink が委譲するときは自分のキーにこれを連結して返す。</summary>
+        public static IEnumerable<WorldEffectKeyInfo> BuiltinKeys()
+        {
+            yield return new WorldEffectKeyInfo("shake", "arg0 = 強さ (省略 1.0)");
+            yield return new WorldEffectKeyInfo("flash", "arg0 = 秒数 (省略 0.3)");
+            yield return new WorldEffectKeyInfo("fade_out", "arg0 = 秒数 (省略 1.0)");
+            yield return new WorldEffectKeyInfo("fade_in", "arg0 = 秒数 (省略 1.0)");
+            yield return new WorldEffectKeyInfo("blackout", "arg0 = 暗転の保持秒数 (省略 0.5)");
+        }
+
+        public IEnumerable<WorldEffectKeyInfo> EnumerateKeys() => BuiltinKeys();
 
         public async UniTask DispatchAsync(IWorldEffect effect, CancellationToken ct)
         {

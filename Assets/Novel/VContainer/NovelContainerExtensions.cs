@@ -68,6 +68,7 @@ namespace Novel.Integration
                     // ICharacterCatalog は game 側登録の契約だが、未登録構成でもキャプチャ全体を落とさない
                     container.TryResolve<ICharacterCatalog>(out var catalog);
                     var sprites = container.Resolve<ISpriteLoader>();
+                    var worldEffects = container.Resolve<IWorldEffectSink>();
                     // 語彙は記録用 vocabulary で読む (MRubyState を作らない。RegisterVocabulary は登録以外の副作用を持たない契約)
                     var commands = new System.Collections.Generic.List<CommandKeyInfo>();
                     foreach (var module in container.Resolve<System.Collections.Generic.IEnumerable<INovelCommandModule>>())
@@ -85,7 +86,9 @@ namespace Novel.Integration
                         sprites.GetType().Name,
                         // 名乗らないローダは「プレフィックス不明」として null のまま渡す (空文字の確定と区別する)
                         (sprites as ISpriteKeyPrefix)?.KeyPrefix,
-                        commands));
+                        commands,
+                        worldEffectKeys: new System.Collections.Generic.List<WorldEffectKeyInfo>(worldEffects.EnumerateKeys()),
+                        worldEffectSinkType: worldEffects.GetType().Name));
                 }
                 catch (Exception e)
                 {
