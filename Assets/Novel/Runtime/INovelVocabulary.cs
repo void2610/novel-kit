@@ -84,7 +84,10 @@ namespace Novel.Runtime
         public static IReadOnlyList<CommandParameterInfo> DescribeParameters(Type commandType)
         {
             var result = new List<CommandParameterInfo>();
-            foreach (var property in commandType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+            // GetProperties は宣言順を保証しないため、宣言順に対応する MetadataToken で固定する (コピー雛形が宣言順前提)
+            var properties = commandType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+            Array.Sort(properties, (a, b) => a.MetadataToken.CompareTo(b.MetadataToken));
+            foreach (var property in properties)
             {
                 if (!property.CanRead || property.GetIndexParameters().Length > 0) continue;
                 if (HasAttribute(property, "MRubyIgnoreAttribute")) continue;
