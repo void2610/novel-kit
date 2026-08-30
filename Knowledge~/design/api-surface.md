@@ -73,7 +73,7 @@ readonly partial record struct SayCommand : ICommand {
 
 ```csharp
 public interface INovelCommandModule {
-    void        RegisterVocabulary(MRubyState state);              // state.AddCommand<MyCommand>("my_cmd")
+    void        RegisterVocabulary(INovelVocabulary vocabulary);   // vocabulary.Add<MyCommand>("my_cmd") (2026-08-30: MRubyState から変更)
     IDisposable MapHandlers(ICommandSubscribable router);          // [Routes] を兼ね MapTo(router) を返す
 }
 

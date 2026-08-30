@@ -3,7 +3,7 @@ type: Decision
 title: プロジェクトリファレンス — キー列挙はチャンネル契約に統合・実体は DI ビルド時にキャプチャ
 description: ライター向けに「使える名前と構図」を一覧するエディタウィンドウを追加する。列挙の契約は IAudioChannel / IPortraitChannel / ICharacterCatalog 自身に統合し（音とキャラは明示実装必須・構図のみ default = 標準 5 構図）、実行時にしか実体がない情報は RegisterNovelKitCore が DI ビルド時にキャプチャしてエディタ側キャッシュへ渡す（game 側の追加記述ゼロ・種別ごとにマージ）。音の参考実装は追加しない。
 tags: [decision, editor, tooling, audio, portrait, layout, catalog, writer]
-timestamp: 2026-08-29T00:00:00Z
+timestamp: 2026-08-30T00:00:00Z
 status: 確定
 ---
 
@@ -184,6 +184,14 @@ public interface IPortraitChannel
   `IScenarioKeyExtension` で Validate Scenarios の語彙・preamble・正解集合を差し込める。CinematicEffect 連携
   ([ADR](/design/decisions/cinematic-effect.md)) が `[InitializeOnLoad]` で登録する。コアの editor は
   opt-in アセンブリを参照できない (asmdef の任意参照が扱いづらい) ため、依存の向きを逆にした。
+- **プロジェクト定義コマンドの一覧** (2026-08-30・ユーザー要望)。`RegisterNovelCommand<TModule>()` の語彙を
+  「コマンド」タブに出す。VitalRouter.MRuby の `AddCommand<T>(state, name)` は登録先が非公開クロージャ内の
+  `Dictionary` で読み戻せず、リフレクションで潜るのは脆い。そこで語彙の束縛口 `INovelVocabulary` を novel-kit 側で
+  持ち (`RegisterVocabulary(MRubyState)` → `RegisterVocabulary(INovelVocabulary)`・破壊的)、runner は MRubyState へ
+  委譲、DI ビルド時キャプチャは記録用実装を渡して MRubyState を作らずに Ruby 名 / コマンド型 / モジュール型を読む。
+  引数は `[MRubyObject]` 型のプロパティから MRubyCS.Serializer と同じ規則 (snake_case・`[MRubyMember]` 上書き・
+  `[MRubyIgnore]` 除外) で導く (属性は名前で見て Serializer への参照を Runtime に持ち込まない)。
+  糖衣 (preamble の関数名) は `.mrb` から読めないため一覧に含めない。マージは他種別と同じ「空 = 未提供」。
 
 # 検討した代替案
 
