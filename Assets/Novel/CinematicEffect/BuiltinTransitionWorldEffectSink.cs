@@ -81,8 +81,7 @@ namespace Novel.Cinematic
             }
         }
 
-        // 色名 (white / red 等) と #rrggbb を受ける。解釈できない指定は黙って黒に倒さず、そのまま黒で再生しつつ作家には Validate 側で気付かせたいが、
-        // 現状 world_effect は Validate の対象外のため既定色へフォールバックする
+        // 色名 (white / red 等) と #rrggbb を受ける。解釈できない指定は既定の黒へフォールバック (world_effect は Validate 対象外で検出できない)
         private static Color ParseColor(string color)
             => !string.IsNullOrEmpty(color) && ColorUtility.TryParseHtmlString(color, out var parsed) ? parsed : Color.black;
     }
