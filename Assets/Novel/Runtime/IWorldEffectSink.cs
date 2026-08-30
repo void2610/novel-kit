@@ -13,11 +13,16 @@ namespace Novel.Runtime
     {
         public string Key { get; }
         public IReadOnlyList<float> Args { get; }
+        /// <summary>色指定 (HTML 色名 / #rrggbb)。未指定は空文字で、解釈と既定色は sink に委ねる</summary>
+        public string Color { get; }
 
-        public WorldEffect(string key, IReadOnlyList<float> args)
+        public WorldEffect(string key, IReadOnlyList<float> args) : this(key, args, "") { }
+
+        public WorldEffect(string key, IReadOnlyList<float> args, string color)
         {
             Key = key;
             Args = args;
+            Color = color;
         }
 
         public float Arg(int index, float fallback = 0f)

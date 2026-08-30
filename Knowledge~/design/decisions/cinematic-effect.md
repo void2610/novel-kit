@@ -3,7 +3,7 @@ type: Decision
 title: CinematicEffect 連携 — アセットを置くことが登録・対応表は持たない
 description: cinematic-effect パッケージの CinematicSequenceAsset を、Resources/Novel/Effects/<key>.asset の配置規約だけでシナリオから呼べるようにする (opt-in アセンブリ)。DSL は world_effect と別の cinematic / cinematic_stop。停止は <key>_exit.asset (プロジェクトが置く。ライブラリは推測しない)。標準 5 種は内蔵 sink。エディタの一覧・検証は規約フォルダを直接走査する。
 tags: [decision, cinematic, effect, editor, opt-in, writer]
-timestamp: 2026-08-30T00:00:00Z
+timestamp: 2026-08-30T16:00:00Z
 status: 確定
 ---
 
@@ -69,3 +69,7 @@ key → `CinematicSequenceAsset` の対応表 SO (`CrWorldEffectLibrary`)、そ�
   `BuiltinTransitionWorldEffectSink.TryBuild()` に委譲)。
 - `.rb` 側は `world_effect :vignette, 0.7` → `cinematic :vignette`、`world_effect :vignette, 0` →
   `cinematic_stop :vignette` に書き換える (糖衣を preamble に置けば互換も取れる)。
+- 2026-08-30 追記: CR の `whiteout_out` / `whiteout_in` (白版 fade) だけがゲーム側 sink のコード実装として残り、演出の置き場が
+  3 系統に散って分かりにくいとの指摘で、`fade_out` / `fade_in` / `blackout` に色引数を足した (`fade_out 1.0, :white`)。
+  `WorldEffectCommand` / `WorldEffect` に任意の `Color` (HTML 色名 / `#rrggbb`) を持たせ、内蔵 sink が `ColorUtility` で解釈する
+  (未指定・不明は黒)。float 配列 `Args` に色を押し込む案は可読性で不採用。これで CR の sink は Director 外の自前演出 (time_lapse / awake_cutin) だけになる。

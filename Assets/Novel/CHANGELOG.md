@@ -6,6 +6,9 @@
 ## [Unreleased]
 
 ### Added
+- `fade_out` / `fade_in` / `blackout` に色引数 (`fade_out 1.0, :white`)。`WorldEffectCommand` / `WorldEffect` に任意の `Color`
+  (HTML 色名 / `#rrggbb`) を追加し、内蔵 `BuiltinTransitionWorldEffectSink` が解釈する (未指定・不明は黒)。
+  白フェードのためにゲーム側が sink を書く必要が無くなった
 - **CinematicEffect 連携 (opt-in・`com.void2610.cinematic-effect` 導入時のみコンパイル)**。
   `Resources/Novel/Effects/<key>.asset` に `CinematicSequenceAsset` を置くだけで、シナリオから
   `cinematic :key` / `cinematic_stop :key` で呼べる。対応表 (SO) は持たない — アセット名がキー

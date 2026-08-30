@@ -63,6 +63,19 @@ namespace Novel.Tests
             var fadeOut = StepsOf(BuiltinTransitionWorldEffectSink.TryBuild(new WorldEffect("fade_out", new[] { 2f }))!);
             Assert.That(fadeOut[0].Kind, Is.EqualTo(CinematicSequence.StepKind.Play));
             Assert.That(((ScreenFadeConfig)fadeOut[0].Config!).EnterDuration, Is.EqualTo(2f), "引数が尺として効く");
+            Assert.That(((ScreenFadeConfig)fadeOut[0].Config!).FadeColor, Is.EqualTo(Color.black), "色未指定は黒");
+        }
+
+        [Test]
+        public void fade系は色名とhexを受け取り不明な色は黒に倒す()
+        {
+            static Color ColorOf(string key, string color)
+                => ((ScreenFadeConfig)StepsOf(BuiltinTransitionWorldEffectSink.TryBuild(new WorldEffect(key, Array.Empty<float>(), color))!)[0].Config!).FadeColor;
+
+            Assert.That(ColorOf("fade_out", "white"), Is.EqualTo(Color.white));
+            Assert.That(ColorOf("fade_in", "#ff0000"), Is.EqualTo(Color.red));
+            Assert.That(ColorOf("blackout", "white"), Is.EqualTo(Color.white));
+            Assert.That(ColorOf("fade_out", "no-such-color"), Is.EqualTo(Color.black));
         }
     }
 }

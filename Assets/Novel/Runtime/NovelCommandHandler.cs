@@ -235,7 +235,7 @@ namespace Novel.Runtime
         {
             if (_progress.IsFastForwarding) return; // 演出 (shake/flash 等) は瞬間表現なので早送りでは再現しない
             if (_worldEffectSink == null) return;
-            await _worldEffectSink.DispatchAsync(new WorldEffect(cmd.EffectKey, cmd.Args ?? Array.Empty<float>()), ct);
+            await _worldEffectSink.DispatchAsync(new WorldEffect(cmd.EffectKey, cmd.Args ?? Array.Empty<float>(), cmd.Color ?? ""), ct);
         }
 
         public void On(MessageWindowVisibilityCommand cmd) => _view.SetMessageWindowVisible(cmd.Visible);
