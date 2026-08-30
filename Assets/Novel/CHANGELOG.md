@@ -8,7 +8,8 @@
 ### Added
 - `Novel/Project Reference` に「コマンド」タブ。`RegisterNovelCommand<TModule>()` で登録したプロジェクト定義
   コマンドを、モジュールごとに名前と引数 (Ruby 側の名前と型) で一覧する。コピーは `screen_shake 0.0, false` のような
-  呼び出し形 (引数は宣言順のプレースホルダー)。DI ビルド時に記録用 `INovelVocabulary` で語彙を読むため、一度再生すれば出る
+  呼び出し形 (引数は宣言順のプレースホルダー)。コマンド型・プロパティの `[NovelDescription("…")]` が説明として
+  並ぶ。DI ビルド時に記録用 `INovelVocabulary` で語彙を読むため、一度再生すれば出る
   (糖衣 = preamble の関数名は `.mrb` から読めないため含まれない)
 
 - `fade_out` / `fade_in` / `blackout` に色引数 (`fade_out 1.0, :white`)。`WorldEffectCommand` / `WorldEffect` に任意の `Color`

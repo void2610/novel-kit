@@ -603,6 +603,10 @@ namespace Novel.Editor
                         var parameters = string.Join("  ", command.Parameters.Select(p => $"{p.Name}: {p.TypeName}"));
                         EditorGUILayout.LabelField($"{parameters}    ({command.CommandType})", EditorStyles.miniLabel);
                     }
+                    if (command.Description != null)
+                        EditorGUILayout.LabelField($"        {command.Description}", EditorStyles.wordWrappedMiniLabel);
+                    foreach (var p in command.Parameters.Where(p => p.Description != null))
+                        EditorGUILayout.LabelField($"        {p.Name}: {p.Description}", EditorStyles.wordWrappedMiniLabel);
                 }
             }
         }

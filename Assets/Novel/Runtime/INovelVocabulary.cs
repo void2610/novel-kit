@@ -14,6 +14,7 @@ namespace Novel.Runtime
     /// </summary>
     public interface INovelVocabulary
     {
+        /// <remarks>説明はコマンド型・プロパティの <see cref="NovelDescriptionAttribute"/> で付ける。</remarks>
         void Add<TCommand>(string rubyName) where TCommand : ICommand;
     }
 
@@ -26,8 +27,13 @@ namespace Novel.Runtime
         public string ModuleType { get; }
         public IReadOnlyList<CommandParameterInfo> Parameters { get; }
 
-        public CommandKeyInfo(string name, string commandType, string moduleType, IReadOnlyList<CommandParameterInfo> parameters)
+        /// <summary>コマンド型の <see cref="NovelDescriptionAttribute"/> (無ければ null)。</summary>
+        public string? Description { get; }
+
+        public CommandKeyInfo(string name, string commandType, string moduleType, IReadOnlyList<CommandParameterInfo> parameters,
+            string? description = null)
         {
+            Description = string.IsNullOrEmpty(description) ? null : description;
             Name = name;
             CommandType = commandType;
             ModuleType = moduleType;
@@ -41,10 +47,14 @@ namespace Novel.Runtime
         public string Name { get; }
         public string TypeName { get; }
 
-        public CommandParameterInfo(string name, string typeName)
+        /// <summary>プロパティの <see cref="NovelDescriptionAttribute"/> (無ければ null)。</summary>
+        public string? Description { get; }
+
+        public CommandParameterInfo(string name, string typeName, string? description = null)
         {
             Name = name;
             TypeName = typeName;
+            Description = string.IsNullOrEmpty(description) ? null : description;
         }
     }
 
@@ -65,7 +75,11 @@ namespace Novel.Runtime
         public IReadOnlyList<CommandKeyInfo> Commands => _commands;
 
         public void Add<TCommand>(string rubyName) where TCommand : ICommand =>
-            _commands.Add(new CommandKeyInfo(rubyName, typeof(TCommand).Name, _moduleType, DescribeParameters(typeof(TCommand))));
+            _commands.Add(new CommandKeyInfo(rubyName, typeof(TCommand).Name, _moduleType, DescribeParameters(typeof(TCommand)),
+                Description(typeof(TCommand))));
+
+        private static string? Description(MemberInfo member) =>
+            (Attribute.GetCustomAttribute(member, typeof(NovelDescriptionAttribute)) as NovelDescriptionAttribute)?.Text;
 
         public static IReadOnlyList<CommandParameterInfo> DescribeParameters(Type commandType)
         {
@@ -75,7 +89,7 @@ namespace Novel.Runtime
                 if (!property.CanRead || property.GetIndexParameters().Length > 0) continue;
                 if (HasAttribute(property, "MRubyIgnoreAttribute")) continue;
                 var name = MemberNameOverride(property) ?? ToSnakeCase(property.Name);
-                result.Add(new CommandParameterInfo(name, FriendlyTypeName(property.PropertyType)));
+                result.Add(new CommandParameterInfo(name, FriendlyTypeName(property.PropertyType), Description(property)));
             }
             return result;
         }

@@ -94,8 +94,10 @@ using MRubyCS.Serializer;   // [MRubyObject]
 using VitalRouter;          // [Routes] / ICommandSubscribable
 
 [MRubyObject]
+[NovelDescription("画面を揺らす")]                       // Project Reference の「コマンド」タブに出る (任意)
 public readonly partial record struct ScreenShakeCommand : ICommand
 {
+    [NovelDescription("強さ (1.0 が標準)")]
     public float Power { get; init; }
 }
 

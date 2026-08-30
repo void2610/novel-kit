@@ -8,8 +8,10 @@ using VitalRouter;
 namespace Novel.Tests
 {
     [MRubyObject]
+    [NovelDescription("検証用")]
     public readonly partial record struct VocabularyProbeCommand : ICommand
     {
+        [NovelDescription("話者 id")]
         public string SpeakerId { get; init; }
         public float[] Args { get; init; }
         [MRubyMember("as")] public string? DisplayAs { get; init; }
@@ -36,6 +38,8 @@ namespace Novel.Tests
             Assert.That(command.Name, Is.EqualTo("probe"));
             Assert.That(command.CommandType, Is.EqualTo(nameof(VocabularyProbeCommand)));
             Assert.That(command.ModuleType, Is.EqualTo(nameof(ProbeModule)));
+            Assert.That(command.Description, Is.EqualTo("検証用"), "型の [NovelDescription]");
+            Assert.That(command.Parameters.Select(p => p.Description), Is.EqualTo(new[] { "話者 id", null, null }), "プロパティの [NovelDescription]");
             Assert.That(command.Parameters.Select(p => (p.Name, p.TypeName)), Is.EqualTo(new[]
             {
                 ("speaker_id", "string"),   // snake_case

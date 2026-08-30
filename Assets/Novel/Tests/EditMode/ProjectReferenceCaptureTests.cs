@@ -270,7 +270,7 @@ namespace Novel.Tests
                 "A", "P", "C", commands: new[]
                 {
                     new CommandKeyInfo("location", "LocationCommand", "CrCalendarCommandModule",
-                        new[] { new CommandParameterInfo("name", "string") }),
+                        new[] { new CommandParameterInfo("name", "string", "場所名 (空で消す)") }, "年月日表示の後ろに場所を添える"),
                 });
             var withoutModules = Snap(
                 new[] { new AudioKeyInfo("battle", AudioKeyKind.Bgm) }, System.Array.Empty<StageLayoutInfo>(),
@@ -281,6 +281,8 @@ namespace Novel.Tests
             var command = merged.Commands.Single();
             Assert.That(command.Name, Is.EqualTo("location"));
             Assert.That(command.Parameters.Single().TypeName, Is.EqualTo("string"));
+            Assert.That(command.Description, Is.EqualTo("年月日表示の後ろに場所を添える"), "説明も往復する");
+            Assert.That(command.Parameters.Single().Description, Is.EqualTo("場所名 (空で消す)"));
             Assert.That(merged.AudioKeys.Single().Key, Is.EqualTo("battle"), "非空の種別は置き換わる");
         }
 

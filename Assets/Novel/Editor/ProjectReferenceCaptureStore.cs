@@ -204,8 +204,10 @@ namespace Novel.Editor
             public string name = "";
             public string commandType = "";
             public string moduleType = "";
+            public string description = "";
             public string[] paramNames = Array.Empty<string>();
             public string[] paramTypes = Array.Empty<string>();
+            public string[] paramDescriptions = Array.Empty<string>();
         }
 
         [Serializable]
@@ -256,9 +258,10 @@ namespace Novel.Editor
                 var c = s.Commands[i];
                 dto.commands[i] = new CommandDto
                 {
-                    name = c.Name, commandType = c.CommandType, moduleType = c.ModuleType,
+                    name = c.Name, commandType = c.CommandType, moduleType = c.ModuleType, description = c.Description ?? "",
                     paramNames = c.Parameters.Select(p => p.Name).ToArray(),
                     paramTypes = c.Parameters.Select(p => p.TypeName).ToArray(),
+                    paramDescriptions = c.Parameters.Select(p => p.Description ?? "").ToArray(),
                 };
             }
             for (var i = 0; i < s.Characters.Count; i++)
@@ -288,8 +291,9 @@ namespace Novel.Editor
             {
                 var parameters = new List<CommandParameterInfo>(c.paramNames.Length);
                 for (var i = 0; i < c.paramNames.Length; i++)
-                    parameters.Add(new CommandParameterInfo(c.paramNames[i], i < c.paramTypes.Length ? c.paramTypes[i] : ""));
-                commands.Add(new CommandKeyInfo(c.name, c.commandType, c.moduleType, parameters));
+                    parameters.Add(new CommandParameterInfo(c.paramNames[i], i < c.paramTypes.Length ? c.paramTypes[i] : "",
+                        i < c.paramDescriptions.Length ? c.paramDescriptions[i] : null));
+                commands.Add(new CommandKeyInfo(c.name, c.commandType, c.moduleType, parameters, c.description));
             }
 
             DateTime.TryParse(dto.capturedAt, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var capturedAt);

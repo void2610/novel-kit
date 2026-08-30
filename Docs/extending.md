@@ -81,6 +81,9 @@ Resources ローダと dev 警告付きファセットを重ねる。ゲーム�
 builder.RegisterNovelCommand<MyCommands>();   // runner が IEnumerable<INovelCommandModule> として集約注入する
 ```
 
+登録した語彙は Project Reference の「コマンド」タブに並ぶ (DI ビルド時に記録用の `INovelVocabulary` で読む)。
+コマンド型と各プロパティに `[NovelDescription("…")]` を付けると、説明がタブに出る。
+
 モジュールのコンストラクタで受け取れる、novel-kit 側の共有物:
 
 | 型 | 用途 |
