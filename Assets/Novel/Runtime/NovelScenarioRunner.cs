@@ -75,7 +75,8 @@ namespace Novel.Runtime
                 config.AddCommand<MessageWindowVisibilityCommand>("message_window_visible");
                 config.AddCommand<ClearMessageCommand>("clear_message");
                 // game 独自コマンドの語彙束縛（組込語彙の後・名前衝突は game 責任）
-                foreach (var module in modules) module.RegisterVocabulary(config);
+                var vocabulary = new MRubyVocabulary(config);
+                foreach (var module in modules) module.RegisterVocabulary(vocabulary);
             });
 
             var handler = new NovelCommandHandler(view, _store, text, catalog,
@@ -88,6 +89,13 @@ namespace Novel.Runtime
             _subscriptions = new List<IDisposable> { handler.MapTo(_router) };
             // 独自コマンドハンドラを同じノベル専用 Router へ写像（購読は Dispose でまとめて解除）
             foreach (var module in modules) _subscriptions.Add(module.MapHandlers(_router));
+        }
+
+        private sealed class MRubyVocabulary : INovelVocabulary
+        {
+            private readonly MRubyState _state;
+            public MRubyVocabulary(MRubyState state) => _state = state;
+            public void Add<TCommand>(string rubyName) where TCommand : ICommand => _state.AddCommand<TCommand>(rubyName);
         }
 
         // 再生中に再度呼ぶと switch-latest: 前再生を cancel し後始末完了を待って差し替える（前呼び出しは Cancelled）

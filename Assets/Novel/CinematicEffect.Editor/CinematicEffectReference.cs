@@ -5,8 +5,6 @@ using Novel.Editor;
 using Novel.Runtime;
 using UnityEditor;
 using VitalRouter;
-using MRubyCS;
-using VitalRouter.MRuby;
 
 namespace Novel.Cinematic.Editor
 {
@@ -68,7 +66,7 @@ namespace Novel.Cinematic.Editor
     {
         private readonly ISet<string> _keys;
         public CinematicKeyRecorder(ISet<string> keys) => _keys = keys;
-        public void RegisterVocabulary(MRubyState state) => state.AddCommand<CinematicCommand>("cinematic");
+        public void RegisterVocabulary(INovelVocabulary vocabulary) => vocabulary.Add<CinematicCommand>("cinematic");
         public IDisposable MapHandlers(ICommandSubscribable router) => MapTo(router);
         public void On(CinematicCommand cmd)
         {

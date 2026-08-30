@@ -30,7 +30,7 @@ namespace Novel.Tests
     public sealed partial class CustomEchoModule : INovelCommandModule
     {
         public readonly List<string> Received = new();
-        public void RegisterVocabulary(MRubyState state) => state.AddCommand<CustomEchoCommand>("custom_echo");
+        public void RegisterVocabulary(INovelVocabulary vocabulary) => vocabulary.Add<CustomEchoCommand>("custom_echo");
         public IDisposable MapHandlers(ICommandSubscribable router) => MapTo(router);
         public void On(CustomEchoCommand cmd) => Received.Add(cmd.Text);
     }
@@ -48,7 +48,7 @@ namespace Novel.Tests
     public sealed partial class CustomNumberModule : INovelCommandModule
     {
         public readonly List<float> Received = new();
-        public void RegisterVocabulary(MRubyState state) => state.AddCommand<CustomNumberCommand>("custom_number");
+        public void RegisterVocabulary(INovelVocabulary vocabulary) => vocabulary.Add<CustomNumberCommand>("custom_number");
         public IDisposable MapHandlers(ICommandSubscribable router) => MapTo(router);
         public void On(CustomNumberCommand cmd) => Received.Add(cmd.Value);
     }

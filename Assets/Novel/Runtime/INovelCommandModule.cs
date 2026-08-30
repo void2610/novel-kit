@@ -10,8 +10,9 @@ namespace Novel.Runtime
     // Ruby 糖衣（def my_cmd; cmd :my_cmd, ... end）は別 .rb を IPreambleSource として追加登録して供給する。
     public interface INovelCommandModule
     {
-        // 組込語彙の後に呼ばれる。state.AddCommand<MyCommand>("my_cmd") で Ruby 名と C# コマンド型を束ねる。
-        void RegisterVocabulary(MRubyState state);
+        // 組込語彙の後に呼ばれる。vocabulary.Add<MyCommand>("my_cmd") で Ruby 名と C# コマンド型を束ねる。
+        // エディタのプロジェクトリファレンスも記録用の vocabulary を渡して呼ぶため、登録以外の副作用を持たせない。
+        void RegisterVocabulary(INovelVocabulary vocabulary);
 
         // ノベル専用 Router へ [Routes] ハンドラを写像し、その購読を返す（runner が Dispose 時に解除する）。
         IDisposable MapHandlers(ICommandSubscribable router);
