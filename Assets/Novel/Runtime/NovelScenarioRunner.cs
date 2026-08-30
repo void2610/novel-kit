@@ -224,9 +224,10 @@ namespace Novel.Runtime
 #if UNITY_EDITOR
         private List<string> CollectSymbols(Irep irep)
         {
-            var names = new List<string>();
+            // シンボル表は同じ名前を複数回含みうるため重複を除く (一覧の件数が増殖しないように)
+            var names = new HashSet<string>(StringComparer.Ordinal);
             foreach (var symbol in irep.Symbols) names.Add(_state.NameOf(symbol).ToString());
-            return names;
+            return names.ToList();
         }
 
         // 組込 (C# 実装) や Kernel 由来を除き、Object に Ruby で定義されたものだけを糖衣とみなす
