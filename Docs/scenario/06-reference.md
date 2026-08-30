@@ -57,7 +57,8 @@
 | `shake 2.0` | 画面を揺らす。数字は強さ（省略時 1.0）※要ゲーム側対応 |
 | `flash 0.2` | フラッシュ。数字は秒数（省略時 0.2）※同上 |
 | `fade_out 1.0` / `fade_in 1.0` | フェードアウト/イン。数字は秒数（省略時 1.0）※同上 |
-| `blackout` | 一瞬で真っ暗にする ※同上 |
+| `fade_out 1.0, :white` / `fade_in 1.0, :white` | 色付きフェード。2 つ目は色名か `'#rrggbb'`（省略時 :black）※同上 |
+| `blackout` | 一瞬で真っ暗にする。`blackout 0.5, :white` で白 ※同上 |
 | `world_effect :zoom, 1.5` | プロジェクト定義の画面効果を名前で呼ぶ ※同上 |
 | `cinematic :flashback` | 用意された演出を名前で始める ※要ゲーム側対応。名前は Project Reference の「演出」タブ |
 | `cinematic_stop :flashback` | その演出を終える |

@@ -41,9 +41,10 @@ namespace Novel.Cinematic
             await _director.RunAsync(sequence, ct);
         }
 
-        /// <summary>標準 5 種を組む。該当しないキーは null。</summary>
+        /// <summary>標準 5 種を組む。該当しないキーは null。fade 系の色は <see cref="WorldEffect.Color"/> (既定は黒)。</summary>
         public static CinematicSequence? TryBuild(WorldEffect we)
         {
+            var color = ParseColor(we.Color);
             switch (we.Key)
             {
                 case "shake":
@@ -63,21 +64,25 @@ namespace Novel.Cinematic
                 {
                     var duration = we.Arg(0, 1f);
                     return CinematicSequence.Create()
-                        .Play<ScreenFadeEffect>(new ScreenFadeConfig(Color.black, duration, 1f, 0f, Ease.InOutSine, false))
+                        .Play<ScreenFadeEffect>(new ScreenFadeConfig(color, duration, 1f, 0f, Ease.InOutSine, false))
                         .Delay(duration);
                 }
                 case "fade_in":
                     return CinematicSequence.Create()
-                        .Stop<ScreenFadeEffect>(new ScreenFadeConfig(Color.black, 1f, we.Arg(0, 1f), 0f, Ease.InOutSine, false));
+                        .Stop<ScreenFadeEffect>(new ScreenFadeConfig(color, 1f, we.Arg(0, 1f), 0f, Ease.InOutSine, false));
                 case "blackout":
                 {
                     var hold = Mathf.Max(0f, we.Arg(0, 0.5f));
                     return CinematicSequence.Create()
-                        .PlayAndAwait<ScreenFadeEffect>(new ScreenFadeConfig(Color.black, 0.15f, 0.4f, hold, Ease.InOutSine, true));
+                        .PlayAndAwait<ScreenFadeEffect>(new ScreenFadeConfig(color, 0.15f, 0.4f, hold, Ease.InOutSine, true));
                 }
                 default:
                     return null;
             }
         }
+
+        // 色名 (white / red 等) と #rrggbb を受ける。解釈できない指定は既定の黒へフォールバック (world_effect は Validate 対象外で検出できない)
+        private static Color ParseColor(string color)
+            => !string.IsNullOrEmpty(color) && ColorUtility.TryParseHtmlString(color, out var parsed) ? parsed : Color.black;
     }
 }

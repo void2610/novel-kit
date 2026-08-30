@@ -118,6 +118,8 @@ namespace Novel.Commands
     {
         public string EffectKey { get; init; }
         public float[] Args { get; init; }
+        // 色を持つ効果 (fade 等) 向けの任意指定。HTML 色名か #rrggbb。未指定は sink の既定色
+        public string? Color { get; init; }
     }
 
     // テキストウィンドウの表示 / 非表示切替 (イベント CG 表示時に一時的に隠す等)

@@ -129,16 +129,17 @@ def flash(duration = 0.2)
   world_effect :flash, duration
 end
 
-def fade_out(duration = 1.0)
-  world_effect :fade_out, duration
+# 色は :black / :white 等の色名か '#rrggbb'。白フェード (回想明け等) は fade_out 1.0, :white
+def fade_out(duration = 1.0, color = :black)
+  cmd :world_effect, effect_key: 'fade_out', args: [duration.to_f], color: color.to_s
 end
 
-def fade_in(duration = 1.0)
-  world_effect :fade_in, duration
+def fade_in(duration = 1.0, color = :black)
+  cmd :world_effect, effect_key: 'fade_in', args: [duration.to_f], color: color.to_s
 end
 
-def blackout(duration = 0.0)
-  world_effect :blackout, duration
+def blackout(duration = 0.0, color = :black)
+  cmd :world_effect, effect_key: 'blackout', args: [duration.to_f], color: color.to_s
 end
 
 # テキストウィンドウを一時的に隠す / 戻す (イベント CG 全画面表示中など)

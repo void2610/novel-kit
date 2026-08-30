@@ -2,6 +2,9 @@
 
 更新履歴を新しい順に記録する。日付は `YYYY-MM-DD`。
 
+## 2026-08-30
+* **Update**: [CinematicEffect 連携](/design/decisions/cinematic-effect.md) に fade 系の色引数 (fade_out 1.0, :white) の追記。
+
 ## 2026-08-29
 * **Creation**: [CinematicEffect 連携](/design/decisions/cinematic-effect.md) を新規作成。color-recollection が対応表 SO + sink + DI 配線の C# 3 つで実現していたものを、`Resources/Novel/Effects/<key>.asset` の配置規約だけで `cinematic :key` / `cinematic_stop :key` から呼べる opt-in アセンブリ (`Novel.CinematicEffect` / `.VContainer` / `.Editor`) に置き換えた。当初提示した「対応表 SO」案はユーザーが「アセット名が既にキーなのに二重登録」と棄却し、規約方式で組み直した。DSL は `world_effect` と別語彙 (ユーザー指示)。停止は `<key>_exit.asset` をプロジェクトが置く (当初 Enter からの自動導出を実装したが「止め方は演出の一部でプロジェクトが決めるもの」との指摘で棄却)。標準 5 種は内蔵 sink。エディタは規約フォルダを直接走査し、[プロジェクトリファレンス](/design/decisions/project-reference.md) に `IProjectReferenceSection` / `IScenarioKeyExtension` の拡張点を追加。テストで「Validate のスタブ実行が拡張の preamble を読まず糖衣が stub 化される」欠陥を検出し、拡張が preamble も供給する契約にした。EditMode 196 件通過。
 
