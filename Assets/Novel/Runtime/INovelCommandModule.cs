@@ -1,6 +1,5 @@
 #nullable enable
 using System;
-using MRubyCS;
 using VitalRouter;
 
 namespace Novel.Runtime
