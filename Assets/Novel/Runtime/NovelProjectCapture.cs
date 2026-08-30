@@ -19,6 +19,9 @@ namespace Novel.Runtime
             public IReadOnlyList<AudioKeyInfo> AudioKeys { get; }
             public IReadOnlyList<StageLayoutInfo> Layouts { get; }
             public IReadOnlyList<CharacterKeyInfo> Characters { get; }
+
+            /// <summary>プロジェクト定義コマンド (INovelCommandModule の語彙)。</summary>
+            public IReadOnlyList<CommandKeyInfo> Commands { get; }
             public string AudioChannelType { get; }
             public string PortraitChannelType { get; }
             public string CharacterCatalogType { get; }
@@ -37,8 +40,10 @@ namespace Novel.Runtime
             public Snapshot(IReadOnlyList<AudioKeyInfo> audioKeys, IReadOnlyList<StageLayoutInfo> layouts,
                 IReadOnlyList<CharacterKeyInfo> characters,
                 string audioChannelType, string portraitChannelType, string characterCatalogType, DateTime capturedAt,
-                string spriteLoaderType = "", string? spriteKeyPrefix = null)
+                string spriteLoaderType = "", string? spriteKeyPrefix = null,
+                IReadOnlyList<CommandKeyInfo>? commands = null)
             {
+                Commands = commands ?? Array.Empty<CommandKeyInfo>();
                 AudioKeys = audioKeys;
                 Layouts = layouts;
                 Characters = characters;

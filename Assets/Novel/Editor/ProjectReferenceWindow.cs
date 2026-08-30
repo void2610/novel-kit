@@ -29,6 +29,7 @@ namespace Novel.Editor
             Images,
             Layouts,
             Audio,
+            Commands,
         }
 
         private Vector2 _scroll;
@@ -133,6 +134,7 @@ namespace Novel.Editor
                 $"画像 ({_imageGroups.Sum(g => g.Keys.Count)})",
                 $"構図 ({layouts.Count})",
                 $"BGM / SE ({audioKeys.Count})",
+                $"コマンド ({snapshot?.Commands.Count ?? 0})",
             };
             foreach (var section in sections) labels.Add($"{section.Title} ({section.Count})");
             var index = Mathf.Clamp(GUILayout.Toolbar(_tabIndex, labels.ToArray()), 0, labels.Count - 1);
@@ -156,12 +158,13 @@ namespace Novel.Editor
                     case Tab.Images: DrawImages(); break;
                     case Tab.Layouts: DrawLayouts(snapshot, layouts); break;
                     case Tab.Audio: DrawAudio(snapshot, audioKeys); break;
+                    case Tab.Commands: DrawCommands(snapshot); break;
                 }
             }
             EditorGUILayout.EndScrollView();
         }
 
-        private const int BuiltinTabCount = 4;
+        private const int BuiltinTabCount = 5;
 
         /// <summary>拡張セクション (opt-in アセンブリ) が組込タブと同じ見た目で行を描くための口。</summary>
         public sealed class Rows
@@ -432,6 +435,23 @@ namespace Novel.Editor
             }
         }
 
+        /// <summary>そのまま .rb に書ける呼び出し形。引数は宣言順に型ごとの空値を置く (作家が値だけ埋めればよい)。</summary>
+        private static string CommandTemplate(CommandKeyInfo command)
+        {
+            if (command.Parameters.Count == 0) return command.Name;
+            return $"{command.Name} {string.Join(", ", command.Parameters.Select(p => EmptyLiteral(p.TypeName)))}";
+        }
+
+        private static string EmptyLiteral(string typeName) => typeName switch
+        {
+            "string" => "''",
+            "bool" => "false",
+            "int" or "long" => "0",
+            "float" or "double" => "0.0",
+            _ when typeName.EndsWith("[]", StringComparison.Ordinal) => "[]",
+            _ => "nil",
+        };
+
         /// <summary>スロット数を「画面に何人立つか」のミニ図で示す (等間隔に配置)。</summary>
         private static void DrawSlotDiagram(int slotCount)
         {
@@ -552,6 +572,39 @@ namespace Novel.Editor
             var path = ResolveByKey(_audioPathByKey!, key);
             _resolvedAudio[key] = path;
             return path;
+        }
+
+        // ---- プロジェクト定義コマンド (DI ビルド時キャプチャ。INovelCommandModule の語彙) ----
+
+        private void DrawCommands(NovelProjectCapture.Snapshot? snapshot)
+        {
+            var commands = snapshot?.Commands ?? Array.Empty<CommandKeyInfo>();
+            if (commands.Count == 0)
+            {
+                EditorGUILayout.HelpBox(
+                    "プロジェクト定義コマンドは INovelCommandModule の RegisterVocabulary から取得します。" +
+                    "RegisterNovelCommand<TModule>() で登録し、一度再生してください。",
+                    MessageType.Info);
+                return;
+            }
+            EditorGUILayout.LabelField(
+                $"取得元: RegisterNovelCommand のモジュール ({FormatTime(snapshot!.CapturedAt)} の再生時)。" +
+                "コピーは name 引数, 引数 の呼び出し形 (引数は宣言順のプレースホルダー)。", EditorStyles.miniLabel);
+            foreach (var group in commands.GroupBy(c => c.ModuleType).OrderBy(g => g.Key, StringComparer.Ordinal))
+            {
+                var rows = group.Where(c => Matches(c.Name) || Matches(c.CommandType)).OrderBy(c => c.Name, StringComparer.Ordinal).ToList();
+                if (rows.Count == 0) continue;
+                EditorGUILayout.LabelField($"{group.Key} ({rows.Count})", EditorStyles.miniBoldLabel);
+                foreach (var command in rows)
+                {
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        DrawKeyChip(command.Name, CommandTemplate(command), 160f);
+                        var parameters = string.Join("  ", command.Parameters.Select(p => $"{p.Name}: {p.TypeName}"));
+                        EditorGUILayout.LabelField($"{parameters}    ({command.CommandType})", EditorStyles.miniLabel);
+                    }
+                }
+            }
         }
 
         // ---- 共通描画 ----

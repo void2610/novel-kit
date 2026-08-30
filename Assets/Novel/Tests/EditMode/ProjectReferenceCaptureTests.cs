@@ -182,9 +182,9 @@ namespace Novel.Tests
         private static NovelProjectCapture.Snapshot Snap(
             AudioKeyInfo[] audio, StageLayoutInfo[] layouts, CharacterKeyInfo[] characters,
             string audioType, string portraitType, string catalogType,
-            string spriteLoaderType = "", string? spriteKeyPrefix = null) =>
+            string spriteLoaderType = "", string? spriteKeyPrefix = null, CommandKeyInfo[]? commands = null) =>
             new(audio, layouts, characters, audioType, portraitType, catalogType, System.DateTime.Now,
-                spriteLoaderType, spriteKeyPrefix);
+                spriteLoaderType, spriteKeyPrefix, commands);
 
         private static NovelProjectCapture.Snapshot RealCapture() => Snap(
             new[] { new AudioKeyInfo("daily", AudioKeyKind.Bgm, "日常シーン") },
@@ -246,6 +246,42 @@ namespace Novel.Tests
             Assert.That(merged.AudioKeys, Is.Empty);
             Assert.That(merged.Layouts.Select(l => l.Id),
                 Is.EqualTo(new[] { "single", "pair", "trio", "quad", "penta" }));
+        }
+
+        [Test]
+        public void Build時に独自コマンドモジュールの語彙をキャプチャする()
+        {
+            var builder = MakeBuilder();
+            builder.RegisterNovelCommand<CustomEchoModule>();
+
+            using var container = builder.Build();
+
+            var command = NovelProjectCapture.Latest!.Commands.Single();
+            Assert.That(command.Name, Is.EqualTo("custom_echo"));
+            Assert.That(command.ModuleType, Is.EqualTo(nameof(CustomEchoModule)));
+            Assert.That(command.Parameters.Single().Name, Is.EqualTo("text"));
+        }
+
+        [Test]
+        public void コマンド目録は往復して復元されモジュール未登録の配線に消されない()
+        {
+            var withCommands = Snap(
+                System.Array.Empty<AudioKeyInfo>(), System.Array.Empty<StageLayoutInfo>(), System.Array.Empty<CharacterKeyInfo>(),
+                "A", "P", "C", commands: new[]
+                {
+                    new CommandKeyInfo("location", "LocationCommand", "CrCalendarCommandModule",
+                        new[] { new CommandParameterInfo("name", "string") }),
+                });
+            var withoutModules = Snap(
+                new[] { new AudioKeyInfo("battle", AudioKeyKind.Bgm) }, System.Array.Empty<StageLayoutInfo>(),
+                System.Array.Empty<CharacterKeyInfo>(), "A2", "P", "C");
+
+            var merged = ProjectReferenceCaptureStore.MergeForTest(withCommands, withoutModules);
+
+            var command = merged.Commands.Single();
+            Assert.That(command.Name, Is.EqualTo("location"));
+            Assert.That(command.Parameters.Single().TypeName, Is.EqualTo("string"));
+            Assert.That(merged.AudioKeys.Single().Key, Is.EqualTo("battle"), "非空の種別は置き換わる");
         }
 
         [Test]
