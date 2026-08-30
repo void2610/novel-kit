@@ -6,10 +6,16 @@
 ## [Unreleased]
 
 ### Added
-- `Novel/Project Reference` に「コマンド」タブ。`RegisterNovelCommand<TModule>()` で登録したプロジェクト定義
-  コマンドを、モジュールごとに名前と引数 (Ruby 側の名前と型) で一覧する。コピーは `screen_shake 0.0, false` のような
+- `Novel/Project Reference` に「コマンド」タブ。シナリオから呼べるプロジェクト定義の語彙を 3 種まとめて一覧する
+  - **糖衣** (preamble の `def`)。再生 1 回目の preamble ロード時に「新たに Object へ定義されたメソッド」と
+    バイトコードのハッシュをキャプチャし、エディタがハッシュで元の `.rb` アセットを特定してソースから
+    引数名・既定値・`def` 直上のコメント (説明) を読む。ソースが見つからない場合は名前のみ
+  - **独自コマンド** (`RegisterNovelCommand<TModule>()`)。コピーは `screen_shake 0.0, false` のような
   呼び出し形 (引数は宣言順のプレースホルダー)。コマンド型・プロパティの `[NovelDescription("…")]` が説明として
-  並ぶ。DI ビルド時に記録用 `INovelVocabulary` で語彙を読むため、一度再生すれば出る
+  並ぶ。DI ビルド時に記録用 `INovelVocabulary` で語彙を読む
+  - **world_effect のキー** (`IWorldEffectSink.EnumerateKeys()`)。標準 5 種は `BuiltinTransitionWorldEffectSink.BuiltinKeys()`
+    で連結できる
+  - いずれも一度再生すれば出る
   (糖衣 = preamble の関数名は `.mrb` から読めないため含まれない)
 
 - `fade_out` / `fade_in` / `blackout` に色引数 (`fade_out 1.0, :white`)。`WorldEffectCommand` / `WorldEffect` に任意の `Color`
@@ -90,6 +96,8 @@
 - `NovelDisplayText.Build` を公開。自前 View が `TextRevealEngine` の可視文字数と整合する TMP 文字列構築を再実装せずに済む。
 
 ### Changed
+- **破壊的**: `IWorldEffectSink` に `EnumerateKeys()` を追加 (default 実装なし。音キーと同じく実装忘れが沈黙の空目録に
+  なるため明示実装を要求する。一覧を持てない実装は空を返す)
 - **破壊的**: `INovelCommandModule.RegisterVocabulary` の引数が `MRubyState` から `INovelVocabulary` になった。
   `state.AddCommand<T>("name")` → `vocabulary.Add<T>("name")` に書き換える。VitalRouter.MRuby には登録済み語彙を
   読み戻す API が無いため、束縛口を novel-kit 側で持ち、エディタが MRubyState を作らずに語彙を記録できるようにした。

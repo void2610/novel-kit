@@ -42,7 +42,7 @@ Resources ローダと dev 警告付きファセットを重ねる。ゲーム�
 | `IPortraitDirector` | 立ち絵の slot 解決 | `DefaultPortraitDirector` (内部で `IPortraitChannel` を使う) | 通常は差し替えない |
 | `IBackgroundChannel` / `IStillChannel` / `ICenterImageChannel` | bg / still / image | dev 警告の no-op | 解決済み `ResolvedSprite` が渡る (ロードは runner) |
 | `IAudioChannel` | se / se_loop / bgm | dev 警告の no-op | `EnumerateKeys()` は default 実装なし (明示実装必須)。`AudioKeyInfo.Asset` に AudioClip を渡すと Project Reference で試聴できる |
-| `IWorldEffectSink` | world_effect (shake 等) | Core: 無音 / CinematicEffect opt-in: 標準 5 種 | 返す `UniTask` の完了で blocking 性が決まる (effect-await ADR) |
+| `IWorldEffectSink` | world_effect (shake 等) | Core: 無音 / CinematicEffect opt-in: 標準 5 種 | 返す `UniTask` の完了で blocking 性が決まる (effect-await ADR)。`EnumerateKeys()` は default 実装なし (明示実装必須。標準 5 種は `BuiltinTransitionWorldEffectSink.BuiltinKeys()` を連結) |
 
 ### テキスト・診断
 
@@ -66,6 +66,9 @@ Resources ローダと dev 警告付きファセットを重ねる。ゲーム�
 | 音キー | `IAudioChannel.EnumerateKeys()` | 明示実装必須 (一覧を持てないなら空を返す) |
 | 構図 | `IPortraitChannel.EnumerateLayouts()` | 独自構図があればオーバーライド |
 | 演出キー (opt-in) | `Resources/Novel/Effects/` の走査 | なし (規約に従って置く) |
+| 独自コマンド | `INovelCommandModule.RegisterVocabulary` を記録用 vocabulary で呼ぶ | `[NovelDescription]` で説明を付ける |
+| 糖衣 | 再生 1 回目の preamble ロード時に定義されたメソッドとバイトコードのハッシュ | `.rb` を Resources 等のアセットとして持てば、エディタがハッシュで特定して引数名・既定値・直上コメントを出す |
+| world_effect キー | `IWorldEffectSink.EnumerateKeys()` | 明示実装必須 |
 
 列挙はキーの一覧を返すだけの軽量な実装にし、アセットの実ロードを伴わないこと。
 「空 = 列挙未提供」とみなして以前のキャプチャを保持するため、`EnumerateKeys` が一時的に空を返しても一覧は消えない。
@@ -83,6 +86,7 @@ builder.RegisterNovelCommand<MyCommands>();   // runner が IEnumerable<INovelCo
 
 登録した語彙は Project Reference の「コマンド」タブに並ぶ (DI ビルド時に記録用の `INovelVocabulary` で読む)。
 コマンド型と各プロパティに `[NovelDescription("…")]` を付けると、説明がタブに出る。
+糖衣 (preamble の `def`) も同じタブに並び、`.rb` の `def` 直上のコメントがそのまま説明になる。
 
 モジュールのコンストラクタで受け取れる、novel-kit 側の共有物:
 

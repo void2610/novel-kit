@@ -191,7 +191,15 @@ public interface IPortraitChannel
   委譲、DI ビルド時キャプチャは記録用実装を渡して MRubyState を作らずに Ruby 名 / コマンド型 / モジュール型を読む。
   引数は `[MRubyObject]` 型のプロパティから MRubyCS.Serializer と同じ規則 (snake_case・`[MRubyMember]` 上書き・
   `[MRubyIgnore]` 除外) で導く (属性は名前で見て Serializer への参照を Runtime に持ち込まない)。
-  糖衣 (preamble の関数名) は `.mrb` から読めないため一覧に含めない。マージは他種別と同じ「空 = 未提供」。
+  マージは他種別と同じ「空 = 未提供」。
+- **糖衣と world_effect キーも同じタブに** (2026-08-30・ユーザー「これで全部？」)。糖衣は MRubyCS に Ruby 側の
+  introspection (`methods` / `instance_methods` / `Method#parameters`) が無く、バイトコードにも引数名 (デバッグ情報)
+  が無いが、C# 側で `Irep.Symbols` を候補に `TryFindMethod(ObjectClass, …)` の owner が Object かつ Ruby proc のものを
+  「ロード前後の解決可否の差」で取れば定義名は分かる (再生 1 回目の preamble ロード時に部分スナップショットとして
+  Publish)。引数名・既定値・説明は、バイトコードの SHA-1 で元の `.rb` アセット (ScriptedImporter が `.mrb` を
+  サブアセットに持つ) を特定し、ソースの `def` 行と直上コメントを正規表現で読んで補う (`RubyDefParser`・
+  入れ子 def は対象外)。ソースが無い環境 (Addressables 等) では名前だけ出す。world_effect キーは
+  `IWorldEffectSink.EnumerateKeys()` (default なし・破壊的) で音キーと同じ方式。
 
 # 検討した代替案
 
