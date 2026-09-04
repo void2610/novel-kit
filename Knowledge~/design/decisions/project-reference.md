@@ -3,7 +3,7 @@ type: Decision
 title: プロジェクトリファレンス — キー列挙はチャンネル契約に統合・実体は DI ビルド時にキャプチャ
 description: ライター向けに「使える名前と構図」を一覧するエディタウィンドウを追加する。列挙の契約は IAudioChannel / IPortraitChannel / ICharacterCatalog 自身に統合し（音とキャラは明示実装必須・構図のみ default = 標準 5 構図）、実行時にしか実体がない情報は RegisterNovelKitCore が DI ビルド時にキャプチャしてエディタ側キャッシュへ渡す（game 側の追加記述ゼロ・種別ごとにマージ）。音の参考実装は追加しない。
 tags: [decision, editor, tooling, audio, portrait, layout, catalog, writer]
-timestamp: 2026-08-30T00:00:00Z
+timestamp: 2026-09-05T00:00:00Z
 status: 確定
 ---
 
@@ -200,6 +200,11 @@ public interface IPortraitChannel
   サブアセットに持つ) を特定し、ソースの `def` 行と直上コメントを正規表現で読んで補う (`RubyDefParser`・
   入れ子 def は対象外)。ソースが無い環境 (Addressables 等) では名前だけ出す。world_effect キーは
   `IWorldEffectSink.EnumerateKeys()` (default なし・破壊的) で音キーと同じ方式。
+- **独自コマンドのコピー雛形は `cmd :name, key: 空値` のキーワード形** (2026-09-05・レビュー指摘)。当初の
+  裸呼び形 (`screen_shake 0.0, false`) は動かない: VitalRouter.MRuby が Object に定義する Ruby メソッドは
+  `cmd` (と `state`) だけで、`AddCommand<T>` は非公開の VITALROUTER_METHOD_TABLE に足すのみ・MRubyCS は
+  method_missing 未対応のため、裸の名前は糖衣が無い限り NoMethodError。`cmd` の実装も
+  `GetKeywordArguments()` でキーワード引数しか受けない (上流 MRubyStateExtensions.cs で確認)。
 
 # 検討した代替案
 
