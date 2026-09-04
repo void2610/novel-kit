@@ -96,6 +96,8 @@
 - `NovelDisplayText.Build` を公開。自前 View が `TextRevealEngine` の可視文字数と整合する TMP 文字列構築を再実装せずに済む。
 
 ### Changed
+- Project Reference の「コマンド」タブの表示を整理。セクションを枠で囲み、名前 + 説明を 1 行目・引数を
+  インデントした 2 行目に揃え、縞背景で行を区切る。C# コマンド型名の表示は削除 (名前から自明なため)
 - **破壊的**: `IWorldEffectSink` に `EnumerateKeys()` を追加 (default 実装なし。音キーと同じく実装忘れが沈黙の空目録に
   なるため明示実装を要求する。一覧を持てない実装は空を返す)
 - **破壊的**: `INovelCommandModule.RegisterVocabulary` の引数が `MRubyState` から `INovelVocabulary` になった。
