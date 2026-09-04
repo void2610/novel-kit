@@ -3,6 +3,7 @@
 更新履歴を新しい順に記録する。日付は `YYYY-MM-DD`。
 
 ## 2026-09-05
+* **Update**: [Project Reference](/design/decisions/project-reference.md) にコマンドタブ 2 カラム化 (折り返し + コード行) の追記。
 * **Update**: [プロジェクトリファレンス](/design/decisions/project-reference.md) — 独自コマンドのコピー雛形を裸呼び形 (`screen_shake 0.0, false`) から `cmd :name, key: 空値` のキーワード形へ修正 (レビュー指摘の裏取り)。VitalRouter.MRuby が Object に定義する Ruby メソッドは `cmd` のみで MRubyCS は method_missing 未対応のため裸の名前は糖衣が無い限り NoMethodError、`cmd` 自体も `GetKeywordArguments()` でキーワード引数しか受けない (上流 MRubyStateExtensions.cs で確認)。
 
 ## 2026-08-30
