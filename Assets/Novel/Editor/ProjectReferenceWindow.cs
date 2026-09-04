@@ -29,6 +29,7 @@ namespace Novel.Editor
             Images,
             Layouts,
             Audio,
+            Commands,
         }
 
         private Vector2 _scroll;
@@ -83,6 +84,7 @@ namespace Novel.Editor
         private void Invalidate()
         {
             foreach (var section in ProjectReferenceSections.All) section.Invalidate();
+            PreambleSourceCatalog.Invalidate();
             _characters = null;
             _imageGroups = null;
             _spritePathByKey = null;
@@ -133,6 +135,7 @@ namespace Novel.Editor
                 $"画像 ({_imageGroups.Sum(g => g.Keys.Count)})",
                 $"構図 ({layouts.Count})",
                 $"BGM / SE ({audioKeys.Count})",
+                $"コマンド ({CommandTabCount(snapshot)})",
             };
             foreach (var section in sections) labels.Add($"{section.Title} ({section.Count})");
             var index = Mathf.Clamp(GUILayout.Toolbar(_tabIndex, labels.ToArray()), 0, labels.Count - 1);
@@ -156,12 +159,13 @@ namespace Novel.Editor
                     case Tab.Images: DrawImages(); break;
                     case Tab.Layouts: DrawLayouts(snapshot, layouts); break;
                     case Tab.Audio: DrawAudio(snapshot, audioKeys); break;
+                    case Tab.Commands: DrawCommands(snapshot); break;
                 }
             }
             EditorGUILayout.EndScrollView();
         }
 
-        private const int BuiltinTabCount = 4;
+        private const int BuiltinTabCount = 5;
 
         /// <summary>拡張セクション (opt-in アセンブリ) が組込タブと同じ見た目で行を描くための口。</summary>
         public sealed class Rows
@@ -432,6 +436,24 @@ namespace Novel.Editor
             }
         }
 
+        /// <summary>そのまま .rb に書ける呼び出し形。語彙登録だけで確実に通るのは cmd + キーワード引数の形のみ
+        /// (VitalRouter.MRuby が Object に定義するのは cmd だけで、裸の名前は糖衣が無いと NoMethodError)。</summary>
+        private static string CommandTemplate(CommandKeyInfo command)
+        {
+            if (command.Parameters.Count == 0) return $"cmd :{command.Name}";
+            return $"cmd :{command.Name}, {string.Join(", ", command.Parameters.Select(p => $"{p.Name}: {EmptyLiteral(p.TypeName)}"))}";
+        }
+
+        private static string EmptyLiteral(string typeName) => typeName switch
+        {
+            "string" => "''",
+            "bool" => "false",
+            "int" or "long" => "0",
+            "float" or "double" => "0.0",
+            _ when typeName.EndsWith("[]", StringComparison.Ordinal) => "[]",
+            _ => "nil",
+        };
+
         /// <summary>スロット数を「画面に何人立つか」のミニ図で示す (等間隔に配置)。</summary>
         private static void DrawSlotDiagram(int slotCount)
         {
@@ -552,6 +574,100 @@ namespace Novel.Editor
             var path = ResolveByKey(_audioPathByKey!, key);
             _resolvedAudio[key] = path;
             return path;
+        }
+
+        private static int CommandTabCount(NovelProjectCapture.Snapshot? snapshot) =>
+            snapshot == null ? 0
+                : snapshot.Commands.Count + snapshot.WorldEffectKeys.Count + snapshot.Preambles.Sum(p => p.MethodNames.Count);
+
+        private void DrawCommands(NovelProjectCapture.Snapshot? snapshot)
+        {
+            if (snapshot == null || CommandTabCount(snapshot) == 0)
+            {
+                EditorGUILayout.HelpBox(
+                    "糖衣 (preamble の def) ・独自コマンド (INovelCommandModule) ・world_effect のキーは再生時に取得します。一度再生してください。",
+                    MessageType.Info);
+                return;
+            }
+            EditorGUILayout.LabelField(
+                $"{FormatTime(snapshot.CapturedAt)} の再生時に取得。コピーはそのまま書ける呼び出し形 " +
+                "(糖衣: 必須引数は名前・省略可は既定値 / コマンド: cmd + キーワード引数に型ごとの空値 / world_effect: キーのみ)。",
+                EditorStyles.miniLabel);
+
+            DrawPreambleSugars(snapshot.Preambles);
+            DrawCommandModules(snapshot.Commands);
+            DrawWorldEffectKeys(snapshot);
+        }
+
+        // ---- 糖衣 (preamble の def)。ソースが特定できれば引数名・既定値・直上コメントを出す ----
+
+        private void DrawPreambleSugars(IReadOnlyList<PreambleInfo> preambles)
+        {
+            foreach (var preamble in preambles)
+            {
+                if (preamble.MethodNames.Count == 0) continue;
+                var entry = PreambleSourceCatalog.Find(preamble.BytecodeHash);
+                var defs = entry == null ? null : RubyDefParser.Parse(entry.Source).ToDictionary(d => d.Name, d => d);
+                var names = preamble.MethodNames.Where(Matches).ToList();
+                if (names.Count == 0) continue;
+
+                if (entry != null) DrawPingableHeader($"糖衣: {entry.AssetPath} ({names.Count})", entry.AssetPath);
+                else EditorGUILayout.LabelField($"糖衣: {preamble.SourceType} ({names.Count}) — ソース .rb が見つからないため名前のみ", EditorStyles.miniBoldLabel);
+
+                foreach (var name in names)
+                {
+                    var def = defs != null && defs.TryGetValue(name, out var d) ? d : null;
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        DrawKeyChip(name, def?.CallTemplate() ?? name, 160f);
+                        EditorGUILayout.LabelField(def?.Signature() ?? "", EditorStyles.miniLabel);
+                    }
+                    if (def?.Comment != null)
+                        EditorGUILayout.LabelField($"        {def.Comment}", EditorStyles.wordWrappedMiniLabel);
+                }
+            }
+        }
+
+        // ---- 独自コマンド (INovelCommandModule の語彙)。cmd :name, key: value で呼ぶ ----
+
+        private void DrawCommandModules(IReadOnlyList<CommandKeyInfo> commands)
+        {
+            foreach (var group in commands.GroupBy(c => c.ModuleType).OrderBy(g => g.Key, StringComparer.Ordinal))
+            {
+                var rows = group.Where(c => Matches(c.Name) || Matches(c.CommandType)).OrderBy(c => c.Name, StringComparer.Ordinal).ToList();
+                if (rows.Count == 0) continue;
+                EditorGUILayout.LabelField($"コマンド: {group.Key} ({rows.Count})", EditorStyles.miniBoldLabel);
+                foreach (var command in rows)
+                {
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        DrawKeyChip(command.Name, CommandTemplate(command), 160f);
+                        var parameters = string.Join("  ", command.Parameters.Select(p => $"{p.Name}: {p.TypeName}"));
+                        EditorGUILayout.LabelField($"{parameters}    ({command.CommandType})", EditorStyles.miniLabel);
+                    }
+                    if (command.Description != null)
+                        EditorGUILayout.LabelField($"        {command.Description}", EditorStyles.wordWrappedMiniLabel);
+                    foreach (var p in command.Parameters.Where(p => p.Description != null))
+                        EditorGUILayout.LabelField($"        {p.Name}: {p.Description}", EditorStyles.wordWrappedMiniLabel);
+                }
+            }
+        }
+
+        // ---- world_effect のキー (IWorldEffectSink.EnumerateKeys) ----
+
+        private void DrawWorldEffectKeys(NovelProjectCapture.Snapshot snapshot)
+        {
+            var rows = snapshot.WorldEffectKeys.Where(k => Matches(k.Key)).OrderBy(k => k.Key, StringComparer.Ordinal).ToList();
+            if (rows.Count == 0) return;
+            EditorGUILayout.LabelField($"world_effect: {snapshot.WorldEffectSinkType} ({rows.Count})", EditorStyles.miniBoldLabel);
+            foreach (var key in rows)
+            {
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    DrawKeyChip($":{key.Key}", $"world_effect :{key.Key}", 160f);
+                    EditorGUILayout.LabelField(key.Note ?? "", EditorStyles.miniLabel);
+                }
+            }
         }
 
         // ---- 共通描画 ----

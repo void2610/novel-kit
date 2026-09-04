@@ -2,7 +2,11 @@
 
 更新履歴を新しい順に記録する。日付は `YYYY-MM-DD`。
 
+## 2026-09-05
+* **Update**: [プロジェクトリファレンス](/design/decisions/project-reference.md) — 独自コマンドのコピー雛形を裸呼び形 (`screen_shake 0.0, false`) から `cmd :name, key: 空値` のキーワード形へ修正 (レビュー指摘の裏取り)。VitalRouter.MRuby が Object に定義する Ruby メソッドは `cmd` のみで MRubyCS は method_missing 未対応のため裸の名前は糖衣が無い限り NoMethodError、`cmd` 自体も `GetKeywordArguments()` でキーワード引数しか受けない (上流 MRubyStateExtensions.cs で確認)。
+
 ## 2026-08-30
+* **Update**: [プロジェクトリファレンス](/design/decisions/project-reference.md) にプロジェクト定義コマンドの一覧を追加。VitalRouter.MRuby は登録済み語彙を読み戻せない (非公開クロージャ内の Dictionary) ため、語彙の束縛口 `INovelVocabulary` を novel-kit 側で持つ形にし (`INovelCommandModule.RegisterVocabulary` の引数を `MRubyState` から変更・破壊的)、DI ビルド時に記録用実装で Ruby 名 / 型 / 引数 (snake_case・`[MRubyMember]` / `[MRubyIgnore]` 対応) をキャプチャして「コマンド」タブに出す。糖衣名は含まれない。別セッションが実装した未コミット差分を引き継ぎ、テスト (記録規則・キャプチャ・マージ) と CHANGELOG / ADR / api-surface を足した。 続けて「これで全部？」の指摘で糖衣 (preamble の def) と world_effect キーも同じタブに載せた — 糖衣は Ruby 側 introspection が無いため `Irep.Symbols` + `TryFindMethod` のロード前後差で定義名を取り、SHA-1 で元 `.rb` を特定してソースから引数名・既定値・直上コメントを補う。コマンド/引数の説明は `[NovelDescription]` 属性。
 * **Update**: [CinematicEffect 連携](/design/decisions/cinematic-effect.md) に fade 系の色引数 (fade_out 1.0, :white) の追記。
 
 ## 2026-08-29

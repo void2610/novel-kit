@@ -90,14 +90,14 @@ TMP リッチテキストと同じ `<...>` 記法。
 ```csharp
 using Novel.Runtime;
 using Novel.Commands;       // ICommand
-using MRubyCS;
 using MRubyCS.Serializer;   // [MRubyObject]
 using VitalRouter;          // [Routes] / ICommandSubscribable
-using VitalRouter.MRuby;    // AddCommand
 
 [MRubyObject]
+[NovelDescription("画面を揺らす")]                       // Project Reference の「コマンド」タブに出る (任意)
 public readonly partial record struct ScreenShakeCommand : ICommand
 {
+    [NovelDescription("強さ (1.0 が標準)")]
     public float Power { get; init; }
 }
 
@@ -107,7 +107,7 @@ public sealed partial class GameplayNovelCommands : INovelCommandModule
     readonly ICameraShaker _shaker;
     public GameplayNovelCommands(ICameraShaker shaker) => _shaker = shaker;
 
-    public void RegisterVocabulary(MRubyState state) => state.AddCommand<ScreenShakeCommand>("screen_shake");
+    public void RegisterVocabulary(INovelVocabulary vocabulary) => vocabulary.Add<ScreenShakeCommand>("screen_shake");
     public IDisposable MapHandlers(ICommandSubscribable router) => MapTo(router);   // VitalRouter 生成
 
     public async UniTask On(ScreenShakeCommand cmd, CancellationToken ct) => await _shaker.ShakeAsync(cmd.Power, ct);

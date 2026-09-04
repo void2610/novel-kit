@@ -2,10 +2,8 @@
 using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
-using MRubyCS;
 using Novel.Runtime;
 using VitalRouter;
-using VitalRouter.MRuby;
 using Void2610.CinematicEffect;
 
 namespace Novel.Cinematic
@@ -36,7 +34,7 @@ namespace Novel.Cinematic
             _errorHandler = errorHandler;
         }
 
-        public void RegisterVocabulary(MRubyState state) => state.AddCommand<CinematicCommand>("cinematic");
+        public void RegisterVocabulary(INovelVocabulary vocabulary) => vocabulary.Add<CinematicCommand>("cinematic");
         public IDisposable MapHandlers(ICommandSubscribable router) => MapTo(router);
 
         public async UniTask On(CinematicCommand cmd, CancellationToken ct)

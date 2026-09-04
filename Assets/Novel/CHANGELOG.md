@@ -6,6 +6,18 @@
 ## [Unreleased]
 
 ### Added
+- `Novel/Project Reference` に「コマンド」タブ。シナリオから呼べるプロジェクト定義の語彙を 3 種まとめて一覧する
+  - **糖衣** (preamble の `def`)。再生 1 回目の preamble ロード時に「新たに Object へ定義されたメソッド」と
+    バイトコードのハッシュをキャプチャし、エディタがハッシュで元の `.rb` アセットを特定してソースから
+    引数名・既定値・`def` 直上のコメント (説明) を読む。ソースが見つからない場合は名前のみ
+  - **独自コマンド** (`RegisterNovelCommand<TModule>()`)。コピーは `cmd :screen_shake, power: 0.0` のような
+  呼び出し形 (糖衣なしでも通る cmd + キーワード引数。空値は型ごとのプレースホルダー)。コマンド型・プロパティの `[NovelDescription("…")]` が説明として
+  並ぶ。DI ビルド時に記録用 `INovelVocabulary` で語彙を読む
+  - **world_effect のキー** (`IWorldEffectSink.EnumerateKeys()`)。標準 5 種は `BuiltinTransitionWorldEffectSink.BuiltinKeys()`
+    で連結できる
+  - いずれも一度再生すれば出る
+  (糖衣 = preamble の関数名は `.mrb` から読めないため含まれない)
+
 - `fade_out` / `fade_in` / `blackout` に色引数 (`fade_out 1.0, :white`)。`WorldEffectCommand` / `WorldEffect` に任意の `Color`
   (HTML 色名 / `#rrggbb`) を追加し、内蔵 `BuiltinTransitionWorldEffectSink` が解釈する (未指定・不明は黒)。
   白フェードのためにゲーム側が sink を書く必要が無くなった
@@ -25,19 +37,6 @@
   (`NovelScenarioRunner` のコンストラクタ引数 `progress` で共有)。`NovelDiagnostics` を public 化し
   `NovelIssueKind.EffectNotFound` を追加
 
-### Fixed
-- **Ruby の backtrace が一度も surface されていなかったのを修正**。`NovelErrorReport` は
-  `GetBacktraceString()` を例外型から探していたが、実際は `MRubyState` 側のメソッドで常に見つからず、
-  作家には C# のスタックトレースだけが届いていた。`例外.ExceptionObject.Backtrace.ToString(state)` へ
-  辿り直した（`MRubyState.GetBacktraceString()` は VM を抜けた後だと空を返すため使えない）
-- **`RegisterNovelKitCore` の既定エラーハンドラが無音だった**のを修正。error-handling ADR は既定を
-  `DebugNovelErrorHandler` に変えたと記録していたが、実際に変わっていたのは View ヘルパだけで、
-  Core だけを使う構成では MRuby 例外が一切ログに出なかった。`DebugNovelErrorHandler` を
-  `Novel.View` から `Novel.Runtime` へ移し、Core の既定に据えた（**破壊的**: 名前空間が変わる）
-- **シナリオが見つからないときに `NovelResult.Completed` を返していた**のを `Faulted` に変更（**破壊的**）。
-  キーの誤記やアセット未配置が「一瞬で正常終了」に見え、最も原因を掴みにくい失敗になっていた
-
-### Added
 - 例外にならない不具合の通知口 `INovelErrorHandler.OnRuntimeIssue(NovelIssueInfo)`（default 実装付きのため
   既存の実装は壊れない）。dev ビルドではライブラリが `Debug.LogWarning` も出すので、未実装でも無言にならない。
   現在の通知対象は `ScenarioNotFound` / `PreambleNotFound` / `SpriteNotFound`
@@ -79,19 +78,6 @@
   (未明示・未登録の id は従来どおり誤記として警告)。
   この形の話者 id は未登録のまま表示名として画面に出るため、ローカライズ抽出 (`Extract Strings`) の対象になる
 
-### Changed
-- 既読 ID (スキップ判定) を resolve 後テキストから **resolve 前の原文**基準へ変更。ロケールを切り替えても
-  既読が分断しない。既定の恒等 resolver では従来と同一ハッシュのためセーブ互換は不変
-- Validate Scenarios: 未登録コマンドで停止する代わりに、NoMethodError のコマンド名を no-op stub として
-  定義し直して流し直し、以降の行も検証を続けるようにした。読み飛ばした名前は
-  「game 独自コマンドなら正常。誤記でないか確認」として警告に列挙する
-- **破壊的**: `IPortraitDirector` に `HasPortrait` を追加し、話者の既定立ち絵を「そのキャラの立ち絵がまだ
-  出ていないときだけ」適用するようにした。従来は `portrait` で指定した表情が直後の `say` で既定の顔に
-  戻され、表情指定が毎行消えていた。既定実装は slot を別キャラに奪われた記録も落とすため、
-  cast 外 `portrait` の slot 0 フォールバックで画面から消えたキャラは表示中とみなされない。
-  移行: 自前の `IPortraitDirector` 実装に `HasPortrait` の追加が要る。
-
-### Added
 - `AudioKeyInfo` に `Asset` (任意・エディタ試聴用) を追加。`IAudioChannel.EnumerateKeys()` が保持済みの
   AudioClip を渡すと、プロジェクトリファレンスの試聴がキー体系に依存せず効く (エディタ側で GUID 永続化)。
   Novel.Runtime にアセット型を持ち込まないため型は `object`
@@ -105,7 +91,29 @@
   ファクトリ登録へ変更した (共有インスタンスのままでは lifetime 指定が効かないため)。
   `Lifetime.Transient` は Router と runner が注入点ごとに分裂して進行と `CaptureState` が無言で食い違うため受け付けない
 
+- `ITextAssetLoader` (テキスト) と `ISpriteLoader` (スプライト) のロード抽象、および Resources / Addressables 実装。
+  Addressables 実装は `Novel.Addressables` asmdef に隔離し、`com.unity.addressables` 導入時のみコンパイルされる。
+- `NovelDisplayText.Build` を公開。自前 View が `TextRevealEngine` の可視文字数と整合する TMP 文字列構築を再実装せずに済む。
+
 ### Changed
+- **破壊的**: `IWorldEffectSink` に `EnumerateKeys()` を追加 (default 実装なし。音キーと同じく実装忘れが沈黙の空目録に
+  なるため明示実装を要求する。一覧を持てない実装は空を返す)
+- **破壊的**: `INovelCommandModule.RegisterVocabulary` の引数が `MRubyState` から `INovelVocabulary` になった。
+  `state.AddCommand<T>("name")` → `vocabulary.Add<T>("name")` に書き換える。VitalRouter.MRuby には登録済み語彙を
+  読み戻す API が無いため、束縛口を novel-kit 側で持ち、エディタが MRubyState を作らずに語彙を記録できるようにした。
+  `RegisterVocabulary` は登録以外の副作用を持たない契約 (記録用実装でも呼ばれる)
+
+- 既読 ID (スキップ判定) を resolve 後テキストから **resolve 前の原文**基準へ変更。ロケールを切り替えても
+  既読が分断しない。既定の恒等 resolver では従来と同一ハッシュのためセーブ互換は不変
+- Validate Scenarios: 未登録コマンドで停止する代わりに、NoMethodError のコマンド名を no-op stub として
+  定義し直して流し直し、以降の行も検証を続けるようにした。読み飛ばした名前は
+  「game 独自コマンドなら正常。誤記でないか確認」として警告に列挙する
+- **破壊的**: `IPortraitDirector` に `HasPortrait` を追加し、話者の既定立ち絵を「そのキャラの立ち絵がまだ
+  出ていないときだけ」適用するようにした。従来は `portrait` で指定した表情が直後の `say` で既定の顔に
+  戻され、表情指定が毎行消えていた。既定実装は slot を別キャラに奪われた記録も落とすため、
+  cast 外 `portrait` の slot 0 フォールバックで画面から消えたキャラは表示中とみなされない。
+  移行: 自前の `IPortraitDirector` 実装に `HasPortrait` の追加が要る。
+
 - **破壊的**: `IAudioChannel.EnumerateKeys()` / `ICharacterCatalog.EnumerateEntries()` の default 実装 (空) を削除。
   実装忘れが「再生しても一覧に出ない」という沈黙の空目録になるため、明示実装をコンパイルエラーで要求する。
   移行: 一覧を提供しない実装にも `=> System.Array.Empty<...>()` を明示的に書く。
@@ -162,12 +170,18 @@
   なお「初出のみ」の周回リセット (`ResetShown()`) は引き続き game 所有 (runner が勝手に呼ぶとシナリオ単位で
   リセットされセマンティクスが壊れるため)。
 
-### Added
-- `ITextAssetLoader` (テキスト) と `ISpriteLoader` (スプライト) のロード抽象、および Resources / Addressables 実装。
-  Addressables 実装は `Novel.Addressables` asmdef に隔離し、`com.unity.addressables` 導入時のみコンパイルされる。
-- `NovelDisplayText.Build` を公開。自前 View が `TextRevealEngine` の可視文字数と整合する TMP 文字列構築を再実装せずに済む。
-
 ### Fixed
+- **Ruby の backtrace が一度も surface されていなかったのを修正**。`NovelErrorReport` は
+  `GetBacktraceString()` を例外型から探していたが、実際は `MRubyState` 側のメソッドで常に見つからず、
+  作家には C# のスタックトレースだけが届いていた。`例外.ExceptionObject.Backtrace.ToString(state)` へ
+  辿り直した（`MRubyState.GetBacktraceString()` は VM を抜けた後だと空を返すため使えない）
+- **`RegisterNovelKitCore` の既定エラーハンドラが無音だった**のを修正。error-handling ADR は既定を
+  `DebugNovelErrorHandler` に変えたと記録していたが、実際に変わっていたのは View ヘルパだけで、
+  Core だけを使う構成では MRuby 例外が一切ログに出なかった。`DebugNovelErrorHandler` を
+  `Novel.View` から `Novel.Runtime` へ移し、Core の既定に据えた（**破壊的**: 名前空間が変わる）
+- **シナリオが見つからないときに `NovelResult.Completed` を返していた**のを `Faulted` に変更（**破壊的**）。
+  キーの誤記やアセット未配置が「一瞬で正常終了」に見え、最も原因を掴みにくい失敗になっていた
+
 - プロジェクトリファレンスのキャプチャが、novel 未配線スコープのビルド (タイトル画面のシーンや EditMode テスト等)
   で空に上書きされ、音キー・キャラ情報がすぐ消えていた問題。エディタ側ストアが種別ごとにマージするようにした
   (空の種別は「列挙未提供」として以前の実データを保持。Edit Mode のコンテナビルドは採用しない)。

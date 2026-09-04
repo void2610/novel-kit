@@ -75,7 +75,8 @@ namespace Novel.Runtime
                 config.AddCommand<MessageWindowVisibilityCommand>("message_window_visible");
                 config.AddCommand<ClearMessageCommand>("clear_message");
                 // game 独自コマンドの語彙束縛（組込語彙の後・名前衝突は game 責任）
-                foreach (var module in modules) module.RegisterVocabulary(config);
+                var vocabulary = new MRubyVocabulary(config);
+                foreach (var module in modules) module.RegisterVocabulary(vocabulary);
             });
 
             var handler = new NovelCommandHandler(view, _store, text, catalog,
@@ -88,6 +89,13 @@ namespace Novel.Runtime
             _subscriptions = new List<IDisposable> { handler.MapTo(_router) };
             // 独自コマンドハンドラを同じノベル専用 Router へ写像（購読は Dispose でまとめて解除）
             foreach (var module in modules) _subscriptions.Add(module.MapHandlers(_router));
+        }
+
+        private sealed class MRubyVocabulary : INovelVocabulary
+        {
+            private readonly MRubyState _state;
+            public MRubyVocabulary(MRubyState state) => _state = state;
+            public void Add<TCommand>(string rubyName) where TCommand : ICommand => _state.AddCommand<TCommand>(rubyName);
         }
 
         // 再生中に再度呼ぶと switch-latest: 前再生を cancel し後始末完了を待って差し替える（前呼び出しは Cancelled）
@@ -181,14 +189,64 @@ namespace Novel.Runtime
         {
             if (_preambleLoaded) return;
             // 例外/キャンセル時はフラグを立てず次回再試行する（途中失敗で糖衣未定義のまま恒久 Faulted になるのを防ぐ）
+#if UNITY_EDITOR
+            var preambles = new List<PreambleInfo>();
+#endif
             foreach (var preambleSource in _preambleSources)
             {
                 var bytecode = await preambleSource.LoadPreambleAsync(ct);
-                if (bytecode != null && bytecode.Length > 0) _state.LoadBytecode(bytecode);
-                else NovelDiagnostics.PreambleNotFound(_errorHandler, preambleSource.GetType().Name);
+                if (bytecode == null || bytecode.Length == 0)
+                {
+                    NovelDiagnostics.PreambleNotFound(_errorHandler, preambleSource.GetType().Name);
+                    continue;
+                }
+#if UNITY_EDITOR
+                // 糖衣の目録: この preamble が新たに Object へ定義したメソッドを、ロード前後の解決可否の差で取る
+                // (バイトコードのシンボル表には呼び出し先も混ざるため、ロード前から解決できるものは除く)
+                var candidates = CollectSymbols(_state.ParseBytecode(bytecode));
+                var before = new HashSet<string>(candidates.Where(IsRubyMethodOnObject));
+#endif
+                _state.LoadBytecode(bytecode);
+#if UNITY_EDITOR
+                var added = candidates.Where(n => !before.Contains(n) && IsRubyMethodOnObject(n)).ToList();
+                preambles.Add(new PreambleInfo(preambleSource.GetType().Name, Sha1Hex(bytecode), added));
+#endif
             }
             _preambleLoaded = true;   // 全 preamble ロード成功（または不在の確定結果）後にのみ確定
+#if UNITY_EDITOR
+            // 他の種別は空 = 未提供としてエディタ側がマージするため、preamble だけの部分スナップショットでよい
+            NovelProjectCapture.Publish(new NovelProjectCapture.Snapshot(
+                Array.Empty<AudioKeyInfo>(), Array.Empty<StageLayoutInfo>(), Array.Empty<CharacterKeyInfo>(),
+                "", "", "", DateTime.Now, preambles: preambles));
+#endif
         }
+
+#if UNITY_EDITOR
+        private List<string> CollectSymbols(Irep irep)
+        {
+            // シンボル表は同じ名前を複数回含みうるため重複を除く (一覧の件数が増殖しないように)
+            var names = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var symbol in irep.Symbols) names.Add(_state.NameOf(symbol).ToString());
+            return names.ToList();
+        }
+
+        // 組込 (C# 実装) や Kernel 由来を除き、Object に Ruby で定義されたものだけを糖衣とみなす
+        private bool IsRubyMethodOnObject(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return false;
+            return _state.TryFindMethod(_state.ObjectClass, _state.Intern(name), out var method, out var owner)
+                   && owner == _state.ObjectClass && method.Proc != null;
+        }
+
+        private static string Sha1Hex(byte[] bytes)
+        {
+            using var sha = System.Security.Cryptography.SHA1.Create();
+            var hash = sha.ComputeHash(bytes);
+            var sb = new System.Text.StringBuilder(hash.Length * 2);
+            foreach (var b in hash) sb.Append(b.ToString("x2"));
+            return sb.ToString();
+        }
+#endif
 
         public void Dispose()
         {

@@ -55,6 +55,7 @@ namespace Novel.Runtime
     public sealed class NullWorldEffectSink : IWorldEffectSink
     {
         public UniTask DispatchAsync(IWorldEffect effect, CancellationToken ct) => UniTask.CompletedTask;
+        public IEnumerable<WorldEffectKeyInfo> EnumerateKeys() => System.Array.Empty<WorldEffectKeyInfo>();
     }
 
     // 明示的に無音化したい game 向け（既定は View 層の Debug ログ実装。dsl-vocabulary の no-op とは別物）

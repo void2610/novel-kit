@@ -3,7 +3,7 @@ type: Decision
 title: プロジェクトリファレンス — キー列挙はチャンネル契約に統合・実体は DI ビルド時にキャプチャ
 description: ライター向けに「使える名前と構図」を一覧するエディタウィンドウを追加する。列挙の契約は IAudioChannel / IPortraitChannel / ICharacterCatalog 自身に統合し（音とキャラは明示実装必須・構図のみ default = 標準 5 構図）、実行時にしか実体がない情報は RegisterNovelKitCore が DI ビルド時にキャプチャしてエディタ側キャッシュへ渡す（game 側の追加記述ゼロ・種別ごとにマージ）。音の参考実装は追加しない。
 tags: [decision, editor, tooling, audio, portrait, layout, catalog, writer]
-timestamp: 2026-08-29T00:00:00Z
+timestamp: 2026-09-05T00:00:00Z
 status: 確定
 ---
 
@@ -184,6 +184,27 @@ public interface IPortraitChannel
   `IScenarioKeyExtension` で Validate Scenarios の語彙・preamble・正解集合を差し込める。CinematicEffect 連携
   ([ADR](/design/decisions/cinematic-effect.md)) が `[InitializeOnLoad]` で登録する。コアの editor は
   opt-in アセンブリを参照できない (asmdef の任意参照が扱いづらい) ため、依存の向きを逆にした。
+- **プロジェクト定義コマンドの一覧** (2026-08-30・ユーザー要望)。`RegisterNovelCommand<TModule>()` の語彙を
+  「コマンド」タブに出す。VitalRouter.MRuby の `AddCommand<T>(state, name)` は登録先が非公開クロージャ内の
+  `Dictionary` で読み戻せず、リフレクションで潜るのは脆い。そこで語彙の束縛口 `INovelVocabulary` を novel-kit 側で
+  持ち (`RegisterVocabulary(MRubyState)` → `RegisterVocabulary(INovelVocabulary)`・破壊的)、runner は MRubyState へ
+  委譲、DI ビルド時キャプチャは記録用実装を渡して MRubyState を作らずに Ruby 名 / コマンド型 / モジュール型を読む。
+  引数は `[MRubyObject]` 型のプロパティから MRubyCS.Serializer と同じ規則 (snake_case・`[MRubyMember]` 上書き・
+  `[MRubyIgnore]` 除外) で導く (属性は名前で見て Serializer への参照を Runtime に持ち込まない)。
+  マージは他種別と同じ「空 = 未提供」。
+- **糖衣と world_effect キーも同じタブに** (2026-08-30・ユーザー「これで全部？」)。糖衣は MRubyCS に Ruby 側の
+  introspection (`methods` / `instance_methods` / `Method#parameters`) が無く、バイトコードにも引数名 (デバッグ情報)
+  が無いが、C# 側で `Irep.Symbols` を候補に `TryFindMethod(ObjectClass, …)` の owner が Object かつ Ruby proc のものを
+  「ロード前後の解決可否の差」で取れば定義名は分かる (再生 1 回目の preamble ロード時に部分スナップショットとして
+  Publish)。引数名・既定値・説明は、バイトコードの SHA-1 で元の `.rb` アセット (ScriptedImporter が `.mrb` を
+  サブアセットに持つ) を特定し、ソースの `def` 行と直上コメントを正規表現で読んで補う (`RubyDefParser`・
+  入れ子 def は対象外)。ソースが無い環境 (Addressables 等) では名前だけ出す。world_effect キーは
+  `IWorldEffectSink.EnumerateKeys()` (default なし・破壊的) で音キーと同じ方式。
+- **独自コマンドのコピー雛形は `cmd :name, key: 空値` のキーワード形** (2026-09-05・レビュー指摘)。当初の
+  裸呼び形 (`screen_shake 0.0, false`) は動かない: VitalRouter.MRuby が Object に定義する Ruby メソッドは
+  `cmd` (と `state`) だけで、`AddCommand<T>` は非公開の VITALROUTER_METHOD_TABLE に足すのみ・MRubyCS は
+  method_missing 未対応のため、裸の名前は糖衣が無い限り NoMethodError。`cmd` の実装も
+  `GetKeywordArguments()` でキーワード引数しか受けない (上流 MRubyStateExtensions.cs で確認)。
 
 # 検討した代替案
 

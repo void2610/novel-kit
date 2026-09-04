@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using Novel.Assets;
 using Novel.Runtime;
 using UnityEditor;
@@ -88,6 +89,17 @@ namespace Novel.Editor
             {
                 incoming.audio = old.audio;
                 incoming.audioChannelType = old.audioChannelType;
+            }
+            // コマンドは「モジュール未登録の配線 = 未提供」とみなす (novel 未配線スコープが目録を消さないため)
+            if (incoming.commands.Length == 0 && old.commands.Length > 0)
+                incoming.commands = old.commands;
+            // preamble は再生 1 回目のロード時にだけ届く部分スナップショットのため、空は常に「未提供」
+            if (incoming.preambles.Length == 0 && old.preambles.Length > 0)
+                incoming.preambles = old.preambles;
+            if (incoming.worldEffects.Length == 0 && old.worldEffects.Length > 0)
+            {
+                incoming.worldEffects = old.worldEffects;
+                incoming.worldEffectSinkType = old.worldEffectSinkType;
             }
             if (incoming.characters.Length == 0 && old.characters.Length > 0)
             {
@@ -176,6 +188,10 @@ namespace Novel.Editor
             public AudioDto[] audio = Array.Empty<AudioDto>();
             public LayoutDto[] layouts = Array.Empty<LayoutDto>();
             public CharacterDto[] characters = Array.Empty<CharacterDto>();
+            public CommandDto[] commands = Array.Empty<CommandDto>();
+            public PreambleDto[] preambles = Array.Empty<PreambleDto>();
+            public WorldEffectDto[] worldEffects = Array.Empty<WorldEffectDto>();
+            public string worldEffectSinkType = "";
             public string audioChannelType = "";
             public string portraitChannelType = "";
             public string characterCatalogType = "";
@@ -191,6 +207,33 @@ namespace Novel.Editor
             public string id = "";
             public string displayName = "";
             public string defaultPortraitKey = "";
+        }
+
+        [Serializable]
+        private class PreambleDto
+        {
+            public string sourceType = "";
+            public string hash = "";
+            public string[] methods = Array.Empty<string>();
+        }
+
+        [Serializable]
+        private class WorldEffectDto
+        {
+            public string key = "";
+            public string note = "";
+        }
+
+        [Serializable]
+        private class CommandDto
+        {
+            public string name = "";
+            public string commandType = "";
+            public string moduleType = "";
+            public string description = "";
+            public string[] paramNames = Array.Empty<string>();
+            public string[] paramTypes = Array.Empty<string>();
+            public string[] paramDescriptions = Array.Empty<string>();
         }
 
         [Serializable]
@@ -217,6 +260,10 @@ namespace Novel.Editor
                 audio = new AudioDto[s.AudioKeys.Count],
                 layouts = new LayoutDto[s.Layouts.Count],
                 characters = new CharacterDto[s.Characters.Count],
+                commands = new CommandDto[s.Commands.Count],
+                preambles = s.Preambles.Select(p => new PreambleDto { sourceType = p.SourceType, hash = p.BytecodeHash, methods = p.MethodNames.ToArray() }).ToArray(),
+                worldEffects = s.WorldEffectKeys.Select(w => new WorldEffectDto { key = w.Key, note = w.Note ?? "" }).ToArray(),
+                worldEffectSinkType = s.WorldEffectSinkType,
                 audioChannelType = s.AudioChannelType,
                 portraitChannelType = s.PortraitChannelType,
                 characterCatalogType = s.CharacterCatalogType,
@@ -234,6 +281,17 @@ namespace Novel.Editor
             {
                 var l = s.Layouts[i];
                 dto.layouts[i] = new LayoutDto { id = l.Id, slotCount = l.SlotCount, note = l.Note ?? "" };
+            }
+            for (var i = 0; i < s.Commands.Count; i++)
+            {
+                var c = s.Commands[i];
+                dto.commands[i] = new CommandDto
+                {
+                    name = c.Name, commandType = c.CommandType, moduleType = c.ModuleType, description = c.Description ?? "",
+                    paramNames = c.Parameters.Select(p => p.Name).ToArray(),
+                    paramTypes = c.Parameters.Select(p => p.TypeName).ToArray(),
+                    paramDescriptions = c.Parameters.Select(p => p.Description ?? "").ToArray(),
+                };
             }
             for (var i = 0; i < s.Characters.Count; i++)
             {
@@ -257,11 +315,24 @@ namespace Novel.Editor
             foreach (var c in dto.characters)
                 characters.Add(new CharacterKeyInfo(c.id, c.displayName, string.IsNullOrEmpty(c.defaultPortraitKey) ? null : c.defaultPortraitKey));
 
+            var commands = new List<CommandKeyInfo>(dto.commands.Length);
+            foreach (var c in dto.commands)
+            {
+                var parameters = new List<CommandParameterInfo>(c.paramNames.Length);
+                for (var i = 0; i < c.paramNames.Length; i++)
+                    parameters.Add(new CommandParameterInfo(c.paramNames[i], i < c.paramTypes.Length ? c.paramTypes[i] : "",
+                        i < c.paramDescriptions.Length ? c.paramDescriptions[i] : null));
+                commands.Add(new CommandKeyInfo(c.name, c.commandType, c.moduleType, parameters, c.description));
+            }
+
             DateTime.TryParse(dto.capturedAt, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var capturedAt);
+            var preambles = dto.preambles.Select(p => new PreambleInfo(p.sourceType, p.hash, p.methods)).ToList();
+            var worldEffects = dto.worldEffects.Select(w => new WorldEffectKeyInfo(w.key, string.IsNullOrEmpty(w.note) ? null : w.note)).ToList();
             return new NovelProjectCapture.Snapshot(
                 audio, layouts, characters,
                 dto.audioChannelType, dto.portraitChannelType, dto.characterCatalogType, capturedAt,
-                dto.spriteLoaderType, dto.hasSpriteKeyPrefix ? dto.spriteKeyPrefix : null);
+                dto.spriteLoaderType, dto.hasSpriteKeyPrefix ? dto.spriteKeyPrefix : null, commands,
+                preambles, worldEffects, dto.worldEffectSinkType);
         }
 
         // AudioKeyInfo.Asset (試聴用のアセット参照) は JSON に GUID として永続化し、読み込み時に実体へ戻す
