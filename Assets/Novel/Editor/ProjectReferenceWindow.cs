@@ -622,15 +622,16 @@ namespace Novel.Editor
                     foreach (var name in names)
                     {
                         var def = defs != null && defs.TryGetValue(name, out var d) ? d : null;
-                        BeginZebraRow(row++);
-                        using (new EditorGUILayout.HorizontalScope())
+                        using (ZebraRow(row++))
                         {
-                            DrawKeyChip(name, def?.CallTemplate() ?? name, 180f);
-                            if (def?.Comment != null) EditorGUILayout.LabelField(def.Comment, RowLabel);
+                            using (new EditorGUILayout.HorizontalScope())
+                            {
+                                DrawKeyChip(name, def?.CallTemplate() ?? name, 180f);
+                                if (def?.Comment != null) EditorGUILayout.LabelField(def.Comment, RowLabel);
+                            }
+                            if (def != null && def.Params.Count > 0)
+                                DrawDetailLine(def.Signature());
                         }
-                        if (def != null && def.Params.Count > 0)
-                            DrawDetailLine(def.Signature());
-                        EditorGUILayout.EndVertical();
                     }
                 }
                 EditorGUILayout.Space(6f);
@@ -651,16 +652,17 @@ namespace Novel.Editor
                     var row = 0;
                     foreach (var command in rows)
                     {
-                        BeginZebraRow(row++);
-                        using (new EditorGUILayout.HorizontalScope())
+                        using (ZebraRow(row++))
                         {
-                            DrawKeyChip(command.Name, CommandTemplate(command), 180f);
-                            if (command.Description != null) EditorGUILayout.LabelField(command.Description, RowLabel);
+                            using (new EditorGUILayout.HorizontalScope())
+                            {
+                                DrawKeyChip(command.Name, CommandTemplate(command), 180f);
+                                if (command.Description != null) EditorGUILayout.LabelField(command.Description, RowLabel);
+                            }
+                            if (command.Parameters.Count > 0)
+                                DrawDetailLine(string.Join(",   ", command.Parameters.Select(p =>
+                                    p.Description == null ? $"{p.Name}: {p.TypeName}" : $"{p.Name}: {p.TypeName} — {p.Description}")));
                         }
-                        if (command.Parameters.Count > 0)
-                            DrawDetailLine(string.Join(",   ", command.Parameters.Select(p =>
-                                p.Description == null ? $"{p.Name}: {p.TypeName}" : $"{p.Name}: {p.TypeName} — {p.Description}")));
-                        EditorGUILayout.EndVertical();
                     }
                 }
                 EditorGUILayout.Space(6f);
@@ -679,13 +681,14 @@ namespace Novel.Editor
                 var row = 0;
                 foreach (var key in rows)
                 {
-                    BeginZebraRow(row++);
-                    using (new EditorGUILayout.HorizontalScope())
+                    using (ZebraRow(row++))
                     {
-                        DrawKeyChip($":{key.Key}", $"world_effect :{key.Key}", 180f);
-                        if (key.Note != null) EditorGUILayout.LabelField(key.Note, RowLabel);
+                        using (new EditorGUILayout.HorizontalScope())
+                        {
+                            DrawKeyChip($":{key.Key}", $"world_effect :{key.Key}", 180f);
+                            if (key.Note != null) EditorGUILayout.LabelField(key.Note, RowLabel);
+                        }
                     }
-                    EditorGUILayout.EndVertical();
                 }
             }
         }
@@ -695,12 +698,13 @@ namespace Novel.Editor
         private static GUIStyle? _sectionBox;
         private static GUIStyle SectionBox => _sectionBox ??= new GUIStyle(EditorStyles.helpBox) { padding = new RectOffset(8, 8, 6, 6) };
 
-        /// <summary>縞背景つきエントリの開始。EndVertical で閉じる (Scope にしないのは背景を内容より先に描くため)。</summary>
-        private static void BeginZebraRow(int index)
+        /// <summary>縞背景つきエントリ。using で閉じる (Scope の rect へ内容より先に背景を描く)。</summary>
+        private static EditorGUILayout.VerticalScope ZebraRow(int index)
         {
-            var rect = EditorGUILayout.BeginVertical();
+            var scope = new EditorGUILayout.VerticalScope();
             if (Event.current.type == EventType.Repaint && (index & 1) == 1)
-                EditorGUI.DrawRect(rect, new Color(0.5f, 0.5f, 0.5f, 0.08f));
+                EditorGUI.DrawRect(scope.rect, new Color(0.5f, 0.5f, 0.5f, 0.08f));
+            return scope;
         }
 
         /// <summary>エントリ 2 行目の補足 (引数など)。チップの文字位置に揃えてインデントする。</summary>
