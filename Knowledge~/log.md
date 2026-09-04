@@ -3,6 +3,7 @@
 更新履歴を新しい順に記録する。日付は `YYYY-MM-DD`。
 
 ## 2026-09-05
+* **Creation**: [コマンド糖衣の自動生成](/design/decisions/command-sugar-generation.md) を新規作成。基本コマンドを裸で書かせたい (color-recollection 等) というユーザー提案から、`RegisterNovelCommandSugars()` で語彙から糖衣 preamble を自動生成する形に確定。実行時 eval 不可のため「エディタの DI ビルド時に `.rb` 生成 → インポータが `.mrb` 化 → IPreambleSource で読む」経路。当初案のインポート時フックは「語彙は DI が組まないと読めない」制約で棄却し DI ビルド時へ。生成形は宣言順の位置引数 + `**kw` 両対応 (MRubyCS のスプラット対応を実測)、衝突は生成スキップ + 警告で手書き常勝。EditMode 208 件通過。
 * **Update**: [Project Reference](/design/decisions/project-reference.md) にコマンドタブ 2 カラム化 (折り返し + コード行) の追記。
 * **Update**: [プロジェクトリファレンス](/design/decisions/project-reference.md) — 独自コマンドのコピー雛形を裸呼び形 (`screen_shake 0.0, false`) から `cmd :name, key: 空値` のキーワード形へ修正 (レビュー指摘の裏取り)。VitalRouter.MRuby が Object に定義する Ruby メソッドは `cmd` のみで MRubyCS は method_missing 未対応のため裸の名前は糖衣が無い限り NoMethodError、`cmd` 自体も `GetKeywordArguments()` でキーワード引数しか受けない (上流 MRubyStateExtensions.cs で確認)。
 
