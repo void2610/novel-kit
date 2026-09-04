@@ -590,8 +590,7 @@ namespace Novel.Editor
                 return;
             }
             EditorGUILayout.LabelField(
-                $"{FormatTime(snapshot.CapturedAt)} の再生時に取得。コピーはそのまま書ける呼び出し形 " +
-                "(糖衣: 必須引数は名前・省略可は既定値 / コマンド: cmd + キーワード引数に型ごとの空値 / world_effect: キーのみ)。",
+                $"{FormatTime(snapshot.CapturedAt)} の再生時に取得。コピーはそのまま .rb に書ける呼び出し形。",
                 EditorStyles.miniLabel);
 
             DrawPreambleSugars(snapshot.Preambles);
@@ -611,20 +610,30 @@ namespace Novel.Editor
                 var names = preamble.MethodNames.Where(Matches).ToList();
                 if (names.Count == 0) continue;
 
-                if (entry != null) DrawPingableHeader($"糖衣: {entry.AssetPath} ({names.Count})", entry.AssetPath);
-                else EditorGUILayout.LabelField($"糖衣: {preamble.SourceType} ({names.Count}) — ソース .rb が見つからないため名前のみ", EditorStyles.miniBoldLabel);
-
-                foreach (var name in names)
+                using (new EditorGUILayout.VerticalScope(SectionBox))
                 {
-                    var def = defs != null && defs.TryGetValue(name, out var d) ? d : null;
-                    using (new EditorGUILayout.HorizontalScope())
+                    if (entry != null) DrawPingableHeader($"糖衣  —  {entry.AssetPath} ({names.Count})", entry.AssetPath);
+                    else
                     {
-                        DrawKeyChip(name, def?.CallTemplate() ?? name, 160f);
-                        EditorGUILayout.LabelField(def?.Signature() ?? "", EditorStyles.miniLabel);
+                        EditorGUILayout.LabelField($"糖衣  —  {preamble.SourceType} ({names.Count})", EditorStyles.boldLabel);
+                        EditorGUILayout.LabelField("ソース .rb が見つからないため名前のみ", EditorStyles.miniLabel);
                     }
-                    if (def?.Comment != null)
-                        EditorGUILayout.LabelField($"        {def.Comment}", EditorStyles.wordWrappedMiniLabel);
+                    var row = 0;
+                    foreach (var name in names)
+                    {
+                        var def = defs != null && defs.TryGetValue(name, out var d) ? d : null;
+                        BeginZebraRow(row++);
+                        using (new EditorGUILayout.HorizontalScope())
+                        {
+                            DrawKeyChip(name, def?.CallTemplate() ?? name, 180f);
+                            if (def?.Comment != null) EditorGUILayout.LabelField(def.Comment, RowLabel);
+                        }
+                        if (def != null && def.Params.Count > 0)
+                            DrawDetailLine(def.Signature());
+                        EditorGUILayout.EndVertical();
+                    }
                 }
+                EditorGUILayout.Space(6f);
             }
         }
 
@@ -636,20 +645,25 @@ namespace Novel.Editor
             {
                 var rows = group.Where(c => Matches(c.Name) || Matches(c.CommandType)).OrderBy(c => c.Name, StringComparer.Ordinal).ToList();
                 if (rows.Count == 0) continue;
-                EditorGUILayout.LabelField($"コマンド: {group.Key} ({rows.Count})", EditorStyles.miniBoldLabel);
-                foreach (var command in rows)
+                using (new EditorGUILayout.VerticalScope(SectionBox))
                 {
-                    using (new EditorGUILayout.HorizontalScope())
+                    EditorGUILayout.LabelField($"コマンド  —  {group.Key} ({rows.Count})", EditorStyles.boldLabel);
+                    var row = 0;
+                    foreach (var command in rows)
                     {
-                        DrawKeyChip(command.Name, CommandTemplate(command), 160f);
-                        var parameters = string.Join("  ", command.Parameters.Select(p => $"{p.Name}: {p.TypeName}"));
-                        EditorGUILayout.LabelField($"{parameters}    ({command.CommandType})", EditorStyles.miniLabel);
+                        BeginZebraRow(row++);
+                        using (new EditorGUILayout.HorizontalScope())
+                        {
+                            DrawKeyChip(command.Name, CommandTemplate(command), 180f);
+                            if (command.Description != null) EditorGUILayout.LabelField(command.Description, RowLabel);
+                        }
+                        if (command.Parameters.Count > 0)
+                            DrawDetailLine(string.Join(",   ", command.Parameters.Select(p =>
+                                p.Description == null ? $"{p.Name}: {p.TypeName}" : $"{p.Name}: {p.TypeName} — {p.Description}")));
+                        EditorGUILayout.EndVertical();
                     }
-                    if (command.Description != null)
-                        EditorGUILayout.LabelField($"        {command.Description}", EditorStyles.wordWrappedMiniLabel);
-                    foreach (var p in command.Parameters.Where(p => p.Description != null))
-                        EditorGUILayout.LabelField($"        {p.Name}: {p.Description}", EditorStyles.wordWrappedMiniLabel);
                 }
+                EditorGUILayout.Space(6f);
             }
         }
 
@@ -659,15 +673,43 @@ namespace Novel.Editor
         {
             var rows = snapshot.WorldEffectKeys.Where(k => Matches(k.Key)).OrderBy(k => k.Key, StringComparer.Ordinal).ToList();
             if (rows.Count == 0) return;
-            EditorGUILayout.LabelField($"world_effect: {snapshot.WorldEffectSinkType} ({rows.Count})", EditorStyles.miniBoldLabel);
-            foreach (var key in rows)
+            using (new EditorGUILayout.VerticalScope(SectionBox))
             {
-                using (new EditorGUILayout.HorizontalScope())
+                EditorGUILayout.LabelField($"world_effect  —  {snapshot.WorldEffectSinkType} ({rows.Count})", EditorStyles.boldLabel);
+                var row = 0;
+                foreach (var key in rows)
                 {
-                    DrawKeyChip($":{key.Key}", $"world_effect :{key.Key}", 160f);
-                    EditorGUILayout.LabelField(key.Note ?? "", EditorStyles.miniLabel);
+                    BeginZebraRow(row++);
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        DrawKeyChip($":{key.Key}", $"world_effect :{key.Key}", 180f);
+                        if (key.Note != null) EditorGUILayout.LabelField(key.Note, RowLabel);
+                    }
+                    EditorGUILayout.EndVertical();
                 }
             }
+        }
+
+        // ---- コマンドタブの共通描画 (セクション枠・縞背景・詳細行) ----
+
+        private static GUIStyle? _sectionBox;
+        private static GUIStyle SectionBox => _sectionBox ??= new GUIStyle(EditorStyles.helpBox) { padding = new RectOffset(8, 8, 6, 6) };
+
+        /// <summary>縞背景つきエントリの開始。EndVertical で閉じる (Scope にしないのは背景を内容より先に描くため)。</summary>
+        private static void BeginZebraRow(int index)
+        {
+            var rect = EditorGUILayout.BeginVertical();
+            if (Event.current.type == EventType.Repaint && (index & 1) == 1)
+                EditorGUI.DrawRect(rect, new Color(0.5f, 0.5f, 0.5f, 0.08f));
+        }
+
+        /// <summary>エントリ 2 行目の補足 (引数など)。チップの文字位置に揃えてインデントする。</summary>
+        private static void DrawDetailLine(string text)
+        {
+            var rect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight);
+            const float indent = 4f + CopyButtonWidth + ChipGap;
+            EditorGUI.LabelField(new Rect(rect.x + indent, rect.y, Mathf.Max(0f, rect.width - indent), rect.height),
+                text, EditorStyles.miniLabel);
         }
 
         // ---- 共通描画 ----
