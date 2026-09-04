@@ -436,11 +436,12 @@ namespace Novel.Editor
             }
         }
 
-        /// <summary>そのまま .rb に書ける呼び出し形。引数は宣言順に型ごとの空値を置く (作家が値だけ埋めればよい)。</summary>
+        /// <summary>そのまま .rb に書ける呼び出し形。語彙登録だけで確実に通るのは cmd + キーワード引数の形のみ
+        /// (VitalRouter.MRuby が Object に定義するのは cmd だけで、裸の名前は糖衣が無いと NoMethodError)。</summary>
         private static string CommandTemplate(CommandKeyInfo command)
         {
-            if (command.Parameters.Count == 0) return command.Name;
-            return $"{command.Name} {string.Join(", ", command.Parameters.Select(p => EmptyLiteral(p.TypeName)))}";
+            if (command.Parameters.Count == 0) return $"cmd :{command.Name}";
+            return $"cmd :{command.Name}, {string.Join(", ", command.Parameters.Select(p => $"{p.Name}: {EmptyLiteral(p.TypeName)}"))}";
         }
 
         private static string EmptyLiteral(string typeName) => typeName switch
@@ -590,7 +591,7 @@ namespace Novel.Editor
             }
             EditorGUILayout.LabelField(
                 $"{FormatTime(snapshot.CapturedAt)} の再生時に取得。コピーはそのまま書ける呼び出し形 " +
-                "(糖衣: 必須引数は名前・省略可は既定値 / コマンド: 型ごとの空値 / world_effect: キーのみ)。",
+                "(糖衣: 必須引数は名前・省略可は既定値 / コマンド: cmd + キーワード引数に型ごとの空値 / world_effect: キーのみ)。",
                 EditorStyles.miniLabel);
 
             DrawPreambleSugars(snapshot.Preambles);
@@ -627,7 +628,7 @@ namespace Novel.Editor
             }
         }
 
-        // ---- 独自コマンド (INovelCommandModule の語彙)。cmd :name で直接呼ぶ形 ----
+        // ---- 独自コマンド (INovelCommandModule の語彙)。cmd :name, key: value で呼ぶ ----
 
         private void DrawCommandModules(IReadOnlyList<CommandKeyInfo> commands)
         {

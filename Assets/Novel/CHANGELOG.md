@@ -10,8 +10,8 @@
   - **糖衣** (preamble の `def`)。再生 1 回目の preamble ロード時に「新たに Object へ定義されたメソッド」と
     バイトコードのハッシュをキャプチャし、エディタがハッシュで元の `.rb` アセットを特定してソースから
     引数名・既定値・`def` 直上のコメント (説明) を読む。ソースが見つからない場合は名前のみ
-  - **独自コマンド** (`RegisterNovelCommand<TModule>()`)。コピーは `screen_shake 0.0, false` のような
-  呼び出し形 (引数は宣言順のプレースホルダー)。コマンド型・プロパティの `[NovelDescription("…")]` が説明として
+  - **独自コマンド** (`RegisterNovelCommand<TModule>()`)。コピーは `cmd :screen_shake, power: 0.0` のような
+  呼び出し形 (糖衣なしでも通る cmd + キーワード引数。空値は型ごとのプレースホルダー)。コマンド型・プロパティの `[NovelDescription("…")]` が説明として
   並ぶ。DI ビルド時に記録用 `INovelVocabulary` で語彙を読む
   - **world_effect のキー** (`IWorldEffectSink.EnumerateKeys()`)。標準 5 種は `BuiltinTransitionWorldEffectSink.BuiltinKeys()`
     で連結できる
