@@ -3,7 +3,7 @@ type: Decision
 title: プロジェクトリファレンス — キー列挙はチャンネル契約に統合・実体は DI ビルド時にキャプチャ
 description: ライター向けに「使える名前と構図」を一覧するエディタウィンドウを追加する。列挙の契約は IAudioChannel / IPortraitChannel / ICharacterCatalog 自身に統合し（音とキャラは明示実装必須・構図のみ default = 標準 5 構図）、実行時にしか実体がない情報は RegisterNovelKitCore が DI ビルド時にキャプチャしてエディタ側キャッシュへ渡す（game 側の追加記述ゼロ・種別ごとにマージ）。音の参考実装は追加しない。
 tags: [decision, editor, tooling, audio, portrait, layout, catalog, writer]
-timestamp: 2026-09-05T00:00:00Z
+timestamp: 2026-09-05T04:00:00Z
 status: 確定
 ---
 
@@ -220,3 +220,7 @@ public interface IPortraitChannel
   同じ情報を追加記述ゼロで得る。
 - **Markdown 書き出し先行**: Unity を開かないライターへの配布には有効だが、ユーザー判断で
   最初からエディタウィンドウに一本化。エクスポートは必要になれば後付けできる。
+- 2026-09-05 追記: コマンドタブの行を「左: キー名 (太字) / 右: 説明 → コピーされる呼び出し形 → 引数」の 2 カラムへ。
+  説明が右端で切れる (LabelField は折り返さない)・コピー文字列が散文と同色で判別できない、という CR での実使用の指摘が起点。
+  呼び出し形は monospace + 専用色 + 薄背景のコード行にし、「コピーされる文字列そのもの」を見せる。キー名と同一になる
+  呼び出し形 (引数なし糖衣) と、コード行と同内容になるシグネチャ (既定値もキーワードも無い def) は省いてノイズを減らす。

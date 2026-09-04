@@ -622,15 +622,13 @@ namespace Novel.Editor
                     foreach (var name in names)
                     {
                         var def = defs != null && defs.TryGetValue(name, out var d) ? d : null;
-                        BeginZebraRow(row++);
-                        using (new EditorGUILayout.HorizontalScope())
+                        using (ZebraRow(row++))
                         {
-                            DrawKeyChip(name, def?.CallTemplate() ?? name, 180f);
-                            if (def?.Comment != null) EditorGUILayout.LabelField(def.Comment, RowLabel);
+                            // 既定値・キーワード・rest の無い def はシグネチャがコード行と同じ内容になるため省く (rest はコード行に出ない)
+                            var signature = def != null && def.Params.Any(p => p.IsKeyword || p.Default != null || p.IsRest)
+                                ? new[] { def.Signature() } : null;
+                            DrawEntryRow(name, def?.CallTemplate() ?? name, def?.Comment, signature);
                         }
-                        if (def != null && def.Params.Count > 0)
-                            DrawDetailLine(def.Signature());
-                        EditorGUILayout.EndVertical();
                     }
                 }
                 EditorGUILayout.Space(6f);
@@ -651,16 +649,12 @@ namespace Novel.Editor
                     var row = 0;
                     foreach (var command in rows)
                     {
-                        BeginZebraRow(row++);
-                        using (new EditorGUILayout.HorizontalScope())
+                        using (ZebraRow(row++))
                         {
-                            DrawKeyChip(command.Name, CommandTemplate(command), 180f);
-                            if (command.Description != null) EditorGUILayout.LabelField(command.Description, RowLabel);
+                            DrawEntryRow(command.Name, CommandTemplate(command), command.Description,
+                                command.Parameters.Select(p =>
+                                    p.Description == null ? $"{p.Name}: {p.TypeName}" : $"{p.Name}: {p.TypeName} — {p.Description}"));
                         }
-                        if (command.Parameters.Count > 0)
-                            DrawDetailLine(string.Join(",   ", command.Parameters.Select(p =>
-                                p.Description == null ? $"{p.Name}: {p.TypeName}" : $"{p.Name}: {p.TypeName} — {p.Description}")));
-                        EditorGUILayout.EndVertical();
                     }
                 }
                 EditorGUILayout.Space(6f);
@@ -679,13 +673,10 @@ namespace Novel.Editor
                 var row = 0;
                 foreach (var key in rows)
                 {
-                    BeginZebraRow(row++);
-                    using (new EditorGUILayout.HorizontalScope())
+                    using (ZebraRow(row++))
                     {
-                        DrawKeyChip($":{key.Key}", $"world_effect :{key.Key}", 180f);
-                        if (key.Note != null) EditorGUILayout.LabelField(key.Note, RowLabel);
+                        DrawEntryRow($":{key.Key}", $"world_effect :{key.Key}", key.Note, null);
                     }
-                    EditorGUILayout.EndVertical();
                 }
             }
         }
@@ -695,21 +686,111 @@ namespace Novel.Editor
         private static GUIStyle? _sectionBox;
         private static GUIStyle SectionBox => _sectionBox ??= new GUIStyle(EditorStyles.helpBox) { padding = new RectOffset(8, 8, 6, 6) };
 
-        /// <summary>縞背景つきエントリの開始。EndVertical で閉じる (Scope にしないのは背景を内容より先に描くため)。</summary>
-        private static void BeginZebraRow(int index)
+        private static GUIStyle? _zebraRowStyle;
+        private static GUIStyle ZebraRowStyle => _zebraRowStyle ??= new GUIStyle { padding = new RectOffset(0, 0, 3, 3) };
+
+        /// <summary>縞背景つきエントリ。using で閉じる (Scope の rect へ内容より先に背景を描く)。</summary>
+        private static EditorGUILayout.VerticalScope ZebraRow(int index)
         {
-            var rect = EditorGUILayout.BeginVertical();
+            var scope = new EditorGUILayout.VerticalScope(ZebraRowStyle);
             if (Event.current.type == EventType.Repaint && (index & 1) == 1)
-                EditorGUI.DrawRect(rect, new Color(0.5f, 0.5f, 0.5f, 0.08f));
+                EditorGUI.DrawRect(scope.rect, new Color(0.5f, 0.5f, 0.5f, 0.08f));
+            return scope;
         }
 
-        /// <summary>エントリ 2 行目の補足 (引数など)。チップの文字位置に揃えてインデントする。</summary>
-        private static void DrawDetailLine(string text)
+        // チップ列の幅。説明・補足がこの位置から縦一直線に揃う
+        private const float ChipColumnWidth = 190f;
+
+        private static GUIStyle? _chipName;
+        private static GUIStyle ChipName => _chipName ??= new GUIStyle(EditorStyles.boldLabel) { alignment = TextAnchor.MiddleLeft };
+
+        private static GUIStyle? _wrapLabel;
+        private static GUIStyle WrapLabel => _wrapLabel ??= new GUIStyle(EditorStyles.label) { wordWrap = true };
+
+        private static GUIStyle? _wrapMini;
+        private static GUIStyle WrapMini => _wrapMini ??= new GUIStyle(EditorStyles.miniLabel) { wordWrap = true };
+
+        private static Font? _monoFont;
+        private static bool _monoFontResolved;
+
+        private static Font? MonoFont
         {
-            var rect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight);
-            const float indent = 4f + CopyButtonWidth + ChipGap;
-            EditorGUI.LabelField(new Rect(rect.x + indent, rect.y, Mathf.Max(0f, rect.width - indent), rect.height),
-                text, EditorStyles.miniLabel);
+            get
+            {
+                if (_monoFontResolved) return _monoFont;
+                _monoFontResolved = true;
+                _monoFont = Font.CreateDynamicFontFromOSFont(new[] { "Menlo", "Consolas", "Courier New" }, 11);
+                return _monoFont;
+            }
+        }
+
+        private static GUIStyle? _codeLine;
+
+        /// <summary>コピーされる呼び出し形の表示。説明の散文と見分けられるよう monospace + 専用色にする。</summary>
+        private static GUIStyle CodeLine
+        {
+            get
+            {
+                if (_codeLine != null) return _codeLine;
+                _codeLine = new GUIStyle(EditorStyles.label)
+                {
+                    wordWrap = true,
+                    padding = new RectOffset(6, 6, 2, 2),
+                    margin = new RectOffset(0, 0, 1, 1),
+                };
+                if (MonoFont != null) _codeLine.font = MonoFont;
+                var color = EditorGUIUtility.isProSkin ? new Color(0.62f, 0.86f, 0.70f) : new Color(0.05f, 0.40f, 0.15f);
+                _codeLine.normal.textColor = color;
+                _codeLine.hover.textColor = color;
+                return _codeLine;
+            }
+        }
+
+        /// <summary>コピーボタンが入れる文字列そのものを、薄い背景のコード行として見せる。</summary>
+        private static void DrawCodeLine(string text)
+        {
+            var content = new GUIContent(text);
+            var rect = GUILayoutUtility.GetRect(content, CodeLine, GUILayout.ExpandWidth(true));
+            if (Event.current.type == EventType.Repaint)
+                EditorGUI.DrawRect(rect, new Color(0.5f, 0.5f, 0.5f, 0.12f));
+            GUI.Label(rect, content, CodeLine);
+        }
+
+        /// <summary>
+        /// コマンドタブの 1 エントリ。左にキーチップ、右に「説明 → コピーされる呼び出し形 (コード行) → 引数の補足」を縦積みする 2 カラム。
+        /// 右カラムは折り返すため、ウィンドウ幅で説明が切れない。
+        /// </summary>
+        private void DrawEntryRow(string chipLabel, string? copyKey, string? description, IEnumerable<string>? details)
+        {
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                DrawKeyChip(chipLabel, copyKey, ChipColumnWidth, ChipName);
+                using (new EditorGUILayout.VerticalScope())
+                {
+                    var any = false;
+                    if (description != null)
+                    {
+                        EditorGUILayout.LabelField(description, WrapLabel);
+                        any = true;
+                    }
+                    // チップ名と同一のコピー文字列は情報が増えないため出さない
+                    if (copyKey != null && copyKey != chipLabel)
+                    {
+                        DrawCodeLine(copyKey);
+                        any = true;
+                    }
+                    if (details != null)
+                    {
+                        foreach (var detail in details)
+                        {
+                            EditorGUILayout.LabelField(detail, WrapMini);
+                            any = true;
+                        }
+                    }
+                    // 説明が無い行もチップと同じ高さを確保して縞背景を揃える
+                    if (!any) GUILayoutUtility.GetRect(0f, EditorGUIUtility.singleLineHeight);
+                }
+            }
         }
 
         // ---- 共通描画 ----
@@ -754,25 +835,26 @@ namespace Novel.Editor
         /// ボタンを文字列の左に置くのは、キーの長さで押す位置がずれず縦に揃うため。
         /// </summary>
         /// <returns>チップが消費した幅 (後続のラベルを続けて置くのに使う)。</returns>
-        private float DrawKeyChip(Rect rect, string label, string? copyKey, out Rect copyRect)
+        private float DrawKeyChip(Rect rect, string label, string? copyKey, out Rect copyRect, GUIStyle? style = null)
         {
+            style ??= RowLabel;
             copyRect = new Rect(rect.x, rect.y + (rect.height - EditorGUIUtility.singleLineHeight) / 2f,
                 CopyButtonWidth, EditorGUIUtility.singleLineHeight);
             DrawCopyButton(copyRect, copyKey);
-            var textWidth = Mathf.Min(RowLabel.CalcSize(new GUIContent(label)).x,
+            var textWidth = Mathf.Min(style.CalcSize(new GUIContent(label)).x,
                 Mathf.Max(0f, rect.width - CopyButtonWidth - ChipGap));
-            GUI.Label(new Rect(copyRect.xMax + ChipGap, rect.y, textWidth, rect.height), label, RowLabel);
+            GUI.Label(new Rect(copyRect.xMax + ChipGap, rect.y, textWidth, rect.height), label, style);
             return CopyButtonWidth + ChipGap + textWidth;
         }
 
         /// <summary>横並びレイアウト中に置くキーチップ (<paramref name="minWidth"/> で列を揃えられる)。</summary>
-        private void DrawKeyChip(string label, string? copyKey, float minWidth = 0f)
+        private void DrawKeyChip(string label, string? copyKey, float minWidth = 0f, GUIStyle? style = null)
         {
             // GUILayoutUtility.GetRect は EditorGUILayout のような左余白を取らず、行頭で枠に張り付く
             const float leftPad = 4f;
-            var width = leftPad + Mathf.Max(minWidth, RowLabel.CalcSize(new GUIContent(label)).x + ChipGap + CopyButtonWidth);
+            var width = leftPad + Mathf.Max(minWidth, (style ?? RowLabel).CalcSize(new GUIContent(label)).x + ChipGap + CopyButtonWidth);
             var rect = GUILayoutUtility.GetRect(width, EditorGUIUtility.singleLineHeight, GUILayout.Width(width));
-            DrawKeyChip(new Rect(rect.x + leftPad, rect.y, rect.width - leftPad, rect.height), label, copyKey, out _);
+            DrawKeyChip(new Rect(rect.x + leftPad, rect.y, rect.width - leftPad, rect.height), label, copyKey, out _, style);
         }
 
         /// <summary>サムネイル付きの 1 行。クリックでアセットを ping する。</summary>
