@@ -624,8 +624,8 @@ namespace Novel.Editor
                         var def = defs != null && defs.TryGetValue(name, out var d) ? d : null;
                         using (ZebraRow(row++))
                         {
-                            // 既定値もキーワードも無い def はシグネチャがコード行と同じ内容になるため省く
-                            var signature = def != null && def.Params.Any(p => p.IsKeyword || p.Default != null)
+                            // 既定値・キーワード・rest の無い def はシグネチャがコード行と同じ内容になるため省く (rest はコード行に出ない)
+                            var signature = def != null && def.Params.Any(p => p.IsKeyword || p.Default != null || p.IsRest)
                                 ? new[] { def.Signature() } : null;
                             DrawEntryRow(name, def?.CallTemplate() ?? name, def?.Comment, signature);
                         }
@@ -726,7 +726,7 @@ namespace Novel.Editor
 
         private static GUIStyle? _codeLine;
 
-        /// <summary>コピーされる呼び出し形の表示。説明の散文と見分くよう monospace + 専用色にする。</summary>
+        /// <summary>コピーされる呼び出し形の表示。説明の散文と見分けられるよう monospace + 専用色にする。</summary>
         private static GUIStyle CodeLine
         {
             get
