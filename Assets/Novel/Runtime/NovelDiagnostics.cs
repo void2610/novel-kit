@@ -12,8 +12,8 @@ namespace Novel.Runtime
     {
         public static void Report(INovelErrorHandler? handler, NovelIssueInfo issue)
         {
-            // 本番では黙る (未供給ファセットの no-op 警告と同じ方針)。game が拾いたければハンドラ経由で受ける
-            if (Debug.isDebugBuild) Debug.LogWarning(issue.ToString());
+            // 本番では黙り (game が拾いたければハンドラ経由で受ける)、dev では作家のミスを見落とされない赤で顕在化する
+            if (Debug.isDebugBuild) Debug.LogError(issue.ToString());
             handler?.OnRuntimeIssue(issue);
         }
 
