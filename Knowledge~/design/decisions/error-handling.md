@@ -3,7 +3,7 @@ type: Decision
 title: MRuby ランタイムエラー処理・サンドボックス
 description: シナリオ実行を try/catch で包み backtrace を surface。リリースはフェイルセーフで Faulted 終了。サンドボックスは v1 無し（一次コンテンツ前提）。
 tags: [decision, mruby, error-handling, sandbox, runner, result]
-timestamp: 2026-08-28T00:00:00Z
+timestamp: 2026-09-07T00:00:00Z
 status: 確定
 ---
 
@@ -82,6 +82,8 @@ Ruby backtrace を `Detail` に surface する。既定ハンドラを無音の 
   （音キー・構図の列挙で default を置かなかったのとは逆の判断。あちらは「実装忘れ = 沈黙」だったが、
   こちらは未実装でもライブラリが dev ログを出すため沈黙しない）。dev ログとハンドラ通知は
   `NovelDiagnostics` に集約し、検知点が増えても報告の作法がぶれないようにする。
+- **dev ログの重大度は Error (赤)**。当初 LogWarning だったが、シナリオ執筆者 (非プログラマ) が黄色警告を
+  見落とし「表示されない」の報告が再発した (color-recollection PR #170)。作家のミスは見落とされない赤で出す。
 - **シナリオ未発見は `Completed` ではなく `Faulted`**。「一瞬で正常終了」は最も原因を掴みにくい失敗で、
   game 側も成功と誤認する。破壊的変更だが、無言失敗を残すより優先した。
 
