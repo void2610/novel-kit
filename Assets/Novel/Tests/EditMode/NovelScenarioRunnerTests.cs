@@ -330,8 +330,8 @@ namespace Novel.Tests
                 errorHandler: handler,
                 preambleSources: new IPreambleSource[] { new PreambleSource(new ResourcesTextAssetLoader()) });
 
-            // 黙らせるのではなく「警告が出ること」を期待する (この PR の主題が無言失敗の解消のため)
-            LogAssert.Expect(LogType.Warning, new Regex("no_such_scenario.*バイトコードを取得できなかった"));
+            // 黙らせるのではなく「赤ログが出ること」を期待する (無言失敗の解消 + 作家が見落とさない重大度)
+            LogAssert.Expect(LogType.Error, new Regex("no_such_scenario.*バイトコードを取得できなかった"));
             var result = await runner.PlayAsync("no_such_scenario", CancellationToken.None);
 
             Assert.AreEqual(NovelResult.Faulted, result);
@@ -357,7 +357,7 @@ namespace Novel.Tests
                 sprites: new NullSpriteLoaderStub(),
                 preambleSources: new IPreambleSource[] { new PreambleSource(new ResourcesTextAssetLoader()) });
 
-            LogAssert.Expect(LogType.Warning, new Regex("missing_portrait.*解決できなかった"));
+            LogAssert.Expect(LogType.Error, new Regex("missing_portrait.*解決できなかった"));
             var result = await runner.PlayAsync("test_portrait_key", CancellationToken.None);
 
             Assert.AreEqual(NovelResult.Completed, result, "キーが引けなくても再生は止めない");
