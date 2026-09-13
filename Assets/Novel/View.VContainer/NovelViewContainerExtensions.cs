@@ -46,5 +46,37 @@ namespace Novel.Integration
             builder.Register<IStillChannel, WarningStillChannel>(lifetime);
             builder.Register<IAudioChannel, WarningAudioChannel>(lifetime);
         }
+
+        /// <summary>
+        /// コマンド語彙からの糖衣 preamble 自動生成 (command-sugar-generation ADR) を有効化する。
+        /// エディタでは DI ビルド時に語彙をキャプチャして Assets/Resources/Novel/CommandSugars.rb を生成し、
+        /// ランタイムではその生成物を IPreambleSource として読む。新しいコマンドの糖衣が効くのは生成後の次の再生から。
+        /// RegisterNovelKit の後・game 自前の preamble 登録の前に呼ぶこと (preamble は登録順に評価され、
+        /// 手書き糖衣が生成物を後勝ちで上書きできるようにするため)。
+        /// </summary>
+        public static void RegisterNovelCommandSugars(this IContainerBuilder builder, Lifetime lifetime = Lifetime.Singleton)
+        {
+            builder.Register<IPreambleSource>(_ => new PreambleSource(new ResourcesTextAssetLoader(), NovelCommandSugars.ResourceKey), lifetime);
+#if UNITY_EDITOR
+            builder.RegisterBuildCallback(container =>
+            {
+                try
+                {
+                    var commands = new System.Collections.Generic.List<CommandKeyInfo>();
+                    foreach (var module in container.Resolve<System.Collections.Generic.IEnumerable<INovelCommandModule>>())
+                    {
+                        var recorder = new RecordingVocabulary(module.GetType().Name);
+                        module.RegisterVocabulary(recorder);
+                        commands.AddRange(recorder.Commands);
+                    }
+                    NovelCommandSugars.Publish(commands);
+                }
+                catch (System.Exception e)
+                {
+                    UnityEngine.Debug.LogWarning($"[Novel] 糖衣生成用の語彙キャプチャに失敗: {e}");
+                }
+            });
+#endif
+        }
     }
 }

@@ -106,6 +106,25 @@ MRubyCS は実行時に Ruby ソースを eval できないため、糖衣は **
 builder.RegisterInstance<IPreambleSource>(new PreambleSource(new ResourcesTextAssetLoader(), "Scenarios/MyPreamble"));
 ```
 
+### 糖衣の自動生成 (`RegisterNovelCommandSugars`)
+
+引数をそのまま渡すだけの糖衣なら、手書きせず語彙から自動生成できる。
+
+```csharp
+builder.RegisterNovelKit();
+builder.RegisterNovelCommandSugars();   // ← RegisterNovelKit の後・自前 preamble 登録の前
+builder.RegisterNovelCommand<MyCommands>();
+```
+
+- エディタの DI ビルド時 (再生開始時) に語彙をキャプチャし、`Assets/Resources/Novel/CommandSugars.rb` を生成する
+  (内容が変わったときだけ上書き)。生成物は git にコミットする。**新しいコマンドの糖衣が効くのは次の再生から**
+- 生成形は `def screen_shake(power = nil, duration = nil, **kw)` — 宣言順の位置引数とキーワードの両方で書け、
+  渡した引数だけが `cmd` に渡る (未指定は C# 側の既定値)。`[NovelDescription]` が def 直上コメント =
+  Project Reference の説明になる
+- 組込語彙・組込 preamble と同名のコマンドは生成せず警告する。**手書き糖衣が常に後勝ち**なので、
+  引数変換など凝った糖衣にしたいコマンドは自前の preamble に同名 def を書けばそちらが有効になる
+  (呼び出し順の前提: 上記の登録順を守ること。preamble は登録順に評価される)
+
 ### Validate Scenarios との関係 (落とし穴)
 
 Validate Scenarios はシナリオを**スタブ実行**してキーを集める。組込語彙しか知らないので、独自コマンドは

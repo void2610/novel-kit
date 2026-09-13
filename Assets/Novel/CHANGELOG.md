@@ -11,6 +11,10 @@
   散文と見分けられるようにした (キー名と同一の呼び出し形は省く)
 
 ### Added
+- `RegisterNovelCommandSugars()` — コマンド語彙から糖衣 preamble を自動生成する。エディタの DI ビルド時に
+  `Assets/Resources/Novel/CommandSugars.rb` を生成し (差分時のみ上書き・次の再生から有効)、ランタイムで
+  IPreambleSource として読む。生成形は位置引数 + キーワード両対応 (`screen_shake 2.0` / `screen_shake duration: 0.5`)。
+  組込との衝突は生成スキップ + 警告、手書き糖衣が常に後勝ち
 - `Novel/Project Reference` に「コマンド」タブ。シナリオから呼べるプロジェクト定義の語彙を 3 種まとめて一覧する
   - **糖衣** (preamble の `def`)。再生 1 回目の preamble ロード時に「新たに Object へ定義されたメソッド」と
     バイトコードのハッシュをキャプチャし、エディタがハッシュで元の `.rb` アセットを特定してソースから
