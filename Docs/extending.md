@@ -57,7 +57,7 @@ Resources ローダと dev 警告付きファセットを重ねる。ゲーム�
 ### 列挙の契約 (Project Reference / Validate Scenarios の情報源)
 
 エディタは「アセットから静的に読めるもの」は直接走査し、「実行時にしか実体がないもの」は
-**DI ビルド時にキャプチャ**する (`RegisterNovelKitCore` の build callback → `Library/NovelKit` に永続化)。
+**初回再生時にキャプチャ**する (`RegisterNovelKitCore` の build callback が予約し、初回再生時に解決して `Library/NovelKit` に永続化)。
 
 | 情報源 | 取り方 | 差し替え側の責務 |
 |---|---|---|
@@ -84,7 +84,7 @@ Resources ローダと dev 警告付きファセットを重ねる。ゲーム�
 builder.RegisterNovelCommand<MyCommands>();   // runner が IEnumerable<INovelCommandModule> として集約注入する
 ```
 
-登録した語彙は Project Reference の「コマンド」タブに並ぶ (DI ビルド時に記録用の `INovelVocabulary` で読む)。
+登録した語彙は Project Reference の「コマンド」タブに並ぶ (キャプチャ時に記録用の `INovelVocabulary` で読む)。
 コマンド型と各プロパティに `[NovelDescription("…")]` を付けると、説明がタブに出る。
 糖衣 (preamble の `def`) も同じタブに並び、`.rb` の `def` 直上のコメントがそのまま説明になる。
 

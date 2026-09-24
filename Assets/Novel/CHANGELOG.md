@@ -178,6 +178,13 @@
   リセットされセマンティクスが壊れるため)。
 
 ### Fixed
+- **プロジェクトリファレンスのキャプチャが、非同期生成の View に依存するチャンネルを壊しうる**のを修正。
+  DI ビルド直後にチャンネルを解決していたため、View の生成前に解決すると、Singleton 登録が生成前の例外を
+  VContainer の Lazy に抱えたまま固定され、以後の再生でそのチャンネルが使えなくなっていた。また 1 種別の解決に
+  失敗すると全種別のキャプチャを捨てて警告していた。キャプチャは build callback で予約し、初回再生時
+  (runner の preamble ロード時) に種別ごとに独立して取る。取れなかった種別だけを警告し、他の種別はそのまま渡す。
+  リファレンスウィンドウの実行時キャプチャ部分 (音キー・構図・world_effect キー等) は一度再生するまで出ない
+  (以降は `Library/NovelKit` に残る)
 - **Ruby の backtrace が一度も surface されていなかったのを修正**。`NovelErrorReport` は
   `GetBacktraceString()` を例外型から探していたが、実際は `MRubyState` 側のメソッドで常に見つからず、
   作家には C# のスタックトレースだけが届いていた。`例外.ExceptionObject.Backtrace.ToString(state)` へ

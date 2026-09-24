@@ -13,7 +13,7 @@
 * [構図プレビュー](/design/decisions/stage-preview.md) - `Novel/Stage Preview` が game 実装の `IPortraitChannel` を編集モードでそのまま呼ぶ。座標は引き続き game が持つ・実装には「非再生時は即座に反映する」契約を課す
 
 ## 確定済み（2026-08-06・ユーザーとの議論で合意）
-* [プロジェクトリファレンス](/design/decisions/project-reference.md) - ライター向け「名前と構図」一覧のエディタウィンドウ。列挙契約は `IAudioChannel`/`IPortraitChannel` に default 実装付きで統合・実行時実体は `RegisterNovelKitCore` の DI ビルド時キャプチャで取得（game 追加記述ゼロ）・音の参考実装は同梱しない
+* [プロジェクトリファレンス](/design/decisions/project-reference.md) - ライター向け「名前と構図」一覧のエディタウィンドウ。列挙契約は `IAudioChannel`/`IPortraitChannel` に default 実装付きで統合・実行時実体は `RegisterNovelKitCore` の 実行時キャプチャで取得（game 追加記述ゼロ）・音の参考実装は同梱しない
 
 ## 確定済み（2026-06-13・ユーザーとの議論で合意）
 * [実行モデル: 前進専用 + チェックポイント割り切り](/design/decisions/execution-model.md) - セーブは `PlayAsync` 境界のみ。履歴記録/save-anywhere/ロールバックは持たない（2026-06-14 にリプレイ前提から格下げ）

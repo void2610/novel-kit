@@ -1,7 +1,7 @@
 ---
 type: Decision
-title: プロジェクトリファレンス — キー列挙はチャンネル契約に統合・実体は DI ビルド時にキャプチャ
-description: ライター向けに「使える名前と構図」を一覧するエディタウィンドウを追加する。列挙の契約は IAudioChannel / IPortraitChannel / ICharacterCatalog 自身に統合し（音とキャラは明示実装必須・構図のみ default = 標準 5 構図）、実行時にしか実体がない情報は RegisterNovelKitCore が DI ビルド時にキャプチャしてエディタ側キャッシュへ渡す（game 側の追加記述ゼロ・種別ごとにマージ）。音の参考実装は追加しない。
+title: プロジェクトリファレンス — キー列挙はチャンネル契約に統合・実体は初回再生時にキャプチャ
+description: ライター向けに「使える名前と構図」を一覧するエディタウィンドウを追加する。列挙の契約は IAudioChannel / IPortraitChannel / ICharacterCatalog 自身に統合し（音とキャラは明示実装必須・構図のみ default = 標準 5 構図）、実行時にしか実体がない情報は RegisterNovelKitCore が配線したキャプチャで初回再生時に吸い上げてエディタ側キャッシュへ渡す（game 側の追加記述ゼロ・種別ごとにマージ）。音の参考実装は追加しない。
 tags: [decision, editor, tooling, audio, portrait, layout, catalog, writer]
 timestamp: 2026-09-05T04:00:00Z
 status: 確定
@@ -63,14 +63,15 @@ public interface IPortraitChannel
 - `AudioKeyInfo` は key / 種別（BGM/SE）/ ライター向けメモ（任意）、`StageLayoutInfo` は
   layout id / スロット数 / メモ（任意）を持つ軽量構造体。
 
-## 3. 実行時にしか実体がない情報は DI ビルド時にキャプチャする
+## 3. 実行時にしか実体がない情報は初回再生時にキャプチャする
 
 エディタウィンドウは編集モードで動くが、チャンネルは実行時 DI でしか実体化しない。
 このギャップは編集モード側で埋めない。**実際にコンテナが組み上がる瞬間に novel-kit 自身が吸い上げる**。
 
 `RegisterNovelKitCore()`（game が既に呼んでいる）にエディタ実行時のみ有効な
-`RegisterBuildCallback` を仕込み、構築済みコンテナから `IAudioChannel` / `IPortraitChannel` を
-解決して列挙結果をエディタ側キャッシュ（`Library/` 配下・ドメインリロード/再起動を跨いで保持）へ書き出す。
+`RegisterBuildCallback` を仕込んでキャプチャを予約し、初回再生時（runner の preamble ロード時）に
+構築済みコンテナから `IAudioChannel` / `IPortraitChannel` 等を解決して列挙結果を
+エディタ側キャッシュ（`Library/` 配下・ドメインリロード/再起動を跨いで保持）へ書き出す。
 ウィンドウはキャッシュを取得時刻つきで表示する。
 
 - **game 側の追加記述はゼロ。** チャンネル実装 + 列挙オーバーライド + いつもの DI 登録だけで
@@ -82,7 +83,12 @@ public interface IPortraitChannel
   「一度再生してください」と案内する。ただしアセットとして静的に読めるもの
   （キャラカタログ・Resources の画像キー）は再生不要でライブ表示し、
   キャッシュ頼みになるのは実行時にしか実体がない部分（音キー・構図）に限る。
-- キャプチャは try/catch で保護し、失敗しても game の起動を妨げない（警告ログのみ）。
+- キャプチャは try/catch で保護し、失敗しても game の再生を妨げない（警告ログのみ）。
+- **Build 直後には解決しない**（2026-09-25 改訂。当初は Build 直後に解決していた）。非同期生成の View に依存する
+  チャンネルを Build 直後に解決すると、Singleton 登録が生成前の例外を VContainer の Lazy に抱えたまま固定され、
+  以後の再生でそのチャンネルが使えなくなる（庭小人の庭の world_effect sink で判明。当初の実装は先に立ち絵チャンネルで
+  失敗して後続を解決しなかったため、たまたま顕在化していなかった）。再生できた時点では依存が揃っている。
+- 種別ごとに独立して取り、1 種別の失敗で他の種別を捨てない（取れなかった種別は空のまま渡し、エディタ側マージで以前の値が残る）。
 
 ## 4. 音の参考実装は追加しない
 
@@ -94,7 +100,7 @@ public interface IPortraitChannel
 
 - 列挙をチャンネル契約に統合すると、契約が 1 つで済み、「鳴らせるのに一覧に出ない」という
   実装とカタログの乖離が構造的に起きない。
-- DI ビルド時キャプチャは、game が既に書いている配線（interface 実装 + DI 登録）以外の
+- 実行時キャプチャは、game が既に書いている配線（interface 実装 + DI 登録）以外の
   記述を一切要求しない。配線の知識を二重に書かせる案（マニフェスト・editor フック）は
   すべて同型の陳腐化リスクを持つため退けた。
 - default 実装により後方互換が保たれ、既存 6 プロジェクトのチャンネル実装に影響しない。
@@ -117,7 +123,7 @@ public interface IPortraitChannel
 - **Validate Scenarios 突き合わせは次フェーズ候補から昇格して実装**（2026-08-06）。
   `Novel/Validate Scenarios` がコンパイル検証に加え、全 `.rb` が使うキー
   （キャラ/立ち絵/画像/音/構図）を正解データ
-  （キャラ = カタログ SO・画像 = Resources スプライト・音/構図 = DI ビルド時キャプチャ）と
+  （キャラ = カタログ SO・画像 = Resources スプライト・音/構図 = 実行時キャプチャ）と
   突き合わせて未定義キーを警告する（行番号はソース検索の best-effort 付記）。
 - **キーの抽出は正規表現パースではなくスタブ実行**: コンパイル済み `.mrb` を実 preamble 込みで
   早送り実行（`NovelResumePoint.End`。wait 等の実時間を消費しない）し、Router に流れる
@@ -161,7 +167,7 @@ public interface IPortraitChannel
   当初ウィンドウは Resources 相対パスをそのままキーとして表示していたが、`ResourcesSpriteLoader(root)` を
   使う game では表示キーが実キーとズレ、「一覧のとおりに書いたのに出ない」を招く。`ISpriteLoader` 本体への
   メンバ追加は既存実装を全て壊すため、任意実装のファセット `ISpriteKeyPrefix.KeyPrefix` を切り、
-  音キー・構図と同じく DI ビルド時にキャプチャする。ウィンドウは root を差し引いた実キーを表示し、
+  音キー・構図と同じく初回再生時にキャプチャする。ウィンドウは root を差し引いた実キーを表示し、
   root 外のスプライトは「このシナリオからは読めない」と明示する。名乗らないローダでは従来の
   Resources 相対パス表示に落とし、その旨をウィンドウ上部で断る（誤ったキーを断定しない）。
   永続化では「root 不明（未実装）」と「root 空文字（プレフィックス無しが確定）」を区別する必要があるため、
@@ -188,7 +194,7 @@ public interface IPortraitChannel
   「コマンド」タブに出す。VitalRouter.MRuby の `AddCommand<T>(state, name)` は登録先が非公開クロージャ内の
   `Dictionary` で読み戻せず、リフレクションで潜るのは脆い。そこで語彙の束縛口 `INovelVocabulary` を novel-kit 側で
   持ち (`RegisterVocabulary(MRubyState)` → `RegisterVocabulary(INovelVocabulary)`・破壊的)、runner は MRubyState へ
-  委譲、DI ビルド時キャプチャは記録用実装を渡して MRubyState を作らずに Ruby 名 / コマンド型 / モジュール型を読む。
+  委譲、実行時キャプチャは記録用実装を渡して MRubyState を作らずに Ruby 名 / コマンド型 / モジュール型を読む。
   引数は `[MRubyObject]` 型のプロパティから MRubyCS.Serializer と同じ規則 (snake_case・`[MRubyMember]` 上書き・
   `[MRubyIgnore]` 除外) で導く (属性は名前で見て Serializer への参照を Runtime に持ち込まない)。
   マージは他種別と同じ「空 = 未提供」。
@@ -216,7 +222,7 @@ public interface IPortraitChannel
   発見失敗が沈黙する、と複雑さの割に堅牢でないため不採用。
 - **InitializeOnLoad の明示登録（editor フックでファクトリ登録）**: 発見は決定的になるが、
   game が DI に書いた配線と同じ知識を editor 用にもう一度（しかも MonoBehaviour では
-  入手経路の選択込みで）書かせる二重記述になるため不採用。DI ビルド時キャプチャが
+  入手経路の選択込みで）書かせる二重記述になるため不採用。実行時キャプチャが
   同じ情報を追加記述ゼロで得る。
 - **Markdown 書き出し先行**: Unity を開かないライターへの配布には有効だが、ユーザー判断で
   最初からエディタウィンドウに一本化。エクスポートは必要になれば後付けできる。

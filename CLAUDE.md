@@ -18,7 +18,7 @@ EditMode テスト・サンプルシーンで全パイプラインの動作を�
   - `Novel.View.VContainer` — `RegisterNovelKit()` 箱出し登録ヘルパ（Core + Resources ローダ + 警告ファセット）。
   - opt-in（依存パッケージ導入時のみコンパイル）: `Novel.Addressables`（Addressables ローダ）・`Novel.CinematicEffect` / `.VContainer` / `.Editor`（`Resources/Novel/Effects/<key>.asset` の配置規約で `cinematic :key`。`RegisterNovelCinematicEffects()`）。
   - `Novel.Editor` — シナリオ検証メニュー（`Novel/Validate Scenarios`）・プロジェクトリファレンス
-    （`Novel/Project Reference`。使える名前/構図の一覧。実行時実体は DI ビルド時キャプチャ）。
+    （`Novel/Project Reference`。使える名前/構図の一覧。実行時実体は初回再生時のキャプチャ）。
   - `Novel.Samples` / `Novel.Tests.EditMode` — 動作確認シーンと EditMode テスト。
 - 利用手順は `Docs/getting-started.md`。差し替え口・語彙拡張・opt-in アセンブリの作法は `Docs/extending.md`。シナリオライター向け DSL リファレンスは `Docs/scenario/`
   （命令・タグ・preamble 糖衣を変更したら追随して更新すること）。

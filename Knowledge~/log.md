@@ -2,6 +2,9 @@
 
 更新履歴を新しい順に記録する。日付は `YYYY-MM-DD`。
 
+## 2026-09-25
+* **Update**: [プロジェクトリファレンス](/design/decisions/project-reference.md) — キャプチャを DI ビルド直後から初回再生時へ移した。非同期生成の View に依存するチャンネルを Build 直後に解決すると、Singleton 登録が生成前の例外を VContainer の Lazy に抱えたまま固定され、以後の再生でそのチャンネルが使えなくなる (庭小人の庭の world_effect sink で判明。従来は先に立ち絵チャンネルで失敗して後続を解決せず、全種別ごとキャプチャを捨てていたため顕在化していなかった)。種別ごとに独立して取り、1 種別の失敗で他を捨てないようにした。
+
 ## 2026-09-07
 * **Update**: [エラー処理](/design/decisions/error-handling.md) — NovelDiagnostics の dev ログを LogWarning から LogError へ変更 (黄色警告は執筆者に見落とされるため)。
 
