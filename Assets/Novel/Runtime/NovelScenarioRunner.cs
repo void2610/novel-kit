@@ -218,6 +218,8 @@ namespace Novel.Runtime
             NovelProjectCapture.Publish(new NovelProjectCapture.Snapshot(
                 Array.Empty<AudioKeyInfo>(), Array.Empty<StageLayoutInfo>(), Array.Empty<CharacterKeyInfo>(),
                 "", "", "", DateTime.Now, preambles: preambles));
+            // 再生できる時点では View に依存するチャンネルも揃っているため、DI ビルド時に予約したキャプチャをここで行う
+            NovelProjectCapture.RunDeferred();
 #endif
         }
 

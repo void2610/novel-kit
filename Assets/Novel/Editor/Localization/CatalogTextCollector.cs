@@ -17,7 +17,7 @@ namespace Novel.Editor.Localization
     ///
     /// 収集元は `Novel/Project Reference` / `Validate Scenarios` と同じ和集合:
     /// - `ScriptableCharacterCatalog` アセット（プロジェクト内の全件）
-    /// - DI ビルド時キャプチャ（コード実装のカタログ用）
+    /// - 実行時キャプチャ（コード実装のカタログ用）
     ///
     /// 疑似ファイル 1 つとして計画へ載せるので、追跡・差分・deprecated の仕組みがそのまま効く
     /// （キャラの改名は「リネーム」として検出され、訳が追従する）。
@@ -45,7 +45,7 @@ namespace Novel.Editor.Localization
                 foreach (var entry in asset.EnumerateEntries()) Put(byId, entry);
             }
 
-            // コード実装のカタログはアセットが無いため、DI ビルド時キャプチャから拾う
+            // コード実装のカタログはアセットが無いため、実行時キャプチャから拾う
             var capture = ProjectReferenceCaptureStore.LoadOrLatest();
             if (capture != null)
                 foreach (var entry in capture.Characters) Put(byId, entry);

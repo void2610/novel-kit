@@ -7,8 +7,8 @@ using Novel.Assets;
 namespace Novel.Runtime
 {
     /// <summary>
-    /// DI ビルド時に「実際に配線されたチャンネル」から吸い上げたプロジェクト情報のエディタ向け受け口
-    /// (project-reference ADR)。RegisterNovelKitCore の build callback が <see cref="Publish"/> し、
+    /// 「実際に配線されたチャンネル」から吸い上げたプロジェクト情報のエディタ向け受け口
+    /// (project-reference ADR)。RegisterNovelKitCore の build callback が予約し、初回再生時に <see cref="Publish"/> する。
     /// Novel.Editor が購読して永続化・プロジェクトリファレンスウィンドウに表示する。
     /// エディタ専用 (プレイヤービルドには含まれない)。game 側が触る必要はない。
     /// </summary>
@@ -78,6 +78,23 @@ namespace Novel.Runtime
         {
             Latest = snapshot;
             Captured?.Invoke(snapshot);
+        }
+
+        // シーンごとにスコープが作り直されるため、最後に構築されたコンテナの予約だけを残す
+        private static Action? _deferred;
+
+        /// <summary>
+        /// DI ビルド時に配線したキャプチャを初回再生時まで予約する (ビルド時点ではチャンネルを解決しない)。
+        /// 予約は最新の 1 件だけ保持する。
+        /// </summary>
+        public static void DeferUntilPlayback(Action capture) => _deferred = capture;
+
+        /// <summary>予約済みのキャプチャを実行して予約を消す (NovelScenarioRunner が初回再生時に呼ぶ)。</summary>
+        public static void RunDeferred()
+        {
+            var capture = _deferred;
+            _deferred = null;
+            capture?.Invoke();
         }
     }
 }

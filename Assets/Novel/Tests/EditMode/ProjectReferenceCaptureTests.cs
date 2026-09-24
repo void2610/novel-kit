@@ -103,13 +103,14 @@ namespace Novel.Tests
         }
 
         [Test]
-        public void Build時に後勝ち登録したチャンネルの目録をキャプチャする()
+        public void 初回再生時に後勝ち登録したチャンネルの目録をキャプチャする()
         {
             var builder = MakeBuilder();
             builder.RegisterInstance<IAudioChannel>(new EnumeratingAudioChannel());
             builder.RegisterInstance<IPortraitChannel>(new EnumeratingPortraitChannel());
 
             using var container = builder.Build();
+            NovelProjectCapture.RunDeferred();
 
             var snapshot = NovelProjectCapture.Latest;
             Assert.That(snapshot, Is.Not.Null);
@@ -127,12 +128,13 @@ namespace Novel.Tests
         }
 
         [Test]
-        public void Build時に配線されたスプライトローダのrootをキャプチャする()
+        public void 初回再生時に配線されたスプライトローダのrootをキャプチャする()
         {
             var builder = MakeBuilder();
             builder.RegisterInstance<ISpriteLoader>(new ResourcesSpriteLoader("Novel/"));
 
             using var container = builder.Build();
+            NovelProjectCapture.RunDeferred();
 
             var snapshot = NovelProjectCapture.Latest;
             Assert.That(snapshot!.SpriteLoaderType, Is.EqualTo(nameof(ResourcesSpriteLoader)));
@@ -143,6 +145,7 @@ namespace Novel.Tests
         public void ISpriteKeyPrefixを実装しないローダのrootは不明として扱う()
         {
             using var container = MakeBuilder().Build();   // 既定は NullSpriteLoader (root を名乗らない)
+            NovelProjectCapture.RunDeferred();
 
             var snapshot = NovelProjectCapture.Latest;
             Assert.That(snapshot!.SpriteLoaderType, Is.EqualTo(nameof(NullSpriteLoader)));
@@ -150,7 +153,7 @@ namespace Novel.Tests
         }
 
         [Test]
-        public void Build時にコード実装カタログのキャラ目録をキャプチャする()
+        public void 初回再生時にコード実装カタログのキャラ目録をキャプチャする()
         {
             var builder = new ContainerBuilder();
             builder.RegisterNovelKitCore();
@@ -159,6 +162,7 @@ namespace Novel.Tests
             builder.RegisterInstance<IScenarioSource>(new StubSource());
 
             using var container = builder.Build();
+            NovelProjectCapture.RunDeferred();
 
             var snapshot = NovelProjectCapture.Latest;
             Assert.That(snapshot, Is.Not.Null);
@@ -175,6 +179,7 @@ namespace Novel.Tests
             var builder = MakeBuilder();   // IAudioChannel は NullAudioChannel / IPortraitChannel は NullPortraitChannel のまま
 
             using var container = builder.Build();
+            NovelProjectCapture.RunDeferred();
 
             var snapshot = NovelProjectCapture.Latest;
             Assert.That(snapshot, Is.Not.Null);
@@ -259,17 +264,83 @@ namespace Novel.Tests
         }
 
         [Test]
-        public void Build時にworld_effectキーの目録をキャプチャする()
+        public void 初回再生時にworld_effectキーの目録をキャプチャする()
         {
             var builder = MakeBuilder();
             builder.RegisterInstance<IWorldEffectSink>(new EnumeratingWorldEffectSink());
 
             using var container = builder.Build();
+            NovelProjectCapture.RunDeferred();
 
             var snapshot = NovelProjectCapture.Latest!;
             Assert.That(snapshot.WorldEffectSinkType, Is.EqualTo(nameof(EnumeratingWorldEffectSink)));
             Assert.That(snapshot.WorldEffectKeys.Single().Key, Is.EqualTo("time_lapse"));
         }
+
+        // 非同期生成の View に依存する登録を模す (生成前は解決すると例外)
+        private static ContainerBuilder MakeBuilderWithLatePortrait(System.Func<bool> isReady, System.Action? onResolve = null)
+        {
+            var builder = MakeBuilder();
+            builder.RegisterInstance<IAudioChannel>(new EnumeratingAudioChannel());
+            builder.Register<IPortraitChannel>(_ =>
+            {
+                onResolve?.Invoke();
+                return isReady()
+                    ? new EnumeratingPortraitChannel()
+                    : throw new System.InvalidOperationException("View がまだ生成されていません");
+            }, Lifetime.Transient);
+            return builder;
+        }
+
+        [Test]
+        public void Build時にはチャンネルを解決せずキャプチャを予約するだけにする()
+        {
+            var resolveCount = 0;
+            var before = new NovelProjectCapture.Snapshot(
+                System.Array.Empty<AudioKeyInfo>(), System.Array.Empty<StageLayoutInfo>(), System.Array.Empty<CharacterKeyInfo>(),
+                "", "", "", System.DateTime.Now);
+            NovelProjectCapture.Publish(before);
+
+            using var container = MakeBuilderWithLatePortrait(() => true, () => resolveCount++).Build();
+
+            Assert.That(resolveCount, Is.Zero, "Build 時点でチャンネルを解決しない");
+            Assert.That(NovelProjectCapture.Latest, Is.SameAs(before), "Build 時点ではキャプチャしない");
+
+            NovelProjectCapture.RunDeferred();
+
+            Assert.That(resolveCount, Is.EqualTo(1));
+            Assert.That(NovelProjectCapture.Latest!.Layouts.Single().Id, Is.EqualTo("meeting"));
+        }
+
+        [Test]
+        public void 予約の実行時に解決できない種別は飛ばし他の種別をキャプチャして警告する()
+        {
+            using var container = MakeBuilderWithLatePortrait(() => false).Build();
+
+            UnityEngine.TestTools.LogAssert.Expect(UnityEngine.LogType.Warning,
+                new System.Text.RegularExpressions.Regex("キャプチャに失敗: IPortraitChannel: View がまだ生成されていません"));
+            NovelProjectCapture.RunDeferred();
+
+            var snapshot = NovelProjectCapture.Latest!;
+            Assert.That(snapshot.AudioChannelType, Is.EqualTo(nameof(EnumeratingAudioChannel)));
+            Assert.That(snapshot.Layouts, Is.Empty);
+            Assert.That(snapshot.PortraitChannelType, Is.Empty);
+        }
+
+        [UnityEngine.TestTools.UnityTest]
+        public System.Collections.IEnumerator 初回再生で予約済みのキャプチャを実行する() => UniTask.ToCoroutine(async () =>
+        {
+            var ran = false;
+            NovelProjectCapture.DeferUntilPlayback(() => ran = true);
+            using var runner = new NovelScenarioRunner(
+                new ScenarioSource(new Novel.View.ResourcesTextAssetLoader()), new VitalRouter.Router(),
+                new StubView(), new IdentityTextResolver(), new StubCatalog(),
+                preambleSources: new IPreambleSource[] { new PreambleSource(new Novel.View.ResourcesTextAssetLoader()) });
+
+            await runner.PlayAsync("test_variables", CancellationToken.None);
+
+            Assert.That(ran, Is.True);
+        });
 
         [UnityEngine.TestTools.UnityTest]
         public System.Collections.IEnumerator 初回再生のpreambleロードで糖衣の目録をキャプチャする() => UniTask.ToCoroutine(async () =>
@@ -308,12 +379,13 @@ namespace Novel.Tests
         }
 
         [Test]
-        public void Build時に独自コマンドモジュールの語彙をキャプチャする()
+        public void 初回再生時に独自コマンドモジュールの語彙をキャプチャする()
         {
             var builder = MakeBuilder();
             builder.RegisterNovelCommand<CustomEchoModule>();
 
             using var container = builder.Build();
+            NovelProjectCapture.RunDeferred();
 
             var command = NovelProjectCapture.Latest!.Commands.Single();
             Assert.That(command.Name, Is.EqualTo("custom_echo"));

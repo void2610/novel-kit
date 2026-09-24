@@ -23,7 +23,7 @@ namespace Novel.Assets
 
         /// <summary>
         /// この実装が扱える構図の目録 (project-reference ADR)。エディタのプロジェクトリファレンスが
-        /// DI ビルド時に読む。既定は標準 5 構図 (single〜penta)。独自構図を持つ実装はオーバーライドして返す
+        /// 初回再生時のキャプチャが読む。既定は標準 5 構図 (single〜penta)。独自構図を持つ実装はオーバーライドして返す
         /// (キーの列挙のみで、副作用や重い処理を伴わないこと)。
         /// </summary>
         IEnumerable<StageLayoutInfo> EnumerateLayouts() => StageLayoutInfo.Defaults;

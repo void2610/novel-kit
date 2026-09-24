@@ -14,7 +14,7 @@ namespace Novel.Editor
     /// <summary>
     /// このプロジェクトのシナリオで使える「名前と構図」を一覧するウィンドウ (project-reference ADR)。
     /// アセットから静的に読めるもの (キャラ・画像キー・音カタログ) はライブ表示し、
-    /// 実行時にしか実体がないもの (自前チャンネルの音キー・構図) は DI ビルド時キャプチャ
+    /// 実行時にしか実体がないもの (自前チャンネルの音キー・構図) は実行時キャプチャ
     /// (最後に再生した時点のスナップショット) を表示する。
     /// 画像・立ち絵はサムネイル付き、音キーは Resources 上のクリップへ解決できればその場で試聴できる。
     /// </summary>
@@ -192,7 +192,7 @@ namespace Novel.Editor
         private bool IsRowVisible(Rect rect) =>
             rect.yMax >= _scroll.y - 100f && rect.y <= _scroll.y + position.height + 100f;
 
-        // ---- キャラ (ScriptableCharacterCatalog をライブ表示。無ければ DI ビルド時キャプチャ) ----
+        // ---- キャラ (ScriptableCharacterCatalog をライブ表示。無ければ実行時キャプチャ) ----
 
         private void DrawCharacters(NovelProjectCapture.Snapshot? snapshot)
         {
@@ -413,7 +413,7 @@ namespace Novel.Editor
             return found;
         }
 
-        // ---- 構図 (DI ビルド時キャプチャ。未キャプチャなら標準構図) ----
+        // ---- 構図 (実行時キャプチャ。未キャプチャなら標準構図) ----
 
         private void DrawLayouts(NovelProjectCapture.Snapshot? snapshot, IReadOnlyList<StageLayoutInfo> layouts)
         {
@@ -473,7 +473,7 @@ namespace Novel.Editor
             }
         }
 
-        // ---- BGM / SE (DI ビルド時キャプチャ) ----
+        // ---- BGM / SE (実行時キャプチャ) ----
 
         private void DrawAudio(NovelProjectCapture.Snapshot? snapshot, IReadOnlyList<AudioKeyInfo> keys)
         {

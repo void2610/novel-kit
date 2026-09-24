@@ -57,46 +57,103 @@ namespace Novel.Integration
             builder.Register<INovelScenarioRunner, NovelScenarioRunner>(lifetime);
 
 #if UNITY_EDITOR
-            // 実際に配線されたチャンネル (後勝ち差し替え込み) から音キー/構図の目録を吸い上げ、
-            // エディタのプロジェクトリファレンスへ渡す (project-reference ADR)。失敗しても起動は妨げない
-            builder.RegisterBuildCallback(container =>
+            // 実際に配線されたチャンネル (後勝ち差し替え込み) から目録を吸い上げ、エディタのプロジェクトリファレンスへ渡す (project-reference ADR)。
+            // Build 時点で解決すると、非同期生成の View に依存する Singleton が生成前の例外を抱えたまま固定されるため、初回再生時まで待つ
+            builder.RegisterBuildCallback(container => NovelProjectCapture.DeferUntilPlayback(() => CaptureProject(container)));
+#endif
+        }
+
+#if UNITY_EDITOR
+        /// <summary>
+        /// 種別ごとに独立して目録を取り、取れた分だけをスナップショットとして渡す (空の種別はエディタ側のマージで以前の値が残る)。
+        /// 取れなかった種別は警告する。失敗しても再生は妨げない
+        /// </summary>
+        private static void CaptureProject(IObjectResolver container)
+        {
+            var failures = new System.Collections.Generic.List<string>();
+
+            void Try(string label, Action capture)
             {
                 try
                 {
-                    var audio = container.Resolve<IAudioChannel>();
-                    var portrait = container.Resolve<IPortraitChannel>();
-                    // ICharacterCatalog は game 側登録の契約だが、未登録構成でもキャプチャ全体を落とさない
-                    container.TryResolve<ICharacterCatalog>(out var catalog);
-                    var sprites = container.Resolve<ISpriteLoader>();
-                    var worldEffects = container.Resolve<IWorldEffectSink>();
-                    // 語彙は記録用 vocabulary で読む (MRubyState を作らない。RegisterVocabulary は登録以外の副作用を持たない契約)
-                    var commands = new System.Collections.Generic.List<CommandKeyInfo>();
-                    foreach (var module in container.Resolve<System.Collections.Generic.IEnumerable<INovelCommandModule>>())
-                    {
-                        var recorder = new RecordingVocabulary(module.GetType().Name);
-                        module.RegisterVocabulary(recorder);
-                        commands.AddRange(recorder.Commands);
-                    }
-                    NovelProjectCapture.Publish(new NovelProjectCapture.Snapshot(
-                        new System.Collections.Generic.List<AudioKeyInfo>(audio.EnumerateKeys()),
-                        new System.Collections.Generic.List<StageLayoutInfo>(portrait.EnumerateLayouts()),
-                        new System.Collections.Generic.List<CharacterKeyInfo>(
-                            catalog?.EnumerateEntries() ?? System.Array.Empty<CharacterKeyInfo>()),
-                        audio.GetType().Name, portrait.GetType().Name, catalog?.GetType().Name ?? "", DateTime.Now,
-                        sprites.GetType().Name,
-                        // 名乗らないローダは「プレフィックス不明」として null のまま渡す (空文字の確定と区別する)
-                        (sprites as ISpriteKeyPrefix)?.KeyPrefix,
-                        commands,
-                        worldEffectKeys: new System.Collections.Generic.List<WorldEffectKeyInfo>(worldEffects.EnumerateKeys()),
-                        worldEffectSinkType: worldEffects.GetType().Name));
+                    capture();
                 }
                 catch (Exception e)
                 {
-                    UnityEngine.Debug.LogWarning($"[Novel] プロジェクトリファレンスのキャプチャに失敗: {e}");
+                    failures.Add($"{label}: {e.Message}");
                 }
+            }
+
+            var audioKeys = new System.Collections.Generic.List<AudioKeyInfo>();
+            var audioType = "";
+            Try(nameof(IAudioChannel), () =>
+            {
+                var audio = container.Resolve<IAudioChannel>();
+                audioKeys = new System.Collections.Generic.List<AudioKeyInfo>(audio.EnumerateKeys());
+                audioType = audio.GetType().Name;
             });
-#endif
+
+            var layouts = new System.Collections.Generic.List<StageLayoutInfo>();
+            var portraitType = "";
+            Try(nameof(IPortraitChannel), () =>
+            {
+                var portrait = container.Resolve<IPortraitChannel>();
+                layouts = new System.Collections.Generic.List<StageLayoutInfo>(portrait.EnumerateLayouts());
+                portraitType = portrait.GetType().Name;
+            });
+
+            // ICharacterCatalog は game 側登録の契約だが、未登録構成でもキャプチャを落とさない
+            var characters = new System.Collections.Generic.List<CharacterKeyInfo>();
+            var catalogType = "";
+            Try(nameof(ICharacterCatalog), () =>
+            {
+                if (!container.TryResolve<ICharacterCatalog>(out var catalog)) return;
+                characters = new System.Collections.Generic.List<CharacterKeyInfo>(catalog.EnumerateEntries());
+                catalogType = catalog.GetType().Name;
+            });
+
+            var spriteType = "";
+            string? spriteKeyPrefix = null;
+            Try(nameof(ISpriteLoader), () =>
+            {
+                var sprites = container.Resolve<ISpriteLoader>();
+                spriteType = sprites.GetType().Name;
+                // 名乗らないローダは「プレフィックス不明」として null のまま渡す (空文字の確定と区別する)
+                spriteKeyPrefix = (sprites as ISpriteKeyPrefix)?.KeyPrefix;
+            });
+
+            var worldEffectKeys = new System.Collections.Generic.List<WorldEffectKeyInfo>();
+            var worldEffectType = "";
+            Try(nameof(IWorldEffectSink), () =>
+            {
+                var worldEffects = container.Resolve<IWorldEffectSink>();
+                worldEffectKeys = new System.Collections.Generic.List<WorldEffectKeyInfo>(worldEffects.EnumerateKeys());
+                worldEffectType = worldEffects.GetType().Name;
+            });
+
+            // 語彙は記録用 vocabulary で読む (MRubyState を作らない。RegisterVocabulary は登録以外の副作用を持たない契約)
+            var commands = new System.Collections.Generic.List<CommandKeyInfo>();
+            Try(nameof(INovelCommandModule), () =>
+            {
+                var recorded = new System.Collections.Generic.List<CommandKeyInfo>();
+                foreach (var module in container.Resolve<System.Collections.Generic.IEnumerable<INovelCommandModule>>())
+                {
+                    var recorder = new RecordingVocabulary(module.GetType().Name);
+                    module.RegisterVocabulary(recorder);
+                    recorded.AddRange(recorder.Commands);
+                }
+                commands = recorded;
+            });
+
+            NovelProjectCapture.Publish(new NovelProjectCapture.Snapshot(
+                audioKeys, layouts, characters, audioType, portraitType, catalogType, DateTime.Now,
+                spriteType, spriteKeyPrefix, commands,
+                worldEffectKeys: worldEffectKeys, worldEffectSinkType: worldEffectType));
+
+            if (failures.Count > 0)
+                UnityEngine.Debug.LogWarning($"[Novel] プロジェクトリファレンスのキャプチャに失敗: {string.Join(" / ", failures)}");
         }
+#endif
 
         // game 独自コマンドモジュール（[Routes] + INovelCommandModule）を登録する。runner が
         // IEnumerable<INovelCommandModule> として集約注入し、語彙束縛とハンドラ写像を行う。

@@ -37,7 +37,7 @@ namespace Novel.Runtime
 
         /// <summary>
         /// この sink が解釈する world_effect キーの目録 (project-reference ADR)。エディタのプロジェクトリファレンスが
-        /// DI ビルド時に読む。音キーと同じく default 実装は置かない (実装忘れが沈黙の空目録になるため)。
+        /// 初回再生時のキャプチャが読む。音キーと同じく default 実装は置かない (実装忘れが沈黙の空目録になるため)。
         /// 一覧を持てない実装は空を明示的に返す。
         /// </summary>
         IEnumerable<WorldEffectKeyInfo> EnumerateKeys();
