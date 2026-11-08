@@ -1,4 +1,6 @@
 #nullable enable
+using System;
+
 namespace Novel.Runtime
 {
     // say 通し番号と早送り状態を runner とハンドラで共有する (セリフ単位セーブのカーソルの源)
@@ -16,6 +18,9 @@ namespace Novel.Runtime
 
         // 早送り中か。say 以外のコマンド（wait / se / world_effect 等）が演出スキップの判定に使う
         public bool IsFastForwarding => _fastForwardTarget > 0;
+
+        // 早送りが目標の say に届いた瞬間に発火する。早送り中に飛ばした演出のうち、続いているものを復帰地点で再現する契機
+        public event Action? FastForwardReached;
 
         // 通常表示へ戻す say 番号。0 = 早送りなし
         private int _fastForwardTarget;
@@ -37,6 +42,7 @@ namespace Novel.Runtime
             if (SayNumber >= _fastForwardTarget)
             {
                 _fastForwardTarget = 0;
+                FastForwardReached?.Invoke();
                 return false;
             }
             return true;

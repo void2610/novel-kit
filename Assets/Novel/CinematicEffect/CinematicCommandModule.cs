@@ -13,7 +13,7 @@ namespace Novel.Cinematic
     /// 止め方を Enter から推測して代行することはしない (演出の中身と同じくプロジェクトが決める)。
     /// </summary>
     [Routes]
-    public sealed partial class CinematicCommandModule : INovelCommandModule
+    public sealed partial class CinematicCommandModule : INovelCommandModule, IDisposable
     {
         public const string ExitSuffix = "_exit";
 
@@ -25,6 +25,10 @@ namespace Novel.Cinematic
         private readonly NovelPlaybackProgress _progress;
         private readonly INovelErrorHandler? _errorHandler;
 
+        // 早送り中に通過した cinematic の結果。復帰地点でまだ続いている演出だけを再現する
+        private readonly CinematicHeldState _heldDuringFastForward = new();
+        private CancellationTokenRegistration _fastForwardCancelRegistration;
+
         public CinematicCommandModule(CinematicEffectDirector director, ICinematicSequenceLoader loader,
             NovelPlaybackProgress progress, INovelErrorHandler? errorHandler = null)
         {
@@ -32,6 +36,15 @@ namespace Novel.Cinematic
             _loader = loader;
             _progress = progress;
             _errorHandler = errorHandler;
+            _progress.FastForwardReached += RestoreHeldEffects;
+        }
+
+        public void Dispose() => _progress.FastForwardReached -= RestoreHeldEffects;
+
+        private void RestoreHeldEffects()
+        {
+            if (!_heldDuringFastForward.IsEmpty) _director.RunAsync(_heldDuringFastForward.BuildPlaySequence()).Forget();
+            _heldDuringFastForward.Clear();
         }
 
         public void RegisterVocabulary(INovelVocabulary vocabulary) => vocabulary.Add<CinematicCommand>("cinematic");
@@ -39,8 +52,6 @@ namespace Novel.Cinematic
 
         public async UniTask On(CinematicCommand cmd, CancellationToken ct)
         {
-            // 演出は瞬間表現なので早送り (セーブ復帰) では再現しない (world_effect と同じ扱い)
-            if (_progress.IsFastForwarding) return;
             if (string.IsNullOrEmpty(cmd.Key)) return;
 
             var assetKey = cmd.Stop ? cmd.Key + ExitSuffix : cmd.Key;
@@ -49,6 +60,14 @@ namespace Novel.Cinematic
             {
                 NovelDiagnostics.EffectNotFound(_errorHandler, _progress.ScenarioKey, assetKey,
                     $"Resources/{ResourcesCinematicSequenceLoader.Root}{assetKey}.asset を置いてください (使えるキーは Novel > Project Reference で確認できます)。");
+                return;
+            }
+            if (_progress.IsFastForwarding)
+            {
+                // 途中経過は見せず結果だけ覚える。早送りが打ち切られたら次回へ持ち越さない
+                _heldDuringFastForward.Apply(asset.Build());
+                _fastForwardCancelRegistration.Dispose();
+                _fastForwardCancelRegistration = ct.Register(_heldDuringFastForward.Clear);
                 return;
             }
             await _director.RunAsync(asset.Build(), ct);
