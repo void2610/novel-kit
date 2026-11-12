@@ -21,6 +21,9 @@ namespace Novel.Assets
 
         UniTask HideAsync(int slotIndex, CancellationToken ct);
 
+        // 全 slot の立ち絵をフェードを待たずに消す (ロードなどで画面を白紙へ戻すとき)
+        void HideAllImmediate();
+
         /// <summary>
         /// この実装が扱える構図の目録 (project-reference ADR)。エディタのプロジェクトリファレンスが
         /// 初回再生時のキャプチャが読む。既定は標準 5 構図 (single〜penta)。独自構図を持つ実装はオーバーライドして返す

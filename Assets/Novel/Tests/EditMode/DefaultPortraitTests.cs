@@ -33,6 +33,7 @@ namespace Novel.Tests
 
             public UniTask ExitAsync(string character, CancellationToken ct) => UniTask.CompletedTask;
             public UniTask ClearStageAsync(CancellationToken ct) => UniTask.CompletedTask;
+            public void ResetStage() { }
         }
 
         private sealed class StubCatalog : ICharacterCatalog

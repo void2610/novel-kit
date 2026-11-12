@@ -39,5 +39,9 @@ namespace Novel.Runtime
 
         // すべての cast をクリアして場面をリセット (シーン切替時など)。
         UniTask ClearStageAsync(CancellationToken ct);
+
+        // フェードを待たずに全員を下げ、 cast と表示の記録も消す (ロードなどで画面を白紙へ戻すとき)。
+        // 同期で終わるので、 直後の stage 宣言や表示と競合しない
+        void ResetStage();
     }
 }

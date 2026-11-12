@@ -13,6 +13,7 @@ namespace Novel.Runtime
         public UniTask SwitchLayoutAsync(PortraitLayout layout, CancellationToken ct) => UniTask.CompletedTask;
         public UniTask ShowAsync(int slotIndex, ResolvedSprite portrait, CancellationToken ct) => UniTask.CompletedTask;
         public UniTask HideAsync(int slotIndex, CancellationToken ct) => UniTask.CompletedTask;
+        public void HideAllImmediate() { }
     }
 
     public sealed class NullPortraitDirector : IPortraitDirector
@@ -25,6 +26,7 @@ namespace Novel.Runtime
         public UniTask ShowAsync(string character, ResolvedSprite portrait, CancellationToken ct) => UniTask.CompletedTask;
         public UniTask ExitAsync(string character, CancellationToken ct) => UniTask.CompletedTask;
         public UniTask ClearStageAsync(CancellationToken ct) => UniTask.CompletedTask;
+        public void ResetStage() { }
     }
 
     public sealed class NullBackgroundChannel : IBackgroundChannel

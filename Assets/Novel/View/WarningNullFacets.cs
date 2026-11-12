@@ -17,6 +17,8 @@ namespace Novel.View
         public UniTask SwitchLayoutAsync(PortraitLayout layout, CancellationToken ct) { Warn(); return UniTask.CompletedTask; }
         public UniTask ShowAsync(int slotIndex, ResolvedSprite portrait, CancellationToken ct) { Warn(); return UniTask.CompletedTask; }
         public UniTask HideAsync(int slotIndex, CancellationToken ct) { Warn(); return UniTask.CompletedTask; }
+        // 白紙化はコマンドでなく game 側の都合で毎回呼ばれるため、 未配線の警告対象にしない
+        public void HideAllImmediate() { }
         private void Warn() => FacetWarning.Once(ref _warned, "portrait/stage", nameof(IPortraitChannel));
     }
 

@@ -124,6 +124,13 @@ namespace Novel.Runtime
             // layout はリセットせず、 次の Stage 呼び出しまで現状維持 (画面が突然真っさらにならないように)
         }
 
+        public void ResetStage()
+        {
+            _channel.HideAllImmediate();
+            _cast.Clear();
+            _shown.Clear();
+        }
+
         // 上書きされた側は画面から消えているので記録も落とす。 残ると HasPortrait が「見えていないのに表示中」を返す
         private void EvictSlotOwner(int slotIndex, string newOwner)
         {

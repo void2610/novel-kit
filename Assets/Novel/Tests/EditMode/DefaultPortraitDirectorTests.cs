@@ -32,6 +32,7 @@ namespace Novel.Tests
                 Calls.Add($"hide:{slotIndex}");
                 return UniTask.CompletedTask;
             }
+            public void HideAllImmediate() => Calls.Add("hideAll");
         }
 
         private readonly List<UnityEngine.Object> _created = new();
@@ -197,6 +198,24 @@ namespace Novel.Tests
         });
 
         // cast 外の portrait は slot 0 にフォールバックするため、 元から slot 0 にいたキャラは画面から消える
+        // 白紙化の後に同じ stage と立ち絵を宣言し直したとき、 表示の記録が残っていると重複判定に潰されて出せない
+        [UnityTest]
+        public IEnumerator ResetStageの後は同じstageと立ち絵で再表示される() => UniTask.ToCoroutine(async () =>
+        {
+            var view = new RecordingPortraitChannel();
+            var director = new DefaultPortraitDirector(view);
+            await director.StageAsync(PortraitLayout.Single, new[] { "kii" }, CancellationToken.None);
+            await director.ShowAsync("kii", NamedSprite("worry"), CancellationToken.None);
+
+            director.ResetStage();
+            Assert.IsFalse(director.IsStaged("kii"));
+            await director.StageAsync(PortraitLayout.Single, new[] { "kii" }, CancellationToken.None);
+            await director.ShowAsync("kii", NamedSprite("worry"), CancellationToken.None);
+
+            var afterReset = view.Calls.GetRange(view.Calls.IndexOf("hideAll"), view.Calls.Count - view.Calls.IndexOf("hideAll"));
+            Assert.Contains("show:0:worry", afterReset);
+        });
+
         [UnityTest]
         public IEnumerator slotを奪われたキャラは表示中とみなされない() => UniTask.ToCoroutine(async () =>
         {

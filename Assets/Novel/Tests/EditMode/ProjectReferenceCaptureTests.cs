@@ -70,6 +70,7 @@ namespace Novel.Tests
             public UniTask SwitchLayoutAsync(PortraitLayout layout, CancellationToken ct) => UniTask.CompletedTask;
             public UniTask ShowAsync(int slotIndex, ResolvedSprite portrait, CancellationToken ct) => UniTask.CompletedTask;
             public UniTask HideAsync(int slotIndex, CancellationToken ct) => UniTask.CompletedTask;
+            public void HideAllImmediate() { }
 
             public IEnumerable<StageLayoutInfo> EnumerateLayouts()
             {
