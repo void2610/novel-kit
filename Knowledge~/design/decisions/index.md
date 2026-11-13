@@ -32,3 +32,4 @@
 * [MRuby エラー処理・サンドボックス](/design/decisions/error-handling.md) - try/catch で backtrace surface・リリースは Faulted でフェイルセーフ・サンドボックス v1 無し
 * [エフェクトの await 意味論](/design/decisions/effect-await.md) - ハンドラ await で blocking/non-blocking 統一・IWorldEffectSink は async・per-call 上書きは v1 無し
 * [セーブのスナップショット粒度](/design/decisions/save-snapshot.md) - 永続は IStateStore のみ・セーブ境界は PlayAsync の間・途中保存は v1 対象外
+* [コマンド糖衣の自動生成](/design/decisions/command-sugar-generation.md) - 語彙から preamble .rb をエディタ生成・位置+キーワード両対応・衝突スキップで手書き常勝

@@ -15,7 +15,8 @@
         "Novel.Assets",
         "Novel.Localization",
         "Novel.CinematicEffect",
-        "CinematicEffect"
+        "CinematicEffect",
+        "MRubyCS.Compiler"
     ],
     "includePlatforms": [
         "Editor"
